@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { logger } from '../utils/logger';
 
 export const salesService = {
   // Get sales with vendor information for performance analysis
@@ -233,7 +234,7 @@ delete dataToInsert.items;
     }));
     const { error: vvError } = await supabase.from('venta_vendedores').insert(ventaVendedores);
     if (vvError) {
-      console.error('Error al insertar vendedores:', vvError);
+      logger.error('Error al insertar vendedores:', vvError);
       // Si falla, borramos la venta para no dejar datos inconsistentes.
       await supabase.from('ventas').delete().eq('id', data.id);
       return { data: null, error: `Error al asociar vendedores: ${vvError.message}` };
@@ -252,7 +253,7 @@ delete dataToInsert.items;
     );
     
     if (stockResult.error) {
-      console.error('Error al reducir stock:', stockResult.error);
+      logger.error('Error al reducir stock:', stockResult.error);
       // Revertir la venta si no se pudo reducir el stock
       await supabase.from('venta_vendedores').delete().eq('venta_id', data.id);
       await supabase.from('ventas').delete().eq('id', data.id);
@@ -265,7 +266,7 @@ delete dataToInsert.items;
 
 
     } catch (error) {
-      console.error('Error creando la nota de venta:', error);
+      logger.error('Error creando la nota de venta:', error);
       return { data: null, error: error.message };
     }
   },
@@ -382,7 +383,7 @@ delete dataToInsert.items;
               firstVendedorId, // Use the first seller for history
               'Cancelación de Venta'
             );
-            console.log('Stock restored due to sale cancellation');
+            logger.debug('Stock restored due to sale cancellation');
           }
         }
         
@@ -394,9 +395,9 @@ delete dataToInsert.items;
           );
           
           if (reduceResult.error) {
-            console.warn('Warning: Could not reduce stock when reactivating sale:', reduceResult.error);
+            logger.warn('Warning: Could not reduce stock when reactivating sale:', reduceResult.error);
           } else {
-            console.log('Stock reduced due to sale reactivation');
+            logger.debug('Stock reduced due to sale reactivation');
           }
         }
       }
@@ -455,7 +456,7 @@ delete dataToInsert.items;
 
   async getSalesByVendor() {
     try {
-      console.log('🔍 Cargando rendimiento por vendedor...');
+      logger.log('🔍 Cargando rendimiento por vendedor...');
       
       const { data, error } = await supabase
         .from('ventas')
@@ -470,11 +471,11 @@ delete dataToInsert.items;
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('❌ Error en getSalesByVendor:', error);
+        logger.error('❌ Error en getSalesByVendor:', error);
         throw error;
       }
 
-      console.log('📊 Datos de ventas para vendedores:', data?.length || 0, 'registros');
+      logger.debug('📊 Datos de ventas para vendedores:', data?.length || 0, 'registros');
 
       const vendorStats = {};
       let totalVentasConVendedor = 0;
@@ -529,7 +530,7 @@ delete dataToInsert.items;
         });
       });
 
-      console.log('📈 Estadísticas de procesamiento:', {
+      logger.debug('📈 Estadísticas de procesamiento:', {
         totalVentas: data?.length || 0,
         ventasConVendedor: totalVentasConVendedor,
         ventasSinVendedor: ventasSinVendedor,
@@ -545,20 +546,20 @@ delete dataToInsert.items;
         .filter(vendor => vendor.totalSales > 0) // Solo vendedores con ventas
         .sort((a, b) => b.totalRevenue - a.totalRevenue);
 
-      console.log('🏆 Top 3 vendedores:', vendorArray.slice(0, 3).map(v => 
+      logger.debug('🏆 Top 3 vendedores:', vendorArray.slice(0, 3).map(v => 
         `${v.name}: $${v.totalRevenue.toLocaleString()} (${v.totalSales} ventas)`
       ));
 
       return { data: vendorArray, error: null };
     } catch (error) {
-      console.error('❌ Error en getSalesByVendor:', error);
+      logger.error('❌ Error en getSalesByVendor:', error);
       return { data: [], error: error?.message };
     }
   },
 
   async getBestSellingProducts() {
     try {
-      console.log('🔍 Cargando productos más vendidos...');
+      logger.log('🔍 Cargando productos más vendidos...');
       
       const { data, error } = await supabase
         .from('ventas')
@@ -579,15 +580,15 @@ delete dataToInsert.items;
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('❌ Error en getBestSellingProducts:', error);
+        logger.error('❌ Error en getBestSellingProducts:', error);
         throw error;
       }
 
-      console.log('📊 Datos de ventas para productos más vendidos:', data?.length || 0, 'registros');
+      logger.debug('📊 Datos de ventas para productos más vendidos:', data?.length || 0, 'registros');
 
       // Mostrar algunas ventas de ejemplo para debug
       if (data && data.length > 0) {
-        console.log('🔍 Primeras 3 ventas:', data.slice(0, 3).map(sale => ({
+        logger.debug('🔍 Primeras 3 ventas:', data.slice(0, 3).map(sale => ({
           id: sale.armazon_id,
           sku: sale.armazones?.sku,
           estado: sale.estado,
@@ -599,12 +600,12 @@ delete dataToInsert.items;
         data.forEach(sale => {
           estadoCount[sale.estado] = (estadoCount[sale.estado] || 0) + 1;
         });
-        console.log('📊 Estados de ventas:', estadoCount);
+        logger.debug('📊 Estados de ventas:', estadoCount);
       }
 
       // Filtrar solo ventas completadas para productos más vendidos
       const completedSales = data?.filter(sale => sale.estado === 'completada') || [];
-      console.log('✅ Ventas completadas para productos:', completedSales.length, 'de', data?.length || 0, 'total');
+      logger.debug('✅ Ventas completadas para productos:', completedSales.length, 'de', data?.length || 0, 'total');
 
       // Agrupar por producto
       const productStats = {};
@@ -623,17 +624,17 @@ delete dataToInsert.items;
               price: product?.precio || 0,
               totalSold: 0
             };
-            console.log(`🆕 Nuevo producto encontrado: ${product?.sku} (ID: ${productId})`);
+            logger.debug(`🆕 Nuevo producto encontrado: ${product?.sku} (ID: ${productId})`);
           }
           
           productStats[productId].totalSold += 1;
           
           // Log para los primeros productos
           if (index < 5) {
-            console.log(`📦 Venta ${index + 1}: ${product?.sku} - Total actual: ${productStats[productId].totalSold}`);
+            logger.debug(`📦 Venta ${index + 1}: ${product?.sku} - Total actual: ${productStats[productId].totalSold}`);
           }
         } else {
-          console.log(`⚠️ Venta sin producto válido:`, { productId, hasProduct: !!product });
+          logger.debug(`⚠️ Venta sin producto válido:`, { productId, hasProduct: !!product });
         }
       });
 
@@ -643,19 +644,19 @@ delete dataToInsert.items;
         .sort((a, b) => b.totalSold - a.totalSold)
         .slice(0, 10); // Top 10 productos
 
-      console.log('🏆 Productos más vendidos calculados:', productArray.length, 'productos');
-      console.log('📈 Top 5:', productArray.slice(0, 5).map(p => `${p.sku} (${p.brand}): ${p.totalSold} ventas`));
-      console.log('📊 Estadísticas completas:', Object.keys(productStats).length, 'productos únicos encontrados');
+      logger.debug('🏆 Productos más vendidos calculados:', productArray.length, 'productos');
+      logger.debug('📈 Top 5:', productArray.slice(0, 5).map(p => `${p.sku} (${p.brand}): ${p.totalSold} ventas`));
+      logger.debug('📊 Estadísticas completas:', Object.keys(productStats).length, 'productos únicos encontrados');
 
       return { data: productArray, error: null };
     } catch (error) {
-      console.error('❌ Error en getBestSellingProducts:', error);
+      logger.error('❌ Error en getBestSellingProducts:', error);
       return { data: [], error: error?.message };
     }
   },
   async getSalesByPeriod(period = 'month') {
     try {
-      console.log('🔍 getSalesByPeriod llamado con period:', period);
+      logger.debug('🔍 getSalesByPeriod llamado con period:', period);
       
       // Usar fechas más precisas para evitar problemas de zona horaria
       const endDate = new Date();
@@ -684,7 +685,7 @@ delete dataToInsert.items;
       startDate.setDate(startDate.getDate() - days + 1); // +1 para incluir el día actual
       startDate.setHours(0, 0, 0, 0); // Inicio del día
 
-      console.log('📅 Fechas calculadas:', {
+      logger.debug('📅 Fechas calculadas:', {
         period,
         days,
         startDate: startDate.toISOString().split('T')[0],
@@ -699,16 +700,16 @@ delete dataToInsert.items;
         .lte('fecha_venta', endDate.toISOString().split('T')[0])
         .order('fecha_venta', { ascending: true });
 
-      console.log('🔍 Consulta ejecutada desde:', startDate.toISOString().split('T')[0], 'hasta:', endDate.toISOString().split('T')[0]);
+      logger.debug('🔍 Consulta ejecutada desde:', startDate.toISOString().split('T')[0], 'hasta:', endDate.toISOString().split('T')[0]);
 
       if (error) {
-        console.error('❌ Error en consulta Supabase:', error);
+        logger.error('❌ Error en consulta Supabase:', error);
         // En lugar de lanzar error, devolver array vacío para usar datos mock
         return { data: [], error: error.message };
       }
       
-      console.log('📊 Datos raw de Supabase:', data);
-      console.log('📊 Total de registros encontrados:', data?.length || 0);
+      logger.debug('📊 Datos raw de Supabase:', data);
+      logger.debug('📊 Total de registros encontrados:', data?.length || 0);
       
       // Verificar específicamente si hay datos para hoy
       const today = new Date().toISOString().split('T')[0];
@@ -718,11 +719,11 @@ delete dataToInsert.items;
           : sale.fecha_venta;
         return saleDate === today;
       });
-      console.log('📅 Datos para hoy (' + today + '):', todayData);
+      logger.debug('📅 Datos para hoy (' + today + '):', todayData);
       
       // Si no hay datos, devolver array vacío para usar datos mock
       if (!data || data.length === 0) {
-        console.log('⚠️ No hay datos de ventas en el período');
+        logger.debug('⚠️ No hay datos de ventas en el período');
         return { data: [], error: null };
       }
 
@@ -766,7 +767,7 @@ delete dataToInsert.items;
             }
           }
         } catch (dateError) {
-          console.error('❌ Error procesando fecha:', sale.fecha_venta, dateError);
+          logger.error('❌ Error procesando fecha:', sale.fecha_venta, dateError);
         }
       });
 
@@ -790,7 +791,7 @@ delete dataToInsert.items;
             pendingRevenue: day.pendingRevenue
           };
         } catch (formatError) {
-          console.error('❌ Error formateando fecha:', day.date, formatError);
+          logger.error('❌ Error formateando fecha:', day.date, formatError);
           return {
             date: day.date,
             label: day.date,
@@ -804,11 +805,11 @@ delete dataToInsert.items;
         }
       });
 
-      console.log('📈 ChartData final:', chartData);
+      logger.debug('📈 ChartData final:', chartData);
       
       return { data: chartData, error: null };
     } catch (error) {
-      console.error('❌ Error general en getSalesByPeriod:', error);
+      logger.error('❌ Error general en getSalesByPeriod:', error);
       return { data: [], error: error?.message };
     }
   },
@@ -840,7 +841,7 @@ delete dataToInsert.items;
         .limit(1);
 
       if (error) {
-        console.error('Error al obtener último folio:', error);
+        logger.error('Error al obtener último folio:', error);
         // Si hay error, generar folio basado en fecha con zona horaria de México
         const now = new Date();
         const mexicoDate = new Date(now.toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
@@ -882,7 +883,7 @@ delete dataToInsert.items;
       
       return `V${year}${month}${day}${number}`;
     } catch (error) {
-      console.error('Error generando folio:', error);
+      logger.error('Error generando folio:', error);
       // Fallback: folio basado en timestamp con zona horaria de México
       const now = new Date();
       const mexicoDate = new Date(now.toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
