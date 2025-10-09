@@ -1,46 +1,9 @@
-import React, { useRef, useEffect } from 'react';
+import React from 'react';
 import { Edit } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 
 const SalesTable = ({ sales = [], onEdit, loading = false }) => {
   const sortedSales = [...sales];
-  const topScrollRef = useRef(null);
-  const tableScrollRef = useRef(null);
-
-  // Sincronizar scroll horizontal
-  useEffect(() => {
-    const topScroll = topScrollRef.current;
-    const tableScroll = tableScrollRef.current;
-
-    if (!topScroll || !tableScroll) return;
-
-    let isTopScrolling = false;
-    let isTableScrolling = false;
-
-    const handleTopScroll = () => {
-      console.log('Top scroll:', topScroll.scrollLeft);
-      if (isTableScrolling) return;
-      isTopScrolling = true;
-      tableScroll.scrollLeft = topScroll.scrollLeft;
-      setTimeout(() => { isTopScrolling = false; }, 50);
-    };
-
-    const handleTableScroll = () => {
-      console.log('Table scroll:', tableScroll.scrollLeft);
-      if (isTopScrolling) return;
-      isTableScrolling = true;
-      topScroll.scrollLeft = tableScroll.scrollLeft;
-      setTimeout(() => { isTableScrolling = false; }, 50);
-    };
-
-    topScroll.addEventListener('scroll', handleTopScroll);
-    tableScroll.addEventListener('scroll', handleTableScroll);
-
-    return () => {
-      topScroll.removeEventListener('scroll', handleTopScroll);
-      tableScroll.removeEventListener('scroll', handleTableScroll);
-    };
-  }, []);
 
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
@@ -76,13 +39,8 @@ const formatDate = (dateString) => {
 
   return (
     <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-      {/* Scrollbar horizontal superior */}
-      <div ref={topScrollRef} className="overflow-x-auto bg-gray-50 border-b border-gray-200" style={{ height: '20px', marginBottom: '0' }}>
-        <div style={{ width: '1600px', height: '1px' }}></div>
-      </div>
-      
-      {/* Contenedor con scroll vertical */}
-      <div ref={tableScrollRef} className="overflow-y-auto relative" style={{ maxHeight: '70vh' }}>
+      {/* Contenedor con scroll horizontal y vertical */}
+      <div className="overflow-x-auto overflow-y-auto relative" style={{ maxHeight: '70vh' }}>
         {/* Indicador de scroll horizontal */}
         <div className="absolute top-0 right-0 w-4 h-full bg-gradient-to-l from-white to-transparent pointer-events-none z-10"></div>
         <div className="absolute top-0 left-0 w-4 h-full bg-gradient-to-r from-white to-transparent pointer-events-none z-10"></div>
