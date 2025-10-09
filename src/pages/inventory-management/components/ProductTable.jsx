@@ -201,7 +201,7 @@ const ProductTable = ({
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1">
                 <h3 className="font-semibold text-foreground text-base">{product?.sku}</h3>
-                <p className="text-sm text-muted-foreground">{product?.marcas?.nombre || 'Sin marca'}</p>
+                <p className="text-sm text-muted-foreground">{product?.brand || 'Sin marca'}</p>
                 <p className="text-xs text-muted-foreground">{product?.color || 'Sin color'}</p>
               </div>
               <button
@@ -221,7 +221,7 @@ const ProductTable = ({
               <div className="flex flex-col">
                 <span className="text-xs text-muted-foreground">Precio</span>
                 <span className="font-semibold text-sm text-foreground">
-                  {formatPrice(product?.precio)}
+                  {formatPrice(product?.price)}
                 </span>
               </div>
               <div className="flex flex-col">
@@ -235,7 +235,7 @@ const ProductTable = ({
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-muted-foreground">Grupo:</span>
               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-secondary/10 text-secondary">
-                {product?.grupos?.nombre || 'Sin grupo'}
+                {product?.category || 'Sin grupo'}
               </span>
             </div>
 
@@ -259,13 +259,13 @@ const ProductTable = ({
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Descripción:</span>
                     <span className="font-medium text-foreground text-right max-w-[65%] truncate">
-                      {product?.descripciones?.nombre || 'Sin descripción'}
+                      {product?.description || 'Sin descripción'}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Sub Marca:</span>
                     <span className="font-medium text-foreground truncate">
-                      {product?.sub_marcas?.nombre || 'Sin sub marca'}
+                      {product?.supplier || 'Sin sub marca'}
                     </span>
                   </div>
                   <div className="flex justify-between">
