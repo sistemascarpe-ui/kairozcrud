@@ -82,10 +82,11 @@ const SalesManagement = () => {
       return;
     }
     
-    // Filtrar ventas por mes y año seleccionados
+    // Filtrar ventas por mes y año seleccionados usando zona horaria de México
     const filteredByMonth = sales.filter(sale => {
       const saleDate = new Date(sale.created_at);
-      return saleDate.getMonth() === selectedMonth && saleDate.getFullYear() === selectedYear;
+      const mexicoSaleDate = new Date(saleDate.toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
+      return mexicoSaleDate.getMonth() === selectedMonth && mexicoSaleDate.getFullYear() === selectedYear;
     });
     
     const totalSales = filteredByMonth.length;
@@ -122,13 +123,19 @@ const SalesManagement = () => {
       });
     }
     if (selectedDate) {
-      filtered = filtered.filter(s => new Date(s.created_at).toDateString() === selectedDate.toDateString());
-    }
-    if (monthFilter) {
-      // Filtrar por mes en formato "YYYY-MM"
       filtered = filtered.filter(s => {
         const saleDate = new Date(s.created_at);
-        const saleYearMonth = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`;
+        const mexicoSaleDate = new Date(saleDate.toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
+        const mexicoSelectedDate = new Date(selectedDate.toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
+        return mexicoSaleDate.toDateString() === mexicoSelectedDate.toDateString();
+      });
+    }
+    if (monthFilter) {
+      // Filtrar por mes en formato "YYYY-MM" usando zona horaria de México
+      filtered = filtered.filter(s => {
+        const saleDate = new Date(s.created_at);
+        const mexicoSaleDate = new Date(saleDate.toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
+        const saleYearMonth = `${mexicoSaleDate.getFullYear()}-${String(mexicoSaleDate.getMonth() + 1).padStart(2, '0')}`;
         return saleYearMonth === monthFilter;
       });
     }
