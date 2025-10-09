@@ -14,16 +14,24 @@ const SalesTable = ({ sales = [], onEdit, loading = false }) => {
 
     if (!topScroll || !tableScroll) return;
 
+    let isScrolling = false;
+
     const handleTopScroll = () => {
+      if (isScrolling) return;
+      isScrolling = true;
       tableScroll.scrollLeft = topScroll.scrollLeft;
+      setTimeout(() => { isScrolling = false; }, 10);
     };
 
     const handleTableScroll = () => {
+      if (isScrolling) return;
+      isScrolling = true;
       topScroll.scrollLeft = tableScroll.scrollLeft;
+      setTimeout(() => { isScrolling = false; }, 10);
     };
 
-    topScroll.addEventListener('scroll', handleTopScroll);
-    tableScroll.addEventListener('scroll', handleTableScroll);
+    topScroll.addEventListener('scroll', handleTopScroll, { passive: true });
+    tableScroll.addEventListener('scroll', handleTableScroll, { passive: true });
 
     return () => {
       topScroll.removeEventListener('scroll', handleTopScroll);
@@ -67,7 +75,28 @@ const formatDate = (dateString) => {
     <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
       {/* Scrollbar horizontal superior */}
       <div ref={topScrollRef} className="overflow-x-auto bg-gray-50 border-b border-gray-200" style={{ maxHeight: '16px', marginBottom: '0' }}>
-        <div style={{ minWidth: '1600px', height: '1px' }}></div>
+        <table className="min-w-full" style={{ minWidth: '1600px' }}>
+          <thead>
+            <tr>
+              <th className="w-20"></th>
+              <th className="w-32"></th>
+              <th className="w-40"></th>
+              <th className="w-32"></th>
+              <th className="w-28"></th>
+              <th className="w-28"></th>
+              <th className="w-28"></th>
+              <th className="w-24"></th>
+              <th className="w-20"></th>
+              <th className="w-24"></th>
+              <th className="w-32"></th>
+              <th className="w-36"></th>
+              <th className="w-24"></th>
+              <th className="w-24"></th>
+              <th className="w-32"></th>
+              <th className="w-24"></th>
+            </tr>
+          </thead>
+        </table>
       </div>
       
       {/* Contenedor con scroll vertical */}
