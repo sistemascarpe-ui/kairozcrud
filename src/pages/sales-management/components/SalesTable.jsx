@@ -1,9 +1,35 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Edit } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 
 const SalesTable = ({ sales = [], onEdit, loading = false }) => {
   const sortedSales = [...sales];
+  const topScrollRef = useRef(null);
+  const tableScrollRef = useRef(null);
+
+  // Sincronizar scroll horizontal
+  useEffect(() => {
+    const topScroll = topScrollRef.current;
+    const tableScroll = tableScrollRef.current;
+
+    if (!topScroll || !tableScroll) return;
+
+    const handleTopScroll = () => {
+      tableScroll.scrollLeft = topScroll.scrollLeft;
+    };
+
+    const handleTableScroll = () => {
+      topScroll.scrollLeft = tableScroll.scrollLeft;
+    };
+
+    topScroll.addEventListener('scroll', handleTopScroll);
+    tableScroll.addEventListener('scroll', handleTableScroll);
+
+    return () => {
+      topScroll.removeEventListener('scroll', handleTopScroll);
+      tableScroll.removeEventListener('scroll', handleTableScroll);
+    };
+  }, []);
 
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
@@ -39,33 +65,41 @@ const formatDate = (dateString) => {
 
   return (
     <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-      {/* Tabla principal con scroll horizontal */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: '1200px' }}>
+      {/* Scrollbar horizontal superior */}
+      <div ref={topScrollRef} className="overflow-x-auto bg-gray-50 border-b border-gray-200" style={{ maxHeight: '16px', marginBottom: '0' }}>
+        <div style={{ minWidth: '1600px', height: '1px' }}></div>
+      </div>
+      
+      {/* Contenedor con scroll vertical */}
+      <div ref={tableScrollRef} className="overflow-y-auto relative" style={{ maxHeight: '70vh' }}>
+        {/* Indicador de scroll horizontal */}
+        <div className="absolute top-0 right-0 w-4 h-full bg-gradient-to-l from-white to-transparent pointer-events-none z-10"></div>
+        <div className="absolute top-0 left-0 w-4 h-full bg-gradient-to-r from-white to-transparent pointer-events-none z-10"></div>
+        <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: '1600px' }}>
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Armazón</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo de Mica</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Desc. Armazón</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Desc. Micas</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Desc. General</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Factura</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IVA (16%)</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RFC</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Razón Social</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendedor</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Acciones</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Cliente</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Armazón</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Tipo de Mica</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Desc. Armazón</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Desc. Micas</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Desc. General</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Subtotal</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Factura</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">IVA (16%)</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">RFC</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">Razón Social</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Total</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Estado</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Vendedor</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Fecha</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {sortedSales.map((sale) => (
               <tr key={sale.id} className="group hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
+                <td className="px-4 py-4 whitespace-nowrap text-left text-sm font-medium">
                   <div className="flex items-center space-x-2">
                     {onEdit && (
                       <Button variant="ghost" size="sm" onClick={() => onEdit(sale)} className="text-indigo-600 hover:text-indigo-900">
@@ -74,37 +108,37 @@ const formatDate = (dateString) => {
                     )}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-4 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">{sale.cliente?.nombre || 'N/A'}</div>
                   <div className="text-sm text-gray-500">{sale.cliente?.telefono}</div>
                 </td>
-<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+<td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
   <div className="font-medium">
     {}
     {`${sale.armazon?.marcas?.nombre || ''} - ${sale.armazon?.sku || ''} - ${sale.armazon?.color || ''}`}
   </div>
   <div className="text-gray-500">{formatCurrency(sale.armazon?.precio)}</div>
 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                   <div className="font-medium">{sale.tipo_mica?.nombre || 'N/A'}</div>
                   <div className="text-gray-500">{formatCurrency(sale.tipo_mica?.precio)}</div>
                 </td>
                 
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
                   {sale.descuento_armazon_monto > 0 ? (
                     <div className="text-xs text-blue-600">
                       {formatCurrency(sale.descuento_armazon_monto)}
                     </div>
                   ) : (<div className="text-xs text-gray-400">Sin desc.</div>)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
                   {sale.descuento_micas_monto > 0 ? (
                     <div className="text-xs text-green-600">
                       {formatCurrency(sale.descuento_micas_monto)}
                     </div>
                   ) : (<div className="text-xs text-gray-400">Sin desc.</div>)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
                   {sale.descuento_monto > 0 ? (
                     <div className="text-xs text-purple-600">
                       {formatCurrency(sale.descuento_monto)}
@@ -112,9 +146,9 @@ const formatDate = (dateString) => {
                   ) : (<div className="text-xs text-gray-400">Sin desc.</div>)}
                 </td>
                 
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{formatCurrency(sale.subtotal)}</td>
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{formatCurrency(sale.subtotal)}</td>
                 
-                <td className="px-6 py-4 whitespace-nowrap text-center">
+                <td className="px-4 py-4 whitespace-nowrap text-center">
                   {sale.requiere_factura ? (
                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                       Sí
@@ -126,7 +160,7 @@ const formatDate = (dateString) => {
                   )}
                 </td>
                 
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
                   {sale.monto_iva > 0 ? (
                     <div className="text-xs text-blue-600">
                       {formatCurrency(sale.monto_iva)}
@@ -136,7 +170,7 @@ const formatDate = (dateString) => {
                   )}
                 </td>
                 
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                   {sale.rfc ? (
                     <div className="font-mono text-xs">{sale.rfc}</div>
                   ) : (
@@ -144,7 +178,7 @@ const formatDate = (dateString) => {
                   )}
                 </td>
                 
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                   {sale.razon_social ? (
                     <div className="max-w-[200px] truncate" title={sale.razon_social}>
                       {sale.razon_social}
@@ -154,14 +188,14 @@ const formatDate = (dateString) => {
                   )}
                 </td>
                 
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">{formatCurrency(sale.total)}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(sale.estado)}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">{formatCurrency(sale.total)}</td>
+                <td className="px-4 py-4 whitespace-nowrap">{getStatusBadge(sale.estado)}</td>
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                   {sale.vendedores && sale.vendedores.length > 0
                     ? sale.vendedores.map(v => `${v.nombre} ${v.apellido || ''}`.trim()).join(', ')
                     : 'No asignado'}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(sale.created_at)}</td>
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(sale.created_at)}</td>
               </tr>
             ))}
           </tbody>
