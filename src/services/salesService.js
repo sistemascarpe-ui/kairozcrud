@@ -143,12 +143,15 @@ export const salesService = {
     try {
       const { items, vendedor_ids, ...ventaDetails } = salesData;
 
-      // 1. Buscamos el armazón y las micas dentro de la lista de productos.
+      // 1. Generar folio único
+      const folio = await this.generateUniqueFolio();
+
+      // 2. Buscamos el armazón y las micas dentro de la lista de productos.
       const armazonItem = items.find(item => item.armazon_id);
       // Las micas son el item que NO tiene armazon_id
       const micasItem = items.find(item => !item.armazon_id);
 
-      // 1.5. Verificar stock disponible antes de crear la venta
+      // 2.5. Verificar stock disponible antes de crear la venta
       if (armazonItem && armazonItem.armazon_id) {
         const { data: productData, error: stockError } = await supabase
           .from('armazones')
@@ -165,9 +168,10 @@ export const salesService = {
         }
       }
 
-     // 2. Preparamos los datos para la tabla 'ventas' original.
+     // 3. Preparamos los datos para la tabla 'ventas' original.
 const dataToInsert = {
   ...ventaDetails,
+  folio: folio, // Agregar el folio generado
   armazon_id: armazonItem ? armazonItem.armazon_id : null,
   precio_armazon: armazonItem ? parseFloat(armazonItem.precio_unitario) || 0 : 0,
   descripcion_micas: micasItem ? micasItem.descripcion : '',
@@ -785,6 +789,67 @@ delete dataToInsert.items;
       return { data, error: null };
     } catch (error) {
       return { data: null, error: error.message };
+    }
+  },
+
+  // Función para generar folio único
+  async generateUniqueFolio() {
+    try {
+      // Obtener el último folio de la base de datos
+      const { data, error } = await supabase
+        .from('ventas')
+        .select('folio')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error('Error al obtener último folio:', error);
+        // Si hay error, generar folio basado en fecha
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const time = String(now.getTime()).slice(-6); // Últimos 6 dígitos del timestamp
+        return `V${year}${month}${day}${time}`;
+      }
+
+      let nextNumber = 1;
+      
+      if (data && data.length > 0) {
+        const lastFolio = data[0].folio;
+        // Extraer número del folio (asumiendo formato VYYYYMMDDNNNNNN)
+        const match = lastFolio.match(/V(\d{8})(\d+)/);
+        if (match) {
+          const lastDate = match[1];
+          const lastNumber = parseInt(match[2]);
+          
+          // Verificar si es el mismo día
+          const today = new Date();
+          const todayStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+          
+          if (lastDate === todayStr) {
+            nextNumber = lastNumber + 1;
+          }
+        }
+      }
+
+      // Generar nuevo folio
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const number = String(nextNumber).padStart(6, '0');
+      
+      return `V${year}${month}${day}${number}`;
+    } catch (error) {
+      console.error('Error generando folio:', error);
+      // Fallback: folio basado en timestamp
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const time = String(now.getTime()).slice(-6);
+      return `V${year}${month}${day}${time}`;
     }
   },
 };
