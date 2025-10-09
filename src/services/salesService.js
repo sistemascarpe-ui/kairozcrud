@@ -168,25 +168,46 @@ export const salesService = {
         }
       }
 
-     // 3. Preparamos los datos para la tabla 'ventas' original.
+     // 3. Calcular subtotal y total
+     const precioArmazon = armazonItem ? parseFloat(armazonItem.precio_unitario) || 0 : 0;
+     const precioMicas = micasItem ? parseFloat(micasItem.precio_unitario) || 0 : 0;
+     const descuentoArmazonMonto = parseFloat(ventaDetails.descuento_armazon_monto) || 0;
+     const descuentoMicasMonto = parseFloat(ventaDetails.descuento_micas_monto) || 0;
+     const descuentoGeneralMonto = parseFloat(ventaDetails.descuento_monto) || 0;
+     const montoIva = parseFloat(ventaDetails.monto_iva) || 0;
+     
+     // Calcular subtotal (precios - descuentos de productos)
+     const subtotal = (precioArmazon - descuentoArmazonMonto) + (precioMicas - descuentoMicasMonto);
+     
+     // Calcular total (subtotal - descuento general + IVA)
+     const total = subtotal - descuentoGeneralMonto + montoIva;
+
+     // 4. Preparamos los datos para la tabla 'ventas' original.
 const dataToInsert = {
   ...ventaDetails,
   folio: folio, // Agregar el folio generado
   armazon_id: armazonItem ? armazonItem.armazon_id : null,
-  precio_armazon: armazonItem ? parseFloat(armazonItem.precio_unitario) || 0 : 0,
+  precio_armazon: precioArmazon,
   descripcion_micas: micasItem ? micasItem.descripcion : '',
-  precio_micas: micasItem ? parseFloat(micasItem.precio_unitario) || 0 : 0,
+  precio_micas: precioMicas,
   
   // --- CAMBIO CLAVE: Asegurar que los valores sean numéricos ---
-  descuento_armazon_monto: parseFloat(ventaDetails.descuento_armazon_monto) || 0,
-  descuento_micas_monto: parseFloat(ventaDetails.descuento_micas_monto) || 0,
-  descuento_monto: parseFloat(ventaDetails.descuento_monto) || 0,
+  descuento_armazon_monto: descuentoArmazonMonto,
+  descuento_micas_monto: descuentoMicasMonto,
+  descuento_monto: descuentoGeneralMonto,
+  
+  // --- Cálculos de totales ---
+  subtotal: subtotal,
+  total: total,
   
   // --- Datos de facturación ---
   requiere_factura: ventaDetails.requiere_factura || false,
-  monto_iva: parseFloat(ventaDetails.monto_iva) || 0,
+  monto_iva: montoIva,
   rfc: ventaDetails.rfc || null,
   razon_social: ventaDetails.razon_social || null,
+  
+  // --- Fecha en zona horaria de México ---
+  fecha_venta: new Date().toLocaleString("sv-SE", {timeZone: "America/Mexico_City"}),
 };
 delete dataToInsert.descuento_armazon_porcentaje;
 delete dataToInsert.descuento_micas_porcentaje;
@@ -269,8 +290,8 @@ delete dataToInsert.items;
       if (fetchError) throw fetchError;
 
        // --- LÓGICA DE CONVERSIÓN (TAMBIÉN PARA ACTUALIZAR) ---
-      const armazonPrice = restOfUpdates.precio_armazon || 0;
-      const micaPrice = restOfUpdates.precio_micas || 0;
+      const armazonPrice = parseFloat(restOfUpdates.precio_armazon) || 0;
+      const micaPrice = parseFloat(restOfUpdates.precio_micas) || 0;
 
       if (restOfUpdates.descuento_armazon_porcentaje > 0) {
         restOfUpdates.descuento_armazon_monto = (armazonPrice * restOfUpdates.descuento_armazon_porcentaje) / 100;
@@ -287,6 +308,22 @@ delete dataToInsert.items;
       delete restOfUpdates.descuento_armazon_porcentaje;
       delete restOfUpdates.descuento_micas_porcentaje;
       delete restOfUpdates.descuento_porcentaje;
+      
+      // --- CALCULAR SUBTOTAL Y TOTAL ---
+      const descuentoArmazonMonto = parseFloat(restOfUpdates.descuento_armazon_monto) || 0;
+      const descuentoMicasMonto = parseFloat(restOfUpdates.descuento_micas_monto) || 0;
+      const descuentoGeneralMonto = parseFloat(restOfUpdates.descuento_monto) || 0;
+      const montoIva = parseFloat(restOfUpdates.monto_iva) || 0;
+      
+      // Calcular subtotal (precios - descuentos de productos)
+      const subtotal = (armazonPrice - descuentoArmazonMonto) + (micaPrice - descuentoMicasMonto);
+      
+      // Calcular total (subtotal - descuento general + IVA)
+      const total = subtotal - descuentoGeneralMonto + montoIva;
+      
+      // Asignar los cálculos
+      restOfUpdates.subtotal = subtotal;
+      restOfUpdates.total = total;
       
       // Asegurar que los campos de facturación sean del tipo correcto
       if (restOfUpdates.requiere_factura !== undefined) {
@@ -804,11 +841,12 @@ delete dataToInsert.items;
 
       if (error) {
         console.error('Error al obtener último folio:', error);
-        // Si hay error, generar folio basado en fecha
+        // Si hay error, generar folio basado en fecha con zona horaria de México
         const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
+        const mexicoDate = new Date(now.toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
+        const year = mexicoDate.getFullYear();
+        const month = String(mexicoDate.getMonth() + 1).padStart(2, '0');
+        const day = String(mexicoDate.getDate()).padStart(2, '0');
         const time = String(now.getTime()).slice(-6); // Últimos 6 dígitos del timestamp
         return `V${year}${month}${day}${time}`;
       }
@@ -823,9 +861,10 @@ delete dataToInsert.items;
           const lastDate = match[1];
           const lastNumber = parseInt(match[2]);
           
-          // Verificar si es el mismo día
+          // Verificar si es el mismo día usando zona horaria de México
           const today = new Date();
-          const todayStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+          const mexicoToday = new Date(today.toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
+          const todayStr = `${mexicoToday.getFullYear()}${String(mexicoToday.getMonth() + 1).padStart(2, '0')}${String(mexicoToday.getDate()).padStart(2, '0')}`;
           
           if (lastDate === todayStr) {
             nextNumber = lastNumber + 1;
@@ -833,21 +872,23 @@ delete dataToInsert.items;
         }
       }
 
-      // Generar nuevo folio
+      // Generar nuevo folio usando zona horaria de México
       const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
+      const mexicoDate = new Date(now.toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
+      const year = mexicoDate.getFullYear();
+      const month = String(mexicoDate.getMonth() + 1).padStart(2, '0');
+      const day = String(mexicoDate.getDate()).padStart(2, '0');
       const number = String(nextNumber).padStart(6, '0');
       
       return `V${year}${month}${day}${number}`;
     } catch (error) {
       console.error('Error generando folio:', error);
-      // Fallback: folio basado en timestamp
+      // Fallback: folio basado en timestamp con zona horaria de México
       const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
+      const mexicoDate = new Date(now.toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
+      const year = mexicoDate.getFullYear();
+      const month = String(mexicoDate.getMonth() + 1).padStart(2, '0');
+      const day = String(mexicoDate.getDate()).padStart(2, '0');
       const time = String(now.getTime()).slice(-6);
       return `V${year}${month}${day}${time}`;
     }
