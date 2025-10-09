@@ -1,48 +1,9 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React from 'react';
 import { Edit } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 
 const SalesTable = ({ sales = [], onEdit, loading = false }) => {
   const sortedSales = [...sales];
-  const topScrollRef = useRef(null);
-  const tableScrollRef = useRef(null);
-  const [tableWidth, setTableWidth] = useState(0);
-
-  // Calcular el ancho de la tabla y actualizar el scroll superior
-  useEffect(() => {
-    if (tableScrollRef.current) {
-      const scrollWidth = tableScrollRef.current.scrollWidth;
-      setTableWidth(scrollWidth);
-    }
-  }, [sales]);
-
-  // Sincronizar scroll superior con scroll de la tabla
-  useEffect(() => {
-    const topScroll = topScrollRef.current;
-    const tableScroll = tableScrollRef.current;
-
-    if (!topScroll || !tableScroll) return;
-
-    const handleTopScroll = (e) => {
-      if (tableScroll.scrollLeft !== topScroll.scrollLeft) {
-        tableScroll.scrollLeft = topScroll.scrollLeft;
-      }
-    };
-
-    const handleTableScroll = (e) => {
-      if (topScroll.scrollLeft !== tableScroll.scrollLeft) {
-        topScroll.scrollLeft = tableScroll.scrollLeft;
-      }
-    };
-
-    topScroll.addEventListener('scroll', handleTopScroll);
-    tableScroll.addEventListener('scroll', handleTableScroll);
-
-    return () => {
-      topScroll.removeEventListener('scroll', handleTopScroll);
-      tableScroll.removeEventListener('scroll', handleTableScroll);
-    };
-  }, [tableWidth]);
 
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
@@ -78,22 +39,13 @@ const formatDate = (dateString) => {
 
   return (
     <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-      {/* Scroll horizontal superior */}
-      <div 
-        ref={topScrollRef}
-        className="overflow-x-auto overflow-y-hidden border-b border-gray-200 bg-gray-50"
-        style={{ height: '20px' }}
-      >
-        <div style={{ width: `${tableWidth}px`, height: '1px' }}></div>
-      </div>
-      
-      {/* Tabla principal */}
-      <div ref={tableScrollRef} className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+      {/* Tabla principal con scroll horizontal */}
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: '1200px' }}>
           <thead className="bg-gray-50">
             <tr>
-              <th className="sticky left-0 z-10 bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Acciones</th>
-              <th className="sticky left-[88px] z-10 bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Cliente</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Armazón</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo de Mica</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Desc. Armazón</th>
@@ -113,7 +65,7 @@ const formatDate = (dateString) => {
           <tbody className="bg-white divide-y divide-gray-200">
             {sortedSales.map((sale) => (
               <tr key={sale.id} className="group hover:bg-gray-50">
-                <td className="sticky left-0 z-10 bg-white group-hover:bg-gray-50 px-6 py-4 whitespace-nowrap text-left text-sm font-medium shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] transition-colors">
+                <td className="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
                   <div className="flex items-center space-x-2">
                     {onEdit && (
                       <Button variant="ghost" size="sm" onClick={() => onEdit(sale)} className="text-indigo-600 hover:text-indigo-900">
@@ -122,7 +74,7 @@ const formatDate = (dateString) => {
                     )}
                   </div>
                 </td>
-                <td className="sticky left-[88px] z-10 bg-white group-hover:bg-gray-50 px-6 py-4 whitespace-nowrap shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] transition-colors">
+                <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">{sale.cliente?.nombre || 'N/A'}</div>
                   <div className="text-sm text-gray-500">{sale.cliente?.telefono}</div>
                 </td>
