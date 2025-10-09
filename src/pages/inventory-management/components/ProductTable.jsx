@@ -197,7 +197,7 @@ const ProductTable = ({
       {/* Mobile Cards */}
       <div className="lg:hidden divide-y divide-border">
         {products?.map((product) => (
-          <div key={product?.id} className="p-4">
+          <div key={product?.id} className="p-3">
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1">
                 <h3 className="font-semibold text-foreground text-base">{product?.sku}</h3>
@@ -216,60 +216,61 @@ const ProductTable = ({
               </button>
             </div>
 
-            {/* Información principal siempre visible */}
-            <div className="space-y-2 mb-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Precio:</span>
-                <span className="font-semibold text-lg text-foreground">
+            {/* Información principal en grid compacto */}
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div className="flex flex-col">
+                <span className="text-xs text-muted-foreground">Precio</span>
+                <span className="font-semibold text-sm text-foreground">
                   {formatPrice(product?.precio)}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Stock:</span>
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStockStatusColor(product?.stock)}`}>
-                  {product?.stock} unidades
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Grupo:</span>
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-secondary/10 text-secondary">
-                  {product?.grupos?.nombre || 'Sin grupo'}
+              <div className="flex flex-col">
+                <span className="text-xs text-muted-foreground">Stock</span>
+                <span className={`inline-flex items-center px-1 py-0.5 rounded text-xs font-medium w-fit ${getStockStatusColor(product?.stock)}`}>
+                  {product?.stock}
                 </span>
               </div>
             </div>
 
-            {/* Botón de acción siempre visible */}
-            <div className="flex space-x-2 mb-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-muted-foreground">Grupo:</span>
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-secondary/10 text-secondary">
+                {product?.grupos?.nombre || 'Sin grupo'}
+              </span>
+            </div>
+
+            {/* Botón de acción compacto */}
+            <div className="flex space-x-2 mb-2">
               <Button
                 variant="outline"
                 size="sm"
                 iconName="Edit"
                 onClick={() => onEdit(product)}
-                className="flex-1"
+                className="flex-1 text-xs py-1"
               >
                 Editar
               </Button>
             </div>
 
-            {/* Información expandible */}
+            {/* Información expandible compacta */}
             {expandedRows?.has(product?.id) && (
-              <div className="space-y-3 pt-3 border-t border-border">
-                <div className="space-y-2 text-sm">
+              <div className="pt-2 border-t border-border">
+                <div className="space-y-1 text-xs">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Descripción:</span>
-                    <span className="font-medium text-foreground text-right max-w-[60%]">
+                    <span className="font-medium text-foreground text-right max-w-[65%] truncate">
                       {product?.descripciones?.nombre || 'Sin descripción'}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Sub Marca:</span>
-                    <span className="font-medium text-foreground">
+                    <span className="font-medium text-foreground truncate">
                       {product?.sub_marcas?.nombre || 'Sin sub marca'}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Usuario Creador:</span>
-                    <span className="font-medium text-foreground">
+                    <span className="text-muted-foreground">Creado por:</span>
+                    <span className="font-medium text-foreground truncate">
                       {product?.createdBy || 'No especificado'}
                     </span>
                   </div>
