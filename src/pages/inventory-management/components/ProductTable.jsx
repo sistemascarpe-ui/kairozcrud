@@ -199,14 +199,14 @@ const ProductTable = ({
         {products?.map((product) => (
           <div key={product?.id} className="p-4">
             <div className="flex items-start justify-between mb-3">
-              <div>
-                <h3 className="font-medium text-foreground">{product?.sku}</h3>
+              <div className="flex-1">
+                <h3 className="font-semibold text-foreground text-base">{product?.sku}</h3>
                 <p className="text-sm text-muted-foreground">{product?.marcas?.nombre || 'Sin marca'}</p>
                 <p className="text-xs text-muted-foreground">{product?.color || 'Sin color'}</p>
               </div>
               <button
                 onClick={() => toggleRowExpansion(product?.id)}
-                className="p-2 hover:bg-muted rounded-md transition-smooth"
+                className="p-2 hover:bg-muted rounded-md transition-smooth flex-shrink-0"
               >
                 <Icon 
                   name={expandedRows?.has(product?.id) ? 'ChevronUp' : 'ChevronDown'} 
@@ -216,51 +216,63 @@ const ProductTable = ({
               </button>
             </div>
 
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-4">
+            {/* Información principal siempre visible */}
+            <div className="space-y-2 mb-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Precio:</span>
+                <span className="font-semibold text-lg text-foreground">
+                  {formatPrice(product?.precio)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Stock:</span>
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStockStatusColor(product?.stock)}`}>
+                  {product?.stock} unidades
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Grupo:</span>
                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-secondary/10 text-secondary">
                   {product?.grupos?.nombre || 'Sin grupo'}
                 </span>
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStockStatusColor(product?.stock)}`}>
-                  {getStockStatusText(product?.stock)}
-                </span>
               </div>
-              <span className="font-medium text-lg text-foreground">
-                {formatPrice(product?.precio)}
-              </span>
             </div>
 
+            {/* Botón de acción siempre visible */}
+            <div className="flex space-x-2 mb-3">
+              <Button
+                variant="outline"
+                size="sm"
+                iconName="Edit"
+                onClick={() => onEdit(product)}
+                className="flex-1"
+              >
+                Editar
+              </Button>
+            </div>
+
+            {/* Información expandible */}
             {expandedRows?.has(product?.id) && (
               <div className="space-y-3 pt-3 border-t border-border">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
                     <span className="text-muted-foreground">Descripción:</span>
-                    <p className="font-medium text-foreground">{product?.descripciones?.nombre || 'Sin descripción'}</p>
+                    <span className="font-medium text-foreground text-right max-w-[60%]">
+                      {product?.descripciones?.nombre || 'Sin descripción'}
+                    </span>
                   </div>
-                  <div>
-                    <span className="text-muted-foreground">Stock:</span>
-                    <p className="font-medium text-foreground">{product?.stock} unidades</p>
-                  </div>
-                  <div>
+                  <div className="flex justify-between">
                     <span className="text-muted-foreground">Sub Marca:</span>
-                    <p className="font-medium text-foreground">{product?.sub_marcas?.nombre || 'Sin sub marca'}</p>
+                    <span className="font-medium text-foreground">
+                      {product?.sub_marcas?.nombre || 'Sin sub marca'}
+                    </span>
                   </div>
-                  <div>
+                  <div className="flex justify-between">
                     <span className="text-muted-foreground">Usuario Creador:</span>
-                    <p className="font-medium text-foreground">{product?.createdBy || 'No especificado'}</p>
+                    <span className="font-medium text-foreground">
+                      {product?.createdBy || 'No especificado'}
+                    </span>
                   </div>
-                </div>
-                
-                <div className="flex space-x-2 pt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    iconName="Edit"
-                    onClick={() => onEdit(product)}
-                    fullWidth
-                  >
-                    Editar
-                  </Button>
                 </div>
               </div>
             )}
