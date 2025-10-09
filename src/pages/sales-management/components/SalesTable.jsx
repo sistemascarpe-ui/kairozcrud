@@ -14,24 +14,27 @@ const SalesTable = ({ sales = [], onEdit, loading = false }) => {
 
     if (!topScroll || !tableScroll) return;
 
-    let isScrolling = false;
+    let isTopScrolling = false;
+    let isTableScrolling = false;
 
     const handleTopScroll = () => {
-      if (isScrolling) return;
-      isScrolling = true;
+      console.log('Top scroll:', topScroll.scrollLeft);
+      if (isTableScrolling) return;
+      isTopScrolling = true;
       tableScroll.scrollLeft = topScroll.scrollLeft;
-      setTimeout(() => { isScrolling = false; }, 10);
+      setTimeout(() => { isTopScrolling = false; }, 50);
     };
 
     const handleTableScroll = () => {
-      if (isScrolling) return;
-      isScrolling = true;
+      console.log('Table scroll:', tableScroll.scrollLeft);
+      if (isTopScrolling) return;
+      isTableScrolling = true;
       topScroll.scrollLeft = tableScroll.scrollLeft;
-      setTimeout(() => { isScrolling = false; }, 10);
+      setTimeout(() => { isTableScrolling = false; }, 50);
     };
 
-    topScroll.addEventListener('scroll', handleTopScroll, { passive: true });
-    tableScroll.addEventListener('scroll', handleTableScroll, { passive: true });
+    topScroll.addEventListener('scroll', handleTopScroll);
+    tableScroll.addEventListener('scroll', handleTableScroll);
 
     return () => {
       topScroll.removeEventListener('scroll', handleTopScroll);
@@ -74,29 +77,8 @@ const formatDate = (dateString) => {
   return (
     <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
       {/* Scrollbar horizontal superior */}
-      <div ref={topScrollRef} className="overflow-x-auto bg-gray-50 border-b border-gray-200" style={{ maxHeight: '16px', marginBottom: '0' }}>
-        <table className="min-w-full" style={{ minWidth: '1600px' }}>
-          <thead>
-            <tr>
-              <th className="w-20"></th>
-              <th className="w-32"></th>
-              <th className="w-40"></th>
-              <th className="w-32"></th>
-              <th className="w-28"></th>
-              <th className="w-28"></th>
-              <th className="w-28"></th>
-              <th className="w-24"></th>
-              <th className="w-20"></th>
-              <th className="w-24"></th>
-              <th className="w-32"></th>
-              <th className="w-36"></th>
-              <th className="w-24"></th>
-              <th className="w-24"></th>
-              <th className="w-32"></th>
-              <th className="w-24"></th>
-            </tr>
-          </thead>
-        </table>
+      <div ref={topScrollRef} className="overflow-x-auto bg-gray-50 border-b border-gray-200" style={{ height: '20px', marginBottom: '0' }}>
+        <div style={{ width: '1600px', height: '1px' }}></div>
       </div>
       
       {/* Contenedor con scroll vertical */}
