@@ -493,29 +493,33 @@ const MonthlyGoalChart = ({ refreshTrigger }) => {
             </div>
           </div>
 
-          {/* Calendario Móvil - Lista de días con ventas */}
+          {/* Calendario Móvil - Lista completa de días */}
           <div className="lg:hidden bg-white rounded-lg border border-gray-200 overflow-hidden">
             {/* Header móvil */}
             <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
               <div className="flex items-center justify-between">
-                <h5 className="font-medium text-gray-700">Días con Ventas</h5>
+                <h5 className="font-medium text-gray-700">Calendario del Mes</h5>
                 <span className="text-sm text-gray-500">
-                  {dailyData.filter(day => day.totalSales > 0 && !day.isFuture).length} días
+                  {dailyData.filter(day => !day.isFuture).length} días
                 </span>
               </div>
             </div>
             
-            {/* Lista de días con ventas */}
+            {/* Lista de todos los días (pasados y hoy) */}
             <div className="max-h-96 overflow-y-auto">
               {dailyData
-                .filter(day => day.totalSales > 0 && !day.isFuture)
+                .filter(day => !day.isFuture)
                 .sort((a, b) => b.date - a.date)
                 .map((dayData, index) => (
                   <div key={index} className={`border-b border-gray-100 last:border-b-0 p-4 ${getDayColor(dayData)} ${dayData.isToday ? 'ring-2 ring-blue-500 ring-inset' : ''}`}>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center space-x-3">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
-                          dayData.isToday ? 'bg-blue-500 text-white' : 'bg-white bg-opacity-70'
+                          dayData.isToday 
+                            ? 'bg-blue-500 text-white' 
+                            : dayData.totalSales > 0 
+                              ? 'bg-white bg-opacity-70' 
+                              : 'bg-red-100 text-red-700'
                         }`}>
                           {dayData.day}
                         </div>
@@ -533,50 +537,63 @@ const MonthlyGoalChart = ({ refreshTrigger }) => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-lg">
-                          {formatCurrency(dayData.totalSales)}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {dayData.salesCount} venta{dayData.salesCount !== 1 ? 's' : ''}
-                        </p>
+                        {dayData.totalSales > 0 ? (
+                          <>
+                            <p className="font-bold text-lg">
+                              {formatCurrency(dayData.totalSales)}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {dayData.salesCount} venta{dayData.salesCount !== 1 ? 's' : ''}
+                            </p>
+                          </>
+                        ) : (
+                          <div className="text-center">
+                            <p className="font-medium text-red-600 text-sm">Sin ventas</p>
+                            <div className="w-6 h-6 mx-auto mt-1 bg-red-200 rounded-full flex items-center justify-center">
+                              <span className="text-red-600 text-xs">✗</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                     
-                    {/* Detalle de ventas */}
-                    <div className="space-y-1">
-                      {dayData.completedSales > 0 && (
-                        <div className="flex items-center justify-between text-sm">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-green-600">✓</span>
-                            <span className="text-gray-600">Completadas</span>
+                    {/* Detalle de ventas - solo si hay ventas */}
+                    {dayData.totalSales > 0 && (
+                      <div className="space-y-1">
+                        {dayData.completedSales > 0 && (
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-green-600">✓</span>
+                              <span className="text-gray-600">Completadas</span>
+                            </div>
+                            <span className="font-medium text-green-700">
+                              {formatCurrency(dayData.completedSales)}
+                            </span>
                           </div>
-                          <span className="font-medium text-green-700">
-                            {formatCurrency(dayData.completedSales)}
-                          </span>
-                        </div>
-                      )}
-                      {dayData.pendingSales > 0 && (
-                        <div className="flex items-center justify-between text-sm">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-yellow-600">⏳</span>
-                            <span className="text-gray-600">Pendientes</span>
+                        )}
+                        {dayData.pendingSales > 0 && (
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-yellow-600">⏳</span>
+                              <span className="text-gray-600">Pendientes</span>
+                            </div>
+                            <span className="font-medium text-yellow-700">
+                              {formatCurrency(dayData.pendingSales)}
+                            </span>
                           </div>
-                          <span className="font-medium text-yellow-700">
-                            {formatCurrency(dayData.pendingSales)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               
-              {/* Mensaje si no hay ventas */}
-              {dailyData.filter(day => day.totalSales > 0 && !day.isFuture).length === 0 && (
+              {/* Mensaje si no hay datos */}
+              {dailyData.filter(day => !day.isFuture).length === 0 && (
                 <div className="p-8 text-center">
                   <div className="text-gray-400 mb-2">
                     <Calendar className="h-12 w-12 mx-auto" />
                   </div>
-                  <p className="text-gray-500 text-sm">No hay ventas registradas en este mes</p>
+                  <p className="text-gray-500 text-sm">No hay datos para este mes</p>
                 </div>
               )}
             </div>
