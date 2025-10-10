@@ -100,7 +100,7 @@ Sistema completo de gestión para ópticas desarrollado con React y Supabase. Pe
 
 ### 1. **Clonar el Repositorio**
 ```bash
-git clone <repository-url>
+git clone https://github.com/sistemascarpe-ui/kairozcrud
 cd kairozcrud
 ```
 
