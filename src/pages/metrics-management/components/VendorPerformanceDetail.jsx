@@ -545,7 +545,8 @@ const VendorPerformanceDetail = () => {
                   className="p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
                   onClick={() => setExpandedVendor(expandedVendor === vendor.id ? null : vendor.id)}
                 >
-                  <div className="flex items-center justify-between">
+                  {/* Desktop Layout */}
+                  <div className="hidden lg:flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                       <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
                         <User className="h-6 w-6 text-blue-600" />
@@ -581,6 +582,62 @@ const VendorPerformanceDetail = () => {
                           </div>
                           <p className="text-gray-900 font-semibold">{vendor.sharedSales.count} ventas</p>
                           <p className="text-gray-600">{formatCurrency(vendor.sharedSales.revenue)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mobile Layout */}
+                  <div className="lg:hidden">
+                    {/* Header con info básica */}
+                    <div className="flex items-center space-x-3 mb-4">
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <User className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-base font-medium text-gray-900">{vendor.name}</h4>
+                        <div className="flex items-center space-x-3 text-xs text-gray-500">
+                          <span className="flex items-center">
+                            <ShoppingCart className="h-3 w-3 mr-1" />
+                            {vendor.totalSales.count} ventas
+                          </span>
+                          <span className="flex items-center">
+                            <DollarSign className="h-3 w-3 mr-1" />
+                            {formatCurrency(vendor.totalSales.revenue)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Detalles de ventas en móvil */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Ventas Individuales */}
+                      <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                        <div className="flex items-center mb-2">
+                          <User className="h-4 w-4 text-green-600 mr-2" />
+                          <span className="text-sm font-medium text-green-800">Individuales</span>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-lg font-bold text-green-900">{vendor.individualSales.count}</p>
+                          <p className="text-xs text-green-700">ventas</p>
+                          <p className="text-sm font-semibold text-green-800 mt-1">
+                            {formatCurrency(vendor.individualSales.revenue)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Ventas Compartidas */}
+                      <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                        <div className="flex items-center mb-2">
+                          <Share2 className="h-4 w-4 text-blue-600 mr-2" />
+                          <span className="text-sm font-medium text-blue-800">Compartidas</span>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-lg font-bold text-blue-900">{vendor.sharedSales.count}</p>
+                          <p className="text-xs text-blue-700">ventas</p>
+                          <p className="text-sm font-semibold text-blue-800 mt-1">
+                            {formatCurrency(vendor.sharedSales.revenue)}
+                          </p>
                         </div>
                       </div>
                     </div>
