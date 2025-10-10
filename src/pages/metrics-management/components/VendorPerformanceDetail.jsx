@@ -702,7 +702,6 @@ const VendorPerformanceDetail = () => {
                             <div key={sale.id} className="bg-gray-50 p-3 rounded-lg">
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center space-x-2">
-                                  <span className="font-medium text-gray-900">{sale.folio}</span>
                                   {sale.isShared && (
                                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                       <Share2 className="h-3 w-3 mr-1" />
