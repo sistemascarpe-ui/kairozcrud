@@ -11,19 +11,31 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 
 const InventoryChart = ({ data, loading }) => {
   const chartData = {
-    labels: data?.map(item => item.label) || ['En Stock', 'Stock Bajo', 'Sin Stock'],
+    labels: data?.map(item => item.label) || ['En Stock', 'Sin Stock'],
     datasets: [
       {
-        data: data?.map(item => item.value) || [75, 15, 10], // Datos de ejemplo si no hay datos reales
-        backgroundColor: [
-          'rgba(34, 197, 94, 0.8)',
-          'rgba(251, 191, 36, 0.8)',
-          'rgba(239, 68, 68, 0.8)',
+        data: data?.map(item => item.value) || [75, 10], // Datos de ejemplo si no hay datos reales
+        backgroundColor: data?.map(item => {
+          // Convertir hex a rgba con transparencia
+          const hex = item.color.replace('#', '');
+          const r = parseInt(hex.substr(0, 2), 16);
+          const g = parseInt(hex.substr(2, 2), 16);
+          const b = parseInt(hex.substr(4, 2), 16);
+          return `rgba(${r}, ${g}, ${b}, 0.8)`;
+        }) || [
+          'rgba(59, 130, 246, 0.8)', // blue-500 para "En Stock"
+          'rgba(239, 68, 68, 0.8)',  // red-500 para "Sin Stock"
         ],
-        borderColor: [
-          'rgba(34, 197, 94, 1)',
-          'rgba(251, 191, 36, 1)',
-          'rgba(239, 68, 68, 1)',
+        borderColor: data?.map(item => {
+          // Convertir hex a rgba
+          const hex = item.color.replace('#', '');
+          const r = parseInt(hex.substr(0, 2), 16);
+          const g = parseInt(hex.substr(2, 2), 16);
+          const b = parseInt(hex.substr(4, 2), 16);
+          return `rgba(${r}, ${g}, ${b}, 1)`;
+        }) || [
+          'rgba(59, 130, 246, 1)', // blue-500 para "En Stock"
+          'rgba(239, 68, 68, 1)',  // red-500 para "Sin Stock"
         ],
         borderWidth: 2,
       },
