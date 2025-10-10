@@ -428,12 +428,12 @@ const MonthlyGoalChart = ({ refreshTrigger }) => {
             </div>
           </div>
 
-          {/* Calendario */}
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          {/* Calendario Desktop - Oculto en móvil */}
+          <div className="hidden lg:block bg-white rounded-lg border border-gray-200 overflow-hidden">
             {/* Headers de días de la semana */}
             <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
               {getWeekdays().map(day => (
-                <div key={day} className="p-2 sm:p-3 text-center text-xs sm:text-sm font-medium text-gray-700">
+                <div key={day} className="p-3 text-center text-sm font-medium text-gray-700">
                   {day}
                 </div>
               ))}
@@ -444,39 +444,39 @@ const MonthlyGoalChart = ({ refreshTrigger }) => {
               {getCalendarWeeks().map((week, weekIndex) => (
                 <div key={weekIndex} className="grid grid-cols-7">
                   {week.map((dayData, dayIndex) => (
-                    <div key={dayIndex} className="h-20 sm:h-24 lg:h-28 border-r border-gray-200 last:border-r-0">
+                    <div key={dayIndex} className="h-28 border-r border-gray-200 last:border-r-0">
                       {dayData ? (
-                        <div className={`h-full p-1 sm:p-2 lg:p-3 ${getDayColor(dayData)} ${getDayBorderColor(dayData)} transition-colors hover:opacity-80`}>
+                        <div className={`h-full p-3 ${getDayColor(dayData)} ${getDayBorderColor(dayData)} transition-colors hover:opacity-80`}>
                           <div className="flex flex-col h-full">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs sm:text-sm font-semibold">{dayData.day}</span>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-semibold">{dayData.day}</span>
                               {dayData.salesCount > 0 && (
-                                <span className="text-xs bg-white bg-opacity-70 px-1 py-0.5 rounded">
+                                <span className="text-xs bg-white bg-opacity-70 px-1.5 py-0.5 rounded">
                                   {dayData.salesCount}
                                 </span>
                               )}
                             </div>
-                            <div className="flex-1 flex flex-col justify-center min-h-0">
+                            <div className="flex-1 flex flex-col justify-center">
                               {dayData.totalSales > 0 ? (
                                 <div className="text-center">
-                                  <div className="text-xs sm:text-sm font-bold mb-1 truncate">
+                                  <div className="text-sm font-bold mb-1.5">
                                     {formatCurrency(dayData.totalSales)}
                                   </div>
-                                  <div className="space-y-0.5">
+                                  <div className="text-xs space-y-1">
                                     {dayData.completedSales > 0 && (
-                                      <div className="text-green-700 font-medium text-xs truncate">
+                                      <div className="text-green-700 font-medium">
                                         ✓ {formatCurrency(dayData.completedSales)}
                                       </div>
                                     )}
                                     {dayData.pendingSales > 0 && (
-                                      <div className="text-yellow-700 font-medium text-xs truncate">
+                                      <div className="text-yellow-700 font-medium">
                                         ⏳ {formatCurrency(dayData.pendingSales)}
                                       </div>
                                     )}
                                   </div>
                                 </div>
                               ) : !dayData.isFuture ? (
-                                <div className="text-center text-xs sm:text-sm opacity-75 font-medium">
+                                <div className="text-center text-sm opacity-75 font-medium">
                                   Sin ventas
                                 </div>
                               ) : null}
@@ -490,6 +490,95 @@ const MonthlyGoalChart = ({ refreshTrigger }) => {
                   ))}
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Calendario Móvil - Lista de días con ventas */}
+          <div className="lg:hidden bg-white rounded-lg border border-gray-200 overflow-hidden">
+            {/* Header móvil */}
+            <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
+              <div className="flex items-center justify-between">
+                <h5 className="font-medium text-gray-700">Días con Ventas</h5>
+                <span className="text-sm text-gray-500">
+                  {dailyData.filter(day => day.totalSales > 0 && !day.isFuture).length} días
+                </span>
+              </div>
+            </div>
+            
+            {/* Lista de días con ventas */}
+            <div className="max-h-96 overflow-y-auto">
+              {dailyData
+                .filter(day => day.totalSales > 0 && !day.isFuture)
+                .sort((a, b) => b.date - a.date)
+                .map((dayData, index) => (
+                  <div key={index} className={`border-b border-gray-100 last:border-b-0 p-4 ${getDayColor(dayData)} ${dayData.isToday ? 'ring-2 ring-blue-500 ring-inset' : ''}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                          dayData.isToday ? 'bg-blue-500 text-white' : 'bg-white bg-opacity-70'
+                        }`}>
+                          {dayData.day}
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">
+                            {dayData.date.toLocaleDateString('es-ES', { 
+                              weekday: 'short', 
+                              day: 'numeric', 
+                              month: 'short' 
+                            })}
+                          </p>
+                          {dayData.isToday && (
+                            <span className="text-xs text-blue-600 font-medium">Hoy</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-lg">
+                          {formatCurrency(dayData.totalSales)}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {dayData.salesCount} venta{dayData.salesCount !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Detalle de ventas */}
+                    <div className="space-y-1">
+                      {dayData.completedSales > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-green-600">✓</span>
+                            <span className="text-gray-600">Completadas</span>
+                          </div>
+                          <span className="font-medium text-green-700">
+                            {formatCurrency(dayData.completedSales)}
+                          </span>
+                        </div>
+                      )}
+                      {dayData.pendingSales > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-yellow-600">⏳</span>
+                            <span className="text-gray-600">Pendientes</span>
+                          </div>
+                          <span className="font-medium text-yellow-700">
+                            {formatCurrency(dayData.pendingSales)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              
+              {/* Mensaje si no hay ventas */}
+              {dailyData.filter(day => day.totalSales > 0 && !day.isFuture).length === 0 && (
+                <div className="p-8 text-center">
+                  <div className="text-gray-400 mb-2">
+                    <Calendar className="h-12 w-12 mx-auto" />
+                  </div>
+                  <p className="text-gray-500 text-sm">No hay ventas registradas en este mes</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
