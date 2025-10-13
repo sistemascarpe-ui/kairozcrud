@@ -123,7 +123,7 @@ const MonthlyGoalChart = ({ refreshTrigger }) => {
         pendingSales: pendingRevenue,
         goal: MONTHLY_GOAL,
         goalAchieved,
-        progressPercentage: Math.min(progressPercentage, 100)
+        progressPercentage: progressPercentage // Permitir valores superiores al 100%
       });
 
       setDailyData(Object.values(dailySales));
@@ -156,23 +156,31 @@ const MonthlyGoalChart = ({ refreshTrigger }) => {
   };
 
   const getProgressColor = () => {
-    if (monthlyData.progressPercentage >= 100) return 'bg-green-500';
-    if (monthlyData.progressPercentage >= 70) return 'bg-orange-500';
-    if (monthlyData.progressPercentage >= 40) return 'bg-yellow-500';
-    return 'bg-red-500';
+    // Sistema de semáforo más granular
+    if (monthlyData.progressPercentage >= 100) return 'bg-green-500'; // Verde: Meta alcanzada o superada
+    if (monthlyData.progressPercentage >= 80) return 'bg-green-400'; // Verde claro: Muy cerca de la meta
+    if (monthlyData.progressPercentage >= 60) return 'bg-yellow-500'; // Amarillo: Progreso bueno
+    if (monthlyData.progressPercentage >= 40) return 'bg-orange-500'; // Naranja: Progreso moderado
+    if (monthlyData.progressPercentage >= 20) return 'bg-red-400'; // Rojo claro: Progreso bajo
+    return 'bg-red-600'; // Rojo: Progreso muy bajo
   };
 
   const getProgressTextColor = () => {
     if (monthlyData.progressPercentage >= 100) return 'text-green-600';
-    if (monthlyData.progressPercentage >= 70) return 'text-orange-600';
-    if (monthlyData.progressPercentage >= 40) return 'text-yellow-600';
-    return 'text-red-600';
+    if (monthlyData.progressPercentage >= 80) return 'text-green-500';
+    if (monthlyData.progressPercentage >= 60) return 'text-yellow-600';
+    if (monthlyData.progressPercentage >= 40) return 'text-orange-600';
+    if (monthlyData.progressPercentage >= 20) return 'text-red-500';
+    return 'text-red-700';
   };
 
   const getProgressMessage = () => {
+    if (monthlyData.progressPercentage >= 120) return '🚀 ¡Súper Meta!';
     if (monthlyData.progressPercentage >= 100) return '🎉 ¡Meta Alcanzada!';
-    if (monthlyData.progressPercentage >= 70) return '🔥 Buen Progreso';
-    if (monthlyData.progressPercentage >= 40) return '⚡ Progreso Moderado';
+    if (monthlyData.progressPercentage >= 80) return '🔥 Excelente Progreso';
+    if (monthlyData.progressPercentage >= 60) return '⚡ Buen Progreso';
+    if (monthlyData.progressPercentage >= 40) return '📈 Progreso Moderado';
+    if (monthlyData.progressPercentage >= 20) return '⚠️ Progreso Bajo';
     return '🚨 Necesita Atención';
   };
 
@@ -320,15 +328,23 @@ const MonthlyGoalChart = ({ refreshTrigger }) => {
           <div className={`p-6 rounded-xl border ${
             monthlyData.progressPercentage >= 100 
               ? 'bg-gradient-to-br from-green-50 to-green-100 border-green-200' 
-              : monthlyData.progressPercentage >= 70
-                ? 'bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200'
-                : monthlyData.progressPercentage >= 40
+              : monthlyData.progressPercentage >= 80
+                ? 'bg-gradient-to-br from-green-50 to-green-100 border-green-200'
+                : monthlyData.progressPercentage >= 60
                   ? 'bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200'
-                  : 'bg-gradient-to-br from-red-50 to-red-100 border-red-200'
+                  : monthlyData.progressPercentage >= 40
+                    ? 'bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200'
+                    : monthlyData.progressPercentage >= 20
+                      ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-200'
+                      : 'bg-gradient-to-br from-red-100 to-red-200 border-red-300'
           }`}>
             <div className="flex flex-col items-center text-center">
               <div className={`p-3 bg-white rounded-full shadow-sm mb-3 ${
-                monthlyData.progressPercentage >= 100 ? 'text-green-600' : 'text-orange-600'
+                monthlyData.progressPercentage >= 100 ? 'text-green-600' : 
+                monthlyData.progressPercentage >= 80 ? 'text-green-500' :
+                monthlyData.progressPercentage >= 60 ? 'text-yellow-600' :
+                monthlyData.progressPercentage >= 40 ? 'text-orange-600' :
+                monthlyData.progressPercentage >= 20 ? 'text-red-500' : 'text-red-700'
               }`}>
                 {monthlyData.progressPercentage >= 100 ? (
                   <CheckCircle className="h-6 w-6" />
@@ -339,11 +355,15 @@ const MonthlyGoalChart = ({ refreshTrigger }) => {
               <h4 className={`text-sm font-medium mb-1 ${
                 monthlyData.progressPercentage >= 100 
                   ? 'text-green-700' 
-                  : monthlyData.progressPercentage >= 70
-                    ? 'text-orange-700'
-                    : monthlyData.progressPercentage >= 40
+                  : monthlyData.progressPercentage >= 80
+                    ? 'text-green-600'
+                    : monthlyData.progressPercentage >= 60
                       ? 'text-yellow-700'
-                      : 'text-red-700'
+                      : monthlyData.progressPercentage >= 40
+                        ? 'text-orange-700'
+                        : monthlyData.progressPercentage >= 20
+                          ? 'text-red-600'
+                          : 'text-red-800'
               }`}>Progreso</h4>
               <p className={`text-xl font-bold ${getProgressTextColor()}`}>
                 {monthlyData.progressPercentage.toFixed(1)}%
@@ -351,14 +371,31 @@ const MonthlyGoalChart = ({ refreshTrigger }) => {
             </div>
           </div>
           
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl border border-purple-200 sm:col-span-2 lg:col-span-1">
+          <div className={`p-6 rounded-xl border sm:col-span-2 lg:col-span-1 ${
+            monthlyData.totalSales >= MONTHLY_GOAL 
+              ? 'bg-gradient-to-br from-green-50 to-green-100 border-green-200'
+              : 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200'
+          }`}>
             <div className="flex flex-col items-center text-center">
               <div className="p-3 bg-white rounded-full shadow-sm mb-3">
-                <Target className="h-6 w-6 text-purple-600" />
+                {monthlyData.totalSales >= MONTHLY_GOAL ? (
+                  <TrendingUp className="h-6 w-6 text-green-600" />
+                ) : (
+                  <Target className="h-6 w-6 text-purple-600" />
+                )}
               </div>
-              <h4 className="text-sm font-medium text-purple-700 mb-1">Restante</h4>
-              <p className="text-xl font-bold text-purple-900 truncate w-full">
-                ${Math.max(0, MONTHLY_GOAL - monthlyData.totalSales).toLocaleString()}
+              <h4 className={`text-sm font-medium mb-1 ${
+                monthlyData.totalSales >= MONTHLY_GOAL ? 'text-green-700' : 'text-purple-700'
+              }`}>
+                {monthlyData.totalSales >= MONTHLY_GOAL ? 'Excedente' : 'Restante'}
+              </h4>
+              <p className={`text-xl font-bold truncate w-full ${
+                monthlyData.totalSales >= MONTHLY_GOAL ? 'text-green-600' : 'text-purple-900'
+              }`}>
+                {monthlyData.totalSales >= MONTHLY_GOAL 
+                  ? `+$${(monthlyData.totalSales - MONTHLY_GOAL).toLocaleString()}`
+                  : `$${(MONTHLY_GOAL - monthlyData.totalSales).toLocaleString()}`
+                }
               </p>
             </div>
           </div>
@@ -372,23 +409,39 @@ const MonthlyGoalChart = ({ refreshTrigger }) => {
               {monthlyData.progressPercentage.toFixed(1)}%
             </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-3">
+          <div className="w-full bg-gray-200 rounded-full h-3 relative overflow-hidden">
             <div 
               className={`h-3 rounded-full transition-all duration-500 ${getProgressColor()}`}
               style={{ width: `${Math.min(monthlyData.progressPercentage, 100)}%` }}
             ></div>
+            {/* Barra adicional para valores superiores al 100% */}
+            {monthlyData.progressPercentage > 100 && (
+              <div 
+                className="h-3 bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all duration-500 absolute top-0"
+                style={{ 
+                  left: '100%', 
+                  width: `${Math.min(monthlyData.progressPercentage - 100, 20)}%` 
+                }}
+              ></div>
+            )}
           </div>
           
           {/* Indicador de estado del progreso */}
           <div className="flex items-center justify-center mt-2">
             <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-              monthlyData.progressPercentage >= 100 
-                ? 'bg-green-100 text-green-800' 
-                : monthlyData.progressPercentage >= 70
-                  ? 'bg-orange-100 text-orange-800'
-                  : monthlyData.progressPercentage >= 40
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-red-100 text-red-800'
+              monthlyData.progressPercentage >= 120
+                ? 'bg-green-200 text-green-900' 
+                : monthlyData.progressPercentage >= 100 
+                  ? 'bg-green-100 text-green-800' 
+                  : monthlyData.progressPercentage >= 80
+                    ? 'bg-green-100 text-green-800'
+                    : monthlyData.progressPercentage >= 60
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : monthlyData.progressPercentage >= 40
+                        ? 'bg-orange-100 text-orange-800'
+                        : monthlyData.progressPercentage >= 20
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-red-200 text-red-900'
             }`}>
               {getProgressMessage()}
             </span>
