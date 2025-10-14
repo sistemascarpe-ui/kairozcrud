@@ -22,6 +22,22 @@ const formatDate = (dateString) => {
     return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount || 0);
   };
 
+  // Función para extraer solo el número del folio
+  const getFolioNumber = (folio) => {
+    if (!folio) return 'N/A';
+    
+    // Si es un folio automático (formato: VYYYYMMDDNNNNNN), extraer solo el número
+    const autoMatch = folio.match(/^V\d{8}(\d+)$/);
+    if (autoMatch) {
+      // Convertir a número y quitar los ceros a la izquierda
+      const number = parseInt(autoMatch[1]);
+      return number.toString();
+    }
+    
+    // Si es un folio manual, devolverlo tal como está
+    return folio;
+  };
+
   const getStatusBadge = (status) => {
     const statusConfig = {
       'pendiente': { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pendiente' },
@@ -44,10 +60,11 @@ const formatDate = (dateString) => {
         {/* Indicador de scroll horizontal */}
         <div className="absolute top-0 right-0 w-4 h-full bg-gradient-to-l from-white to-transparent pointer-events-none z-10"></div>
         <div className="absolute top-0 left-0 w-4 h-full bg-gradient-to-r from-white to-transparent pointer-events-none z-10"></div>
-        <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: '1600px' }}>
+        <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: '1620px' }}>
           <thead className="bg-gray-50">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Acciones</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Folio</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Cliente</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Armazón</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Tipo de Mica</th>
@@ -75,6 +92,11 @@ const formatDate = (dateString) => {
                         <Edit className="h-4 w-4" />
                       </Button>
                     )}
+                  </div>
+                </td>
+                <td className="px-4 py-4 whitespace-nowrap text-center">
+                  <div className="text-sm font-mono font-bold text-gray-900" title={sale.folio}>
+                    {getFolioNumber(sale.folio)}
                   </div>
                 </td>
                 <td className="px-4 py-4 whitespace-nowrap">

@@ -22,8 +22,24 @@ export const userService = {
             throw error;
           }
           
-          console.log('✅ Usuarios obtenidos exitosamente:', data?.length || 0);
-          return { data, error: null };
+          // Filtrar usuarios no deseados (como "kairoz")
+          const filteredData = data?.filter(user => {
+            const nombre = user.nombre?.toLowerCase() || '';
+            const apellido = user.apellido?.toLowerCase() || '';
+            const fullName = `${nombre} ${apellido}`.trim().toLowerCase();
+            
+            // Lista de usuarios a excluir
+            const excludedUsers = ['kairoz', 'usuario', 'admin', 'test'];
+            
+            return !excludedUsers.some(excluded => 
+              nombre.includes(excluded) || 
+              fullName.includes(excluded) ||
+              excluded.includes(nombre)
+            );
+          }) || [];
+          
+          console.log('✅ Usuarios obtenidos exitosamente:', filteredData?.length || 0, '(filtrados)');
+          return { data: filteredData, error: null };
           
         } catch (err) {
           lastError = err;

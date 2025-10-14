@@ -12,6 +12,7 @@ import MetricsManagement from './pages/metrics-management';
 import BrandManagement from './pages/brand-management';
 import EmpresaManagement from './pages/empresa-management';
 import AdeudosManagement from './pages/adeudos-management';
+import AdminFolios from './pages/admin-folios';
 import Dashboard from './pages/Dashboard';
 
 const Routes = () => {
@@ -63,6 +64,11 @@ const Routes = () => {
         <Route path="/adeudos-management" element={
           <ProtectedRoute>
             <AdeudosManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin-folios" element={
+          <ProtectedRoute>
+            <AdminFolios />
           </ProtectedRoute>
         } />
         

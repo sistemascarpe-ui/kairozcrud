@@ -46,6 +46,11 @@ const Dashboard = () => {
       title: 'Adeudos',
       icon: '💰',
       path: '/adeudos-management',
+    },
+    {
+      title: 'Admin Folios',
+      icon: '⚙️',
+      path: '/admin-folios',
     }
   ];
 

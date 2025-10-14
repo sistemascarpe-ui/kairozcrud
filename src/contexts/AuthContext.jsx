@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { authSyncService } from '../services/authSyncService';
 
 const AuthContext = createContext({})
 
@@ -15,10 +16,19 @@ export const AuthProvider = ({ children }) => {
       if (!userId) return
       setProfileLoading(true)
       try {
-        const { data, error } = await supabase?.from('usuarios')?.select('*')?.eq('id', userId)?.single()
+        // Primero intentar sincronizar el usuario
+        const syncResult = await authSyncService.getCurrentUserSync()
         
-        if (!error && data) {
-          setUserProfile(data)
+        if (syncResult.data) {
+          setUserProfile(syncResult.data)
+        } else if (syncResult.error) {
+          console.warn('No se pudo sincronizar usuario, intentando carga directa:', syncResult.error)
+          // Fallback: intentar cargar directamente
+          const { data, error } = await supabase?.from('usuarios')?.select('*')?.eq('id', userId)?.single()
+          
+          if (!error && data) {
+            setUserProfile(data)
+          }
         }
       } catch (error) {
         console.error('Profile load error:', error)

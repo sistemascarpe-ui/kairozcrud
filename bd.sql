@@ -109,7 +109,7 @@ CREATE TABLE public.venta_vendedores (
 );
 CREATE TABLE public.ventas (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
-  folio character varying NOT NULL UNIQUE,
+  folio character varying NOT NULL DEFAULT ('V-'::text || lpad((nextval('ventas_folio_seq'::regclass))::text, 4, '0'::text)) UNIQUE,
   armazon_id uuid,
   precio_armazon numeric NOT NULL DEFAULT 0,
   descripcion_micas text,
@@ -129,7 +129,9 @@ CREATE TABLE public.ventas (
   rfc text,
   razon_social text,
   total numeric,
+  creado_por_id uuid,
   CONSTRAINT ventas_pkey PRIMARY KEY (id),
   CONSTRAINT ventas_armazon_id_fkey FOREIGN KEY (armazon_id) REFERENCES public.armazones(id),
-  CONSTRAINT ventas_cliente_id_fkey FOREIGN KEY (cliente_id) REFERENCES public.clientes(id)
+  CONSTRAINT ventas_cliente_id_fkey FOREIGN KEY (cliente_id) REFERENCES public.clientes(id),
+  CONSTRAINT ventas_creado_por_id_fkey FOREIGN KEY (creado_por_id) REFERENCES public.usuarios(id)
 );

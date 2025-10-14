@@ -29,6 +29,7 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
     requiere_factura: false,
     rfc: '',
     razon_social: '',
+    folio_manual: '', // Nuevo campo para folio manual
   });
 
   const [formData, setFormData] = useState(getInitialFormData());
@@ -101,6 +102,7 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
           requiere_factura: sale.requiere_factura || false,
           rfc: sale.rfc || '',
           razon_social: sale.razon_social || '',
+          folio_manual: '', // No mostrar folio en edición, solo en creación
         });
       } else {
         // Modo creación - limpiar COMPLETAMENTE el formulario
@@ -252,6 +254,25 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
                 <Select options={stateOptions} value={stateOptions.find(s => s.value === formData.estado)} onChange={(option) => handleChange('estado', option ? option.value : 'completada')} />
               </div>
             </div>
+            
+            {/* Campo de folio manual - solo mostrar en modo creación */}
+            {!sale && (
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Folio (Opcional)</label>
+                  <Input
+                    name="folio_manual"
+                    value={formData.folio_manual}
+                    onChange={(e) => handleChange(e.target.name, e.target.value)}
+                    placeholder="Dejar vacío para folio automático (ej: FACT-2025-001)"
+                    maxLength={50}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Si dejas este campo vacío, se generará un folio automático. Si ingresas un folio manual, asegúrate de que sea único.
+                  </p>
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Atendido por *</label>

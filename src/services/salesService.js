@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { logger } from '../utils/logger';
+import { authSyncService } from './authSyncService';
 
 export const salesService = {
   // Get sales with vendor information for performance analysis
@@ -142,10 +143,85 @@ export const salesService = {
 
   async createSalesNote(salesData) {
     try {
-      const { items, vendedor_ids, ...ventaDetails } = salesData;
+      const { items, vendedor_ids, folio_manual, creado_por_id, ...ventaDetails } = salesData;
 
-      // 1. Generar folio único
-      const folio = await this.generateUniqueFolio();
+      // 1. Determinar el folio a usar (manual o automático)
+      let folio;
+      if (folio_manual && folio_manual.trim() !== '') {
+        // Caso B: Folio Manual - usar el folio ingresado por el usuario
+        folio = folio_manual.trim();
+        
+        // Verificar que el folio manual no exista ya
+        const { data: existingFolio } = await supabase
+          .from('ventas')
+          .select('id')
+          .eq('folio', folio)
+          .single();
+          
+        if (existingFolio) {
+          return { data: null, error: `El folio "${folio}" ya existe. Por favor, usa otro folio.` };
+        }
+
+        // Si el folio manual es solo un número, verificar que no cause conflicto con folios automáticos
+        const numberMatch = folio.match(/^(\d+)$/);
+        if (numberMatch) {
+          const manualNumber = parseInt(numberMatch[1]);
+          
+          // Verificar si este número ya está usado en folios automáticos del día actual
+          const today = new Date();
+          const mexicoToday = new Date(today.toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
+          const todayStr = `${mexicoToday.getFullYear()}${String(mexicoToday.getMonth() + 1).padStart(2, '0')}${String(mexicoToday.getDate()).padStart(2, '0')}`;
+          
+          // Obtener configuración de folios para el prefijo
+          const { data: config } = await supabase
+            .from('configuracion_folios')
+            .select('prefijo')
+            .eq('id', 1)
+            .single();
+            
+          const prefijo = config?.prefijo || 'V';
+          const autoFolio = `${prefijo}${todayStr}${String(manualNumber).padStart(6, '0')}`;
+          
+          const { data: conflictingAuto } = await supabase
+            .from('ventas')
+            .select('id')
+            .eq('folio', autoFolio)
+            .single();
+            
+          if (conflictingAuto) {
+            return { data: null, error: `El número ${manualNumber} ya está usado en un folio automático (${autoFolio}). Por favor, usa otro número.` };
+          }
+        }
+      } else {
+        // Caso A: Folio Automático - generar folio único automáticamente
+        folio = await this.generateUniqueFolio();
+      }
+
+      // 1.5. Obtener el usuario actual si no se proporcionó
+      let usuarioActualId = creado_por_id;
+      if (!usuarioActualId) {
+        // Intentar obtener el usuario actual de la tabla usuarios
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.id) {
+          // Verificar si el usuario existe en la tabla usuarios
+          const { data: usuarioExiste } = await supabase
+            .from('usuarios')
+            .select('id')
+            .eq('id', user.id)
+            .single();
+          
+          if (usuarioExiste) {
+            usuarioActualId = user.id;
+            logger.log('Usuario encontrado en tabla usuarios:', user.id);
+          } else {
+            logger.warn('Usuario de auth no existe en tabla usuarios, se creará venta sin creado_por_id');
+            usuarioActualId = null;
+          }
+        } else {
+          logger.warn('No hay usuario autenticado');
+          usuarioActualId = null;
+        }
+      }
 
       // 2. Buscamos el armazón y las micas dentro de la lista de productos.
       const armazonItem = items.find(item => item.armazon_id);
@@ -186,7 +262,7 @@ export const salesService = {
      // 4. Preparamos los datos para la tabla 'ventas' original.
 const dataToInsert = {
   ...ventaDetails,
-  folio: folio, // Agregar el folio generado
+  folio: folio, // Agregar el folio (manual o automático)
   armazon_id: armazonItem ? armazonItem.armazon_id : null,
   precio_armazon: precioArmazon,
   descripcion_micas: micasItem ? micasItem.descripcion : '',
@@ -210,10 +286,16 @@ const dataToInsert = {
   // --- Fecha en zona horaria de México ---
   fecha_venta: new Date().toLocaleString("sv-SE", {timeZone: "America/Mexico_City"}),
 };
+
+// Solo incluir creado_por_id si el usuario existe en la tabla usuarios
+if (usuarioActualId) {
+  dataToInsert.creado_por_id = usuarioActualId;
+}
 delete dataToInsert.descuento_armazon_porcentaje;
 delete dataToInsert.descuento_micas_porcentaje;
 delete dataToInsert.descuento_porcentaje;
 delete dataToInsert.items;
+delete dataToInsert.folio_manual; // Eliminar el campo folio_manual ya que no existe en la tabla
 
       // 3. Insertamos en la tabla 'ventas' como siempre lo has hecho.
       const { data, error } = await supabase
@@ -830,47 +912,136 @@ delete dataToInsert.items;
     }
   },
 
+  // Función para actualizar la configuración de folios (solo para administradores)
+  async updateFolioConfiguration(config) {
+    try {
+      const { nuevo_prefijo, nuevo_numero, forzar_reinicio } = config;
+      
+      // Construir parámetros para la función RPC
+      const params = {};
+      if (nuevo_prefijo && nuevo_prefijo.trim() !== '') {
+        params.nuevo_prefijo = nuevo_prefijo.trim();
+      }
+      if (nuevo_numero !== undefined && nuevo_numero !== null) {
+        params.nuevo_numero = parseInt(nuevo_numero);
+      }
+      if (forzar_reinicio) {
+        params.forzar_reinicio = true;
+      }
+
+      // Si hay algo que cambiar, llamar a la función RPC
+      if (Object.keys(params).length > 0) {
+        const { data, error } = await supabase.rpc('actualizar_configuracion_folio', params);
+
+        if (error) {
+          logger.error('Error al actualizar configuración de folio:', error);
+          return { data: null, error: error.message };
+        }
+
+        logger.log('Configuración de folio actualizada exitosamente');
+        return { data: data, error: null };
+      } else {
+        return { data: null, error: 'No se proporcionaron parámetros para actualizar' };
+      }
+    } catch (error) {
+      logger.error('Error en updateFolioConfiguration:', error);
+      return { data: null, error: error.message };
+    }
+  },
+
+  // Función para obtener la configuración actual de folios
+  async getFolioConfiguration() {
+    try {
+      const { data, error } = await supabase
+        .from('configuracion_folios')
+        .select('prefijo, numero_inicio')
+        .eq('id', 1)
+        .single();
+
+      if (error) {
+        logger.error('Error al obtener configuración de folio:', error);
+        return { data: null, error: error.message };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      logger.error('Error en getFolioConfiguration:', error);
+      return { data: null, error: error.message };
+    }
+  },
+
   // Función para generar folio único
   async generateUniqueFolio() {
     try {
-      // Obtener el último folio de la base de datos
-      const { data, error } = await supabase
+      // Obtener configuración de folios
+      const { data: config, error: configError } = await supabase
+        .from('configuracion_folios')
+        .select('prefijo, numero_inicio')
+        .eq('id', 1)
+        .single();
+
+      let prefijo = 'V';
+      let numeroInicio = 1;
+
+      if (config && !configError) {
+        prefijo = config.prefijo || 'V';
+        numeroInicio = config.numero_inicio || 1;
+      }
+
+      // Obtener todos los folios del día actual para encontrar el siguiente número disponible
+      const today = new Date();
+      const mexicoToday = new Date(today.toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
+      const todayStr = `${mexicoToday.getFullYear()}${String(mexicoToday.getMonth() + 1).padStart(2, '0')}${String(mexicoToday.getDate()).padStart(2, '0')}`;
+
+      // Obtener todos los folios que contengan números (automáticos y manuales)
+      const { data: allFolios, error } = await supabase
         .from('ventas')
         .select('folio')
-        .order('created_at', { ascending: false })
-        .limit(1);
+        .not('folio', 'is', null);
 
       if (error) {
-        logger.error('Error al obtener último folio:', error);
-        // Si hay error, generar folio basado en fecha con zona horaria de México
+        logger.error('Error al obtener folios:', error);
+        // Si hay error, generar folio basado en configuración con zona horaria de México
         const now = new Date();
         const mexicoDate = new Date(now.toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
         const year = mexicoDate.getFullYear();
         const month = String(mexicoDate.getMonth() + 1).padStart(2, '0');
         const day = String(mexicoDate.getDate()).padStart(2, '0');
         const time = String(now.getTime()).slice(-6); // Últimos 6 dígitos del timestamp
-        return `V${year}${month}${day}${time}`;
+        return `${prefijo}${year}${month}${day}${time}`;
       }
 
-      let nextNumber = 1;
-      
-      if (data && data.length > 0) {
-        const lastFolio = data[0].folio;
-        // Extraer número del folio (asumiendo formato VYYYYMMDDNNNNNN)
-        const match = lastFolio.match(/V(\d{8})(\d+)/);
-        if (match) {
-          const lastDate = match[1];
-          const lastNumber = parseInt(match[2]);
+      let nextNumber = numeroInicio;
+      const usedNumbers = new Set();
+
+      if (allFolios && allFolios.length > 0) {
+        // Extraer números de todos los folios (automáticos y manuales)
+        allFolios.forEach(folioObj => {
+          const folio = folioObj.folio;
           
-          // Verificar si es el mismo día usando zona horaria de México
-          const today = new Date();
-          const mexicoToday = new Date(today.toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
-          const todayStr = `${mexicoToday.getFullYear()}${String(mexicoToday.getMonth() + 1).padStart(2, '0')}${String(mexicoToday.getDate()).padStart(2, '0')}`;
-          
-          if (lastDate === todayStr) {
-            nextNumber = lastNumber + 1;
+          // Para folios automáticos del día actual (formato: VYYYYMMDDNNNNNN)
+          const autoMatch = folio.match(new RegExp(`^${prefijo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}${todayStr}(\\d+)$`));
+          if (autoMatch) {
+            const number = parseInt(autoMatch[1]);
+            usedNumbers.add(number);
           }
+          
+          // Para folios manuales que sean solo números
+          const manualMatch = folio.match(/^(\d+)$/);
+          if (manualMatch) {
+            const number = parseInt(manualMatch[1]);
+            usedNumbers.add(number);
+          }
+        });
+
+        // Encontrar el siguiente número disponible
+        let candidate = numeroInicio;
+        while (usedNumbers.has(candidate)) {
+          candidate++;
         }
+        nextNumber = candidate;
+        
+        logger.log(`Números usados: [${Array.from(usedNumbers).sort((a,b) => a-b).join(', ')}], siguiente disponible: ${nextNumber}`);
       }
 
       // Generar nuevo folio usando zona horaria de México
@@ -881,7 +1052,7 @@ delete dataToInsert.items;
       const day = String(mexicoDate.getDate()).padStart(2, '0');
       const number = String(nextNumber).padStart(6, '0');
       
-      return `V${year}${month}${day}${number}`;
+      return `${prefijo}${year}${month}${day}${number}`;
     } catch (error) {
       logger.error('Error generando folio:', error);
       // Fallback: folio basado en timestamp con zona horaria de México
