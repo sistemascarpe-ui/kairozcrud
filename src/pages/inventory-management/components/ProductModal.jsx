@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { inventoryService } from '../../../services/inventoryService';
 import { userService } from '../../../services/userService';
+import { supabase } from '../../../lib/supabase';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import Select from '../../../components/ui/Select';
@@ -113,11 +114,32 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode = 'create', brand
     }
   };
 
-  const validateForm = () => {
+  const validateForm = async () => {
     const newErrors = {};
 
     if (!formData?.sku?.trim()) {
       newErrors.sku = 'El modelo es obligatorio';
+    } else if (mode === 'edit' || mode === 'create') {
+      // Verificar si el SKU ya existe (excepto para el producto actual en modo edit)
+      try {
+        const { data: existingProducts, error } = await supabase
+          .from('armazones')
+          .select('id, sku')
+          .eq('sku', formData.sku?.trim());
+        
+        if (!error && existingProducts?.length > 0) {
+          // En modo edit, permitir si es el mismo producto
+          if (mode === 'edit' && existingProducts?.some(p => p.id === product?.id)) {
+            // Es el mismo producto, no hay error
+          } else {
+            // SKU ya existe en otro producto
+            newErrors.sku = 'Este modelo ya existe';
+          }
+        }
+      } catch (error) {
+        console.error('Error validando SKU:', error);
+        // En caso de error de conexión, permitir continuar
+      }
     }
 
     if (!formData?.marca_id) {
@@ -147,7 +169,7 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode = 'create', brand
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    if (!(await validateForm())) {
       console.log('Formulario no válido, errores:', errors);
       return;
     }
@@ -220,7 +242,6 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode = 'create', brand
                 error={errors?.sku}
                 required
                 placeholder="Ej: RB-001"
-                disabled={mode === 'edit'}
               />
 
               <Input

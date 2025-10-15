@@ -90,7 +90,7 @@ const InventoryManagement = () => {
       // Handle cases where relationships might be null or arrays
       const brand = product?.marcas?.nombre || (Array.isArray(product?.marcas) ? product?.marcas[0]?.nombre : null) || 'Sin marca';
       const category = product?.grupos?.nombre || (Array.isArray(product?.grupos) ? product?.grupos[0]?.nombre : null) || 'Sin categoría';
-      const supplier = product?.sub_marcas?.nombre || (Array.isArray(product?.sub_marcas) ? product?.sub_marcas[0]?.nombre : null) || 'Sin proveedor';
+      const supplier = product?.sub_marcas?.nombre || (Array.isArray(product?.sub_marcas) ? product?.sub_marcas[0]?.nombre : null) || 'Sin sub marca';
       const description = product?.descripciones?.nombre || (Array.isArray(product?.descripciones) ? product?.descripciones[0]?.nombre : null) || 'Sin descripción';
       const createdBy = product?.usuarios ? `${product?.usuarios?.nombre} ${product?.usuarios?.apellido || ''}`.trim() : 'No especificado';
       
