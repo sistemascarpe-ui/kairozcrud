@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Plus } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import Header from '../../components/ui/Header';
@@ -16,6 +16,7 @@ const BrandManagement = () => {
   const [modalMode, setModalMode] = useState('create');
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
@@ -49,18 +50,16 @@ const BrandManagement = () => {
     setIsModalOpen(true);
   };
 
-  const handleDeleteBrand = async (brand) => {
-    if (window.confirm(`¿Estás seguro de que deseas eliminar "${brand.nombre}"?`)) {
-      let result = await brandService.deleteBrand(brand.id);
-      if (result.error) {
-        toast.error(`Error al eliminar la marca: ${result.error}`);
-        setError(`Error deleting brand: ${result.error}`);
-      } else {
-        toast.success(`Marca "${brand.nombre}" eliminada exitosamente`);
-        setBrands(prev => prev.filter(b => b.id !== brand.id));
-      }
+  // Filtrar marcas basado en el término de búsqueda
+  const filteredBrands = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return brands;
     }
-  };
+    
+    return brands.filter(brand =>
+      brand.nombre?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [brands, searchTerm]);
 
   const handleSaveBrand = async (brandData) => {
     try {
@@ -114,7 +113,7 @@ const BrandManagement = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
             <div>
               <h1 className="text-3xl font-bold text-foreground">Gestión de Marcas</h1>
-              <p className="text-muted-foreground mt-2">Añade, edita y elimina marcas de armazones.</p>
+              <p className="text-muted-foreground mt-2">Añade y edita marcas de armazones.</p>
             </div>
             <div className="mt-4 sm:mt-0">
               <Button iconName="Plus" onClick={handleAddBrand} size="lg">
@@ -123,10 +122,23 @@ const BrandManagement = () => {
             </div>
           </div>
 
+          {/* Buscador */}
+          <div className="mb-6">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar marcas..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+
           <BrandTable
-            brands={brands}
+            brands={filteredBrands}
             onEdit={handleEditBrand}
-            onDelete={handleDeleteBrand}
           />
 
           <BrandModal

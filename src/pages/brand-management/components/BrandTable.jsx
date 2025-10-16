@@ -1,7 +1,7 @@
 import React from 'react';
 import Button from '../../../components/ui/Button';
 
-const BrandTable = ({ brands, onEdit, onDelete }) => {
+const BrandTable = ({ brands, onEdit }) => {
   return (
     <div className="bg-card rounded-lg border border-border shadow-soft overflow-hidden">
       <div className="overflow-x-auto">
@@ -22,9 +22,6 @@ const BrandTable = ({ brands, onEdit, onDelete }) => {
                   <div className="flex items-center space-x-2">
                     <Button variant="ghost" size="sm" iconName="Edit" onClick={() => onEdit(brand)}>
                       Editar
-                    </Button>
-                    <Button variant="ghost" size="sm" iconName="Trash" onClick={() => onDelete(brand)} className="text-error">
-                      Eliminar
                     </Button>
                   </div>
                 </td>
