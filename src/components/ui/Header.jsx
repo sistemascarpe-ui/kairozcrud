@@ -24,6 +24,11 @@ const Header = () => {
       icon: 'FileText'
     },
     {
+      label: 'Campañas',
+      path: '/campaign-management',
+      icon: 'Calendar'
+    },
+    {
       label: 'Métricas',
       path: '/metrics-management',
       icon: 'BarChart3'
@@ -66,9 +71,6 @@ const Header = () => {
                   className="w-full h-full object-contain rounded-lg"
                 />
               </div>
-              <span className="font-heading font-bold text-xl text-foreground">
-                Ópticas Kairoz
-              </span>
             </Link>
           </div>
 

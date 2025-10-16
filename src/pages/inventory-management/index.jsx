@@ -83,9 +83,7 @@ const InventoryManagement = () => {
 
   // Transform products for display
   const transformedProducts = useMemo(() => {
-    console.log('Products data:', products); // Debug log
     return products?.map(product => {
-      console.log('Transforming product:', product); // Debug log
       
       // Handle cases where relationships might be null or arrays
       const brand = product?.marcas?.nombre || (Array.isArray(product?.marcas) ? product?.marcas[0]?.nombre : null) || 'Sin marca';
@@ -94,6 +92,22 @@ const InventoryManagement = () => {
       const description = product?.descripciones?.nombre || (Array.isArray(product?.descripciones) ? product?.descripciones[0]?.nombre : null) || 'Sin descripción';
       const createdBy = product?.usuarios ? `${product?.usuarios?.nombre} ${product?.usuarios?.apellido || ''}`.trim() : 'No especificado';
       
+      // Detectar si el producto ha sido editado manualmente recientemente
+      // Temporalmente deshabilitado hasta que el campo editado_manualmente esté funcionando
+      let hasBeenEdited = false;
+      
+      // Crear fechas para evitar errores de referencia
+      const createdAt = new Date(product?.created_at);
+      const updatedAt = new Date(product?.updated_at || product?.created_at);
+      
+      // TODO: Implementar lógica con campo editado_manualmente cuando esté disponible
+      // if (product?.editado_manualmente) {
+      //   const editadoAt = new Date(product.editado_manualmente);
+      //   const now = new Date();
+      //   const timeSinceEdit = now.getTime() - editadoAt.getTime();
+      //   hasBeenEdited = timeSinceEdit < 24 * 60 * 60 * 1000; // 24 horas
+      // }
+
       return {
         id: product?.id,
         sku: product?.sku || '',
@@ -109,9 +123,11 @@ const InventoryManagement = () => {
         location: 'Almacén Principal', // Default location
         barcode: product?.sku || '',
         color: product?.color || '',
-        createdAt: new Date(product?.created_at),
-        updatedAt: new Date(product?.created_at),
-        createdBy: createdBy
+        createdAt: createdAt,
+        updatedAt: updatedAt,
+        hasBeenEdited: hasBeenEdited,
+        createdBy: createdBy,
+        cantidad_en_campanas: product?.cantidad_en_campanas || 0 // PRESERVAR esta propiedad
       };
     }) || [];
   }, [products]);

@@ -153,9 +153,17 @@ const ProductTable = ({
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="font-mono text-sm text-muted-foreground">
-                    {product?.sku}
-                  </span>
+                  <div className="flex items-center space-x-2">
+                    <span className="font-mono text-sm text-muted-foreground">
+                      {product?.sku}
+                    </span>
+                    {product?.hasBeenEdited && (
+                      <div 
+                        className="w-2 h-2 bg-amber-400 rounded-full" 
+                        title="Este producto ha sido editado"
+                      />
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   <span className="text-sm text-foreground">{product?.brand}</span>
@@ -167,10 +175,24 @@ const ProductTable = ({
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center space-x-2">
-                    <span className="font-medium text-foreground">{product?.stock}</span>
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStockStatusColor(product?.stock)}`}>
-                      {getStockStatusText(product?.stock)}
-                    </span>
+                    <div className="flex flex-col">
+                      <span className="font-medium text-foreground">{product?.stock}</span>
+                      {product?.cantidad_en_campanas > 0 && (
+                        <span className="text-xs text-purple-600 font-medium">
+                          {product.cantidad_en_campanas} en campañas
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-col space-y-1">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStockStatusColor(product?.stock)}`}>
+                        {getStockStatusText(product?.stock)}
+                      </span>
+                      {product?.cantidad_en_campanas > 0 && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                          En Campañas
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </td>
                 <td className="px-4 py-3">
@@ -200,7 +222,15 @@ const ProductTable = ({
           <div key={product?.id} className="p-3">
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1">
-                <h3 className="font-semibold text-foreground text-base">{product?.sku}</h3>
+                <div className="flex items-center space-x-2">
+                  <h3 className="font-semibold text-foreground text-base">{product?.sku}</h3>
+                  {product?.hasBeenEdited && (
+                    <div 
+                      className="w-2 h-2 bg-amber-400 rounded-full" 
+                      title="Este producto ha sido editado"
+                    />
+                  )}
+                </div>
                 <p className="text-sm text-muted-foreground">{product?.brand || 'Sin marca'}</p>
                 <p className="text-xs text-muted-foreground">{product?.color || 'Sin color'}</p>
               </div>
@@ -226,9 +256,16 @@ const ProductTable = ({
               </div>
               <div className="flex flex-col">
                 <span className="text-xs text-muted-foreground">Stock</span>
-                <span className={`inline-flex items-center px-1 py-0.5 rounded text-xs font-medium w-fit ${getStockStatusColor(product?.stock)}`}>
-                  {product?.stock}
-                </span>
+                <div className="flex flex-col space-y-1">
+                  <span className={`inline-flex items-center px-1 py-0.5 rounded text-xs font-medium w-fit ${getStockStatusColor(product?.stock)}`}>
+                    {product?.stock}
+                  </span>
+                  {product?.cantidad_en_campanas > 0 && (
+                    <span className="inline-flex items-center px-1 py-0.5 rounded text-xs font-medium w-fit bg-purple-100 text-purple-800">
+                      {product.cantidad_en_campanas} en campañas
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 

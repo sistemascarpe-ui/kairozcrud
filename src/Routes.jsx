@@ -13,6 +13,8 @@ import BrandManagement from './pages/brand-management';
 import EmpresaManagement from './pages/empresa-management';
 import AdeudosManagement from './pages/adeudos-management';
 import AdminFolios from './pages/admin-folios';
+import CampaignManagement from './pages/campaign-management';
+import CampaignForm from './pages/campaign-management/CampaignForm';
 import Dashboard from './pages/Dashboard';
 
 const Routes = () => {
@@ -69,6 +71,26 @@ const Routes = () => {
         <Route path="/admin-folios" element={
           <ProtectedRoute>
             <AdminFolios />
+          </ProtectedRoute>
+        } />
+        <Route path="/campaign-management" element={
+          <ProtectedRoute>
+            <CampaignManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/campaigns/new" element={
+          <ProtectedRoute>
+            <CampaignForm />
+          </ProtectedRoute>
+        } />
+        <Route path="/campaigns/:id" element={
+          <ProtectedRoute>
+            <CampaignForm />
+          </ProtectedRoute>
+        } />
+        <Route path="/campaigns/:id/edit" element={
+          <ProtectedRoute>
+            <CampaignForm />
           </ProtectedRoute>
         } />
         

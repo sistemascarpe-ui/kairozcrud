@@ -51,6 +51,11 @@ const Dashboard = () => {
       title: 'Admin Folios',
       icon: '⚙️',
       path: '/admin-folios',
+    },
+    {
+      title: 'Campañas',
+      icon: '📋',
+      path: '/campaign-management',
     }
   ];
 

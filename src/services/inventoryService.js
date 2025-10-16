@@ -17,8 +17,34 @@ export const inventoryService = {
         throw error
       }
       
-      console.log('Raw products data from API:', data); // Debug log
-      return { data, error: null }
+      // Obtener información de campañas para todos los productos de una vez
+      const productIds = data?.map(p => p.id) || [];
+      let campaignInfo = {};
+      
+      if (productIds.length > 0) {
+        const { data: campaignData } = await supabase
+          .from('campana_productos')
+          .select('armazon_id, cantidad_enviada, cantidad_devuelta')
+          .in('armazon_id', productIds)
+          .in('estado', ['enviado', 'vendido']);
+        
+        // Agrupar por armazon_id
+        campaignData?.forEach(item => {
+          const productId = item.armazon_id;
+          if (!campaignInfo[productId]) {
+            campaignInfo[productId] = 0;
+          }
+          campaignInfo[productId] += (item.cantidad_enviada - (item.cantidad_devuelta || 0));
+        });
+      }
+      
+      // Agregar información de campañas a cada producto
+      const productsWithCampaigns = (data || []).map(product => ({
+        ...product,
+        cantidad_en_campanas: campaignInfo[product.id] || 0
+      }));
+      
+      return { data: productsWithCampaigns, error: null }
     } catch (error) {
       return { data: null, error: error?.message };
     }

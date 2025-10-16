@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Save, AlertCircle, RefreshCw } from 'lucide-react';
+import { Settings, Save, AlertCircle, RefreshCw, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { salesService } from '../../services/salesService';
 
 const AdminFolios = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     nuevo_prefijo: '',
     nuevo_numero: '',
@@ -116,9 +118,19 @@ const AdminFolios = () => {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center mb-4">
-            <Settings className="h-8 w-8 text-blue-600 mr-3" />
-            <h1 className="text-3xl font-bold text-gray-900">Administración de Folios</h1>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <Settings className="h-8 w-8 text-blue-600 mr-3" />
+              <h1 className="text-3xl font-bold text-gray-900">Administración de Folios</h1>
+            </div>
+            <Button
+              variant="secondary"
+              onClick={() => navigate('/dashboard')}
+              className="flex items-center"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver al Dashboard
+            </Button>
           </div>
           <p className="text-gray-600">
             Configura el prefijo y número de inicio para la generación automática de folios de ventas.
