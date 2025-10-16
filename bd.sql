@@ -289,7 +289,7 @@ BEGIN
     RETURN json_build_object('error', 'Stock insuficiente. Stock actual: ' || stock_actual || ', solicitado: ' || p_cantidad);
   END IF;
   
-  -- Reducir stock PRIMERO
+  -- Reducir stock PRIMERO (NO marcar como editado manualmente - es automático)
   UPDATE public.armazones 
   SET stock = stock - p_cantidad,
       updated_at = now()
@@ -348,7 +348,7 @@ BEGIN
     RETURN json_build_object('error', 'No se puede devolver más cantidad de la disponible. Disponible: ' || cantidad_actual || ', solicitado: ' || p_cantidad_devolver);
   END IF;
   
-  -- Restaurar stock PRIMERO
+  -- Restaurar stock PRIMERO (NO marcar como editado manualmente - es automático)
   UPDATE public.armazones 
   SET stock = stock + p_cantidad_devolver,
       updated_at = now()
@@ -391,6 +391,30 @@ $$;
 -- Agregar campo para rastrear ediciones manuales
 ALTER TABLE public.armazones 
 ADD COLUMN IF NOT EXISTS editado_manualmente timestamp with time zone;
+
+-- Función para marcar producto como editado manualmente
+CREATE OR REPLACE FUNCTION public.marcar_producto_editado(
+  p_armazon_id uuid
+)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  -- Verificar que el armazón existe
+  IF NOT EXISTS (SELECT 1 FROM public.armazones WHERE id = p_armazon_id) THEN
+    RETURN json_build_object('error', 'El armazón no existe');
+  END IF;
+  
+  -- Marcar como editado manualmente
+  UPDATE public.armazones 
+  SET editado_manualmente = now(),
+      updated_at = now()
+  WHERE id = p_armazon_id;
+  
+  RETURN json_build_object('success', true, 'message', 'Producto marcado como editado');
+END;
+$$;
 
 -- Función para limpiar marcas de editado después de 24 horas
 CREATE OR REPLACE FUNCTION public.limpiar_marcas_editado()

@@ -93,20 +93,21 @@ const InventoryManagement = () => {
       const createdBy = product?.usuarios ? `${product?.usuarios?.nombre} ${product?.usuarios?.apellido || ''}`.trim() : 'No especificado';
       
       // Detectar si el producto ha sido editado manualmente recientemente
-      // Temporalmente deshabilitado hasta que el campo editado_manualmente esté funcionando
       let hasBeenEdited = false;
       
       // Crear fechas para evitar errores de referencia
       const createdAt = new Date(product?.created_at);
       const updatedAt = new Date(product?.updated_at || product?.created_at);
       
-      // TODO: Implementar lógica con campo editado_manualmente cuando esté disponible
-      // if (product?.editado_manualmente) {
-      //   const editadoAt = new Date(product.editado_manualmente);
-      //   const now = new Date();
-      //   const timeSinceEdit = now.getTime() - editadoAt.getTime();
-      //   hasBeenEdited = timeSinceEdit < 24 * 60 * 60 * 1000; // 24 horas
-      // }
+      // Usar el campo editado_manualmente para determinar si fue editado
+      if (product?.editado_manualmente) {
+        const editadoAt = new Date(product.editado_manualmente);
+        const now = new Date();
+        const timeSinceEdit = now.getTime() - editadoAt.getTime();
+        
+        // Marcar como editado si fue editado manualmente en las últimas 24 horas
+        hasBeenEdited = timeSinceEdit < 24 * 60 * 60 * 1000; // 24 horas
+      }
 
       return {
         id: product?.id,

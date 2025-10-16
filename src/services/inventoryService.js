@@ -106,10 +106,27 @@ export const inventoryService = {
         throw error
       }
       
+      // Marcar como editado manualmente después de actualizar
+      await this.markProductAsEdited(id);
+      
       console.log('inventoryService - Producto actualizado exitosamente:', data);
       return { data, error: null }
     } catch (error) {
       console.error('inventoryService - Error en updateProduct:', error);
+      return { data: null, error: error?.message };
+    }
+  },
+
+  // Mark product as manually edited
+  async markProductAsEdited(productId) {
+    try {
+      const { data, error } = await supabase.rpc('marcar_producto_editado', {
+        p_armazon_id: productId
+      });
+      
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
       return { data: null, error: error?.message };
     }
   },
