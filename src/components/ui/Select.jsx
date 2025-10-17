@@ -173,9 +173,9 @@ const Select = React.forwardRef(({
 
                 {/* Dropdown */}
                 {isOpen && (
-                    <div className="absolute z-50 w-full mt-1 bg-white text-black border border-border rounded-md shadow-md">
+                    <div className="absolute z-50 w-full mt-1 bg-white text-black border-0 rounded-md shadow-md">
                         {searchable && (
-                            <div className="p-2 border-b">
+                            <div className="p-2 border-b-0">
                                 <div className="relative">
                                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                                     <Input

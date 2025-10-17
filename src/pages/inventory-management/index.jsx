@@ -189,6 +189,11 @@ const InventoryManagement = () => {
   // Pagination info
   const totalPages = Math.ceil((filteredAndSortedProducts?.length || 0) / itemsPerPage);
   const totalProducts = filteredAndSortedProducts?.length || 0;
+  
+  // Calculate total units (sum of all stock)
+  const totalUnits = useMemo(() => {
+    return filteredAndSortedProducts?.reduce((sum, product) => sum + (product?.stock || 0), 0) || 0;
+  }, [filteredAndSortedProducts]);
 
   // Handlers
   const handleSort = (key) => {
@@ -407,6 +412,7 @@ const InventoryManagement = () => {
             descriptions={descriptions}
             subBrands={subBrands}
             resultCount={totalProducts}
+            totalUnits={totalUnits}
           />
 
           {/* Products Table */}
