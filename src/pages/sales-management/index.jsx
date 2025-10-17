@@ -335,41 +335,82 @@ const handleSaveSale = async (saleData) => {
             </div>
           </div>
 
-          {/* --- CAMBIO CLAVE EN EL DISEÑO DE FILTROS --- */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Filtros de Búsqueda</h3>
-              <Button variant="ghost" onClick={clearFilters} className="flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-900"><X className="h-4 w-4" /><span>Limpiar Filtros</span></Button>
+          {/* --- FILTROS CON DISEÑO COLORIDO --- */}
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 p-6 shadow-lg mb-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold text-gray-800">🔍 Filtros de Búsqueda</h3>
+              <Button variant="ghost" onClick={clearFilters} className="flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-900">
+                <X className="h-4 w-4" />
+                <span>Limpiar Filtros</span>
+              </Button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Buscar por nombre</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input type="text" placeholder="Cliente o vendedor..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10"/>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-white bg-blue-500 px-3 py-1 rounded-full">Buscar por nombre</label>
+                <div className="bg-blue-100 rounded-2xl p-3 shadow-lg hover:shadow-xl hover:bg-blue-200 transition-all duration-200">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 h-4 w-4" />
+                    <Input 
+                      type="text" 
+                      placeholder="Cliente o vendedor..." 
+                      value={searchTerm} 
+                      onChange={(e) => setSearchTerm(e.target.value)} 
+                      className="pl-10 bg-blue-50 border-0 text-blue-800 placeholder-blue-500 focus:ring-0 focus:outline-none shadow-none rounded-xl"
+                    />
+                  </div>
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Buscar por fecha</label>
-                <DatePicker 
-                  selected={selectedDate} 
-                  onChange={(date) => setSelectedDate(date)} 
-                  customInput={<CustomDateInput placeholder="dd/mm/aaaa" />}
-                  isClearable
-                  dateFormat="dd/MM/yyyy"
-                />
+              
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-white bg-green-500 px-3 py-1 rounded-full">Buscar por fecha</label>
+                <div className="bg-green-100 rounded-2xl p-3 shadow-lg hover:shadow-xl hover:bg-green-200 transition-all duration-200">
+                  <DatePicker 
+                    selected={selectedDate} 
+                    onChange={(date) => setSelectedDate(date)} 
+                    customInput={<CustomDateInput placeholder="dd/mm/aaaa" />}
+                    isClearable
+                    dateFormat="dd/MM/yyyy"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Filtrar por mes</label>
-                <Select value={monthFilter} onChange={(value) => setMonthFilter(value)} options={monthOptions} />
+              
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-white bg-purple-500 px-3 py-1 rounded-full">Filtrar por mes</label>
+                <div className="bg-purple-100 rounded-2xl p-3 shadow-lg hover:shadow-xl hover:bg-purple-200 transition-all duration-200">
+                  <Select 
+                    value={monthFilter} 
+                    onChange={(value) => setMonthFilter(value)} 
+                    options={monthOptions}
+                    placeholder=""
+                    className="w-full [&>div>button]:bg-purple-50 [&>div>button]:border-0 [&>div>button]:text-purple-800 [&>div>button]:hover:bg-purple-100 [&>div>button]:focus:ring-0 [&>div>button]:focus:outline-none [&>div>button]:shadow-none [&>div>div]:bg-white [&>div>div]:border-0 [&>div>div>div>div]:bg-purple-50 [&>div>div>div>div]:text-purple-800 [&>div>div>div>div]:hover:bg-purple-100"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Filtrar por vendedor</label>
-                <Select value={vendedorFilter} onChange={(value) => setVendedorFilter(value)} options={vendorOptions} />
+              
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-white bg-pink-500 px-3 py-1 rounded-full">Filtrar por vendedor</label>
+                <div className="bg-pink-100 rounded-2xl p-3 shadow-lg hover:shadow-xl hover:bg-pink-200 transition-all duration-200">
+                  <Select 
+                    value={vendedorFilter} 
+                    onChange={(value) => setVendedorFilter(value)} 
+                    options={vendorOptions}
+                    placeholder=""
+                    className="w-full [&>div>button]:bg-pink-50 [&>div>button]:border-0 [&>div>button]:text-pink-800 [&>div>button]:hover:bg-pink-100 [&>div>button]:focus:ring-0 [&>div>button]:focus:outline-none [&>div>button]:shadow-none [&>div>div]:bg-white [&>div>div]:border-0 [&>div>div>div>div]:bg-pink-50 [&>div>div>div>div]:text-pink-800 [&>div>div>div>div]:hover:bg-pink-100"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Filtrar por estado</label>
-                <Select value={statusFilter} onChange={(value) => setStatusFilter(value)} options={statusOptions} />
+              
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-white bg-yellow-500 px-3 py-1 rounded-full">Filtrar por estado</label>
+                <div className="bg-yellow-100 rounded-2xl p-3 shadow-lg hover:shadow-xl hover:bg-yellow-200 transition-all duration-200">
+                  <Select 
+                    value={statusFilter} 
+                    onChange={(value) => setStatusFilter(value)} 
+                    options={statusOptions}
+                    placeholder=""
+                    className="w-full [&>div>button]:bg-yellow-50 [&>div>button]:border-0 [&>div>button]:text-yellow-800 [&>div>button]:hover:bg-yellow-100 [&>div>button]:focus:ring-0 [&>div>button]:focus:outline-none [&>div>button]:shadow-none [&>div>div]:bg-white [&>div>div]:border-0 [&>div>div>div>div]:bg-yellow-50 [&>div>div>div>div]:text-yellow-800 [&>div>div>div>div]:hover:bg-yellow-100"
+                  />
+                </div>
               </div>
             </div>
           </div>

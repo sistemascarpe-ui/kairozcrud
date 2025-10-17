@@ -375,10 +375,12 @@ const VendorPerformanceDetail = () => {
         </div>
 
         {/* Filtros */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center space-x-4 flex-wrap gap-4">
-              <div className="min-w-[200px]">
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 p-6 shadow-lg mb-6">
+          <h3 className="text-lg font-bold text-gray-800 mb-6">👥 Filtros de Rendimiento</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-white bg-blue-500 px-3 py-1 rounded-full">Filtrar por vendedor</label>
+              <div className="bg-blue-100 rounded-2xl p-3 shadow-lg hover:shadow-xl hover:bg-blue-200 transition-all duration-200">
                 <Select
                   value={selectedVendor}
                   onChange={setSelectedVendor}
@@ -389,15 +391,19 @@ const VendorPerformanceDetail = () => {
                       label: `${user.nombre} ${user.apellido || ''}`.trim()
                     }))
                   ]}
-                  placeholder="Filtrar por vendedor"
+                  placeholder=""
+                  className="w-full [&>div>button]:bg-blue-50 [&>div>button]:border-0 [&>div>button]:text-blue-800 [&>div>button]:hover:bg-blue-100 [&>div>button]:focus:ring-0 [&>div>button]:focus:outline-none [&>div>button]:shadow-none [&>div>div]:bg-white [&>div>div]:border-0 [&>div>div>div>div]:bg-blue-50 [&>div>div>div>div]:text-blue-800 [&>div>div>div>div]:hover:bg-blue-100"
                 />
               </div>
-              
-              <div className="min-w-[200px]">
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-white bg-green-500 px-3 py-1 rounded-full">Filtrar por mes</label>
+              <div className="bg-green-100 rounded-2xl p-3 shadow-lg hover:shadow-xl hover:bg-green-200 transition-all duration-200">
                 <select
                   value={selectedMonth}
                   onChange={(e) => handleMonthChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all cursor-pointer hover:border-gray-400"
+                  className="w-full px-3 py-2 bg-green-50 border-0 text-green-800 focus:outline-none focus:ring-0 shadow-none rounded-xl"
                 >
                   <option value="">Todos los meses</option>
                   {generateMonthOptions().map(option => (
@@ -407,17 +413,25 @@ const VendorPerformanceDetail = () => {
                   ))}
                 </select>
               </div>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                iconName="Calendar"
-                onClick={() => setShowDateFilter(!showDateFilter)}
-                className={showDateFilter ? 'bg-blue-50 text-blue-700 border-blue-200' : ''}
-              >
-                Filtro por Fechas
-              </Button>
             </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-white bg-purple-500 px-3 py-1 rounded-full">Filtro por fechas</label>
+              <div className="bg-purple-100 rounded-2xl p-3 shadow-lg hover:shadow-xl hover:bg-purple-200 transition-all duration-200">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  iconName="Calendar"
+                  onClick={() => setShowDateFilter(!showDateFilter)}
+                  className={`w-full border-0 bg-transparent hover:bg-transparent focus:ring-0 focus:outline-none shadow-none font-semibold ${
+                    showDateFilter ? 'text-purple-700' : 'text-purple-600 hover:text-purple-800'
+                  }`}
+                >
+                  Filtro por Fechas
+                </Button>
+              </div>
+            </div>
+          </div>
             {(startDate || endDate) && (
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-600">
@@ -437,7 +451,6 @@ const VendorPerformanceDetail = () => {
                 />
               </div>
             )}
-          </div>
 
           {/* Panel de filtro de fechas */}
           {showDateFilter && (

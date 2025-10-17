@@ -372,53 +372,65 @@ const MetricsManagement = () => {
         
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Filtros de Fecha para Métricas */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Filtrar Estadísticas por Fecha</h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Filtrar por mes</label>
-                <Select
-                  value={selectedMonth}
-                  onChange={(value) => {
-                    setSelectedMonth(value);
-                    setDateFilter(value ? 'month' : 'all');
-                    setSelectedDate(null);
-                  }}
-                  options={generateMonthOptions()}
-                />
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 p-6 shadow-lg mb-8">
+            <h3 className="text-lg font-bold text-gray-800 mb-6">📊 Filtrar Estadísticas por Fecha</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-white bg-blue-500 px-3 py-1 rounded-full">Filtrar por mes</label>
+                <div className="bg-blue-100 rounded-2xl p-3 shadow-lg hover:shadow-xl hover:bg-blue-200 transition-all duration-200">
+                  <Select
+                    value={selectedMonth}
+                    onChange={(value) => {
+                      setSelectedMonth(value);
+                      setDateFilter(value ? 'month' : 'all');
+                      setSelectedDate(null);
+                    }}
+                    options={generateMonthOptions()}
+                    placeholder=""
+                    className="w-full [&>div>button]:bg-blue-50 [&>div>button]:border-0 [&>div>button]:text-blue-800 [&>div>button]:hover:bg-blue-100 [&>div>button]:focus:ring-0 [&>div>button]:focus:outline-none [&>div>button]:shadow-none [&>div>div]:bg-white [&>div>div]:border-0 [&>div>div>div>div]:bg-blue-50 [&>div>div>div>div]:text-blue-800 [&>div>div>div>div]:hover:bg-blue-100"
+                  />
+                </div>
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Filtrar por fecha específica</label>
-                <DatePicker
-                  selected={selectedDate}
-                  onChange={(date) => {
-                    setSelectedDate(date);
-                    setDateFilter(date ? 'specific' : 'all');
-                    setSelectedMonth('');
-                  }}
-                  dateFormat="dd/MM/yyyy"
-                  placeholderText="Seleccionar fecha"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  isClearable
-                />
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-white bg-green-500 px-3 py-1 rounded-full">Filtrar por fecha específica</label>
+                <div className="bg-green-100 rounded-2xl p-3 shadow-lg hover:shadow-xl hover:bg-green-200 transition-all duration-200">
+                  <DatePicker
+                    selected={selectedDate}
+                    onChange={(date) => {
+                      setSelectedDate(date);
+                      setDateFilter(date ? 'specific' : 'all');
+                      setSelectedMonth('');
+                    }}
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="Seleccionar fecha"
+                    className="w-full px-3 py-2 bg-green-50 border-0 text-green-800 placeholder-green-500 focus:ring-0 focus:outline-none shadow-none rounded-xl"
+                    isClearable
+                  />
+                </div>
               </div>
               
-              <div className="flex items-end">
-            <Button
-                  onClick={handleShowAllDates}
-                  variant="outline"
-                  className="w-full"
-                >
-                  Mostrar Todas las Fechas
-            </Button>
-          </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-white bg-purple-500 px-3 py-1 rounded-full">Mostrar todas</label>
+                <div className="bg-purple-100 rounded-2xl p-3 shadow-lg hover:shadow-xl hover:bg-purple-200 transition-all duration-200">
+                  <Button
+                    onClick={handleShowAllDates}
+                    variant="outline"
+                    className="w-full border-0 bg-transparent hover:bg-transparent focus:ring-0 focus:outline-none shadow-none text-purple-700 hover:text-purple-900 font-semibold"
+                  >
+                    Mostrar Todas las Fechas
+                  </Button>
+                </div>
+              </div>
 
-              <div className="flex items-end">
-                <div className="text-sm text-gray-600">
-                  {dateFilter === 'all' && <span className="font-medium text-blue-600">✓ Mostrando todas las fechas</span>}
-                  {dateFilter === 'month' && selectedMonth && <span className="font-medium text-green-600">✓ Filtrado por mes</span>}
-                  {dateFilter === 'specific' && selectedDate && <span className="font-medium text-purple-600">✓ Filtrado por fecha</span>}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-white bg-yellow-500 px-3 py-1 rounded-full">Estado actual</label>
+                <div className="bg-yellow-100 rounded-2xl p-3 shadow-lg">
+                  <div className="text-sm text-yellow-800 font-medium">
+                    {dateFilter === 'all' && <span className="flex items-center gap-2">✓ Mostrando todas las fechas</span>}
+                    {dateFilter === 'month' && selectedMonth && <span className="flex items-center gap-2">✓ Filtrado por mes</span>}
+                    {dateFilter === 'specific' && selectedDate && <span className="flex items-center gap-2">✓ Filtrado por fecha</span>}
+                  </div>
                 </div>
               </div>
             </div>
