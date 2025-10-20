@@ -21,22 +21,36 @@ export const inventoryService = {
       const productIds = data?.map(p => p.id) || [];
       let campaignInfo = {};
       
+      // TEMPORALMENTE DESACTIVADO PARA EVITAR ERRORES 400
+      // TODO: Revisar estructura de tabla campana_productos
+      /*
       if (productIds.length > 0) {
-        const { data: campaignData } = await supabase
-          .from('campana_productos')
-          .select('armazon_id, cantidad_enviada, cantidad_devuelta')
-          .in('armazon_id', productIds)
-          .in('estado', ['enviado', 'vendido']);
-        
-        // Agrupar por armazon_id
-        campaignData?.forEach(item => {
-          const productId = item.armazon_id;
-          if (!campaignInfo[productId]) {
-            campaignInfo[productId] = 0;
+        try {
+          const { data: campaignData, error: campaignError } = await supabase
+            .from('campana_productos')
+            .select('armazon_id, cantidad_enviada, cantidad_devuelta')
+            .in('armazon_id', productIds)
+            .in('estado', ['enviado', 'vendido']);
+          
+          if (campaignError) {
+            console.warn('Error al obtener datos de campañas:', campaignError);
+            // Continuar sin datos de campañas
+          } else {
+            // Agrupar por armazon_id
+            campaignData?.forEach(item => {
+              const productId = item.armazon_id;
+              if (!campaignInfo[productId]) {
+                campaignInfo[productId] = 0;
+              }
+              campaignInfo[productId] += (item.cantidad_enviada - (item.cantidad_devuelta || 0));
+            });
           }
-          campaignInfo[productId] += (item.cantidad_enviada - (item.cantidad_devuelta || 0));
-        });
+        } catch (campaignError) {
+          console.warn('Error al consultar campañas:', campaignError);
+          // Continuar sin datos de campañas
+        }
       }
+      */
       
       // Agregar información de campañas a cada producto
       const productsWithCampaigns = (data || []).map(product => ({
