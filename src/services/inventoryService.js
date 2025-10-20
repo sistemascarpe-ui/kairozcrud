@@ -146,6 +146,62 @@ export const inventoryService = {
     }
   },
 
+  // Delete product with authentication and logging
+  async deleteProductWithAuth(id, userId, adminPin) {
+    try {
+      // Verificar que el PIN sea correcto desde variables de entorno
+      const ADMIN_DELETE_PIN = import.meta.env.VITE_ADMIN_DELETE_PIN || '1234';
+      
+      if (adminPin !== ADMIN_DELETE_PIN) {
+        return { 
+          error: 'PIN de administración incorrecto. No tienes permisos para eliminar este armazón' 
+        };
+      }
+
+      // Obtener información del producto antes de eliminarlo para el log
+      const { data: productData, error: fetchError } = await supabase
+        .from('armazones')
+        .select('sku, color, stock, precio, marcas(nombre)')
+        .eq('id', id)
+        .single();
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      // Eliminar el producto
+      const { error: deleteError } = await supabase
+        .from('armazones')
+        .delete()
+        .eq('id', id);
+
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      // Registrar la eliminación en el historial (opcional)
+      const { error: logError } = await supabase
+        .from('historial_inventario')
+        .insert({
+          armazon_id: id,
+          usuario_id: userId,
+          cantidad_cambio: -productData.stock,
+          tipo_movimiento: `Eliminación autorizada - ${productData.sku} (${productData.marcas?.nombre || 'Sin marca'})`
+        });
+
+      if (logError) {
+        console.warn('No se pudo registrar el log de eliminación:', logError.message);
+      }
+
+      console.log(`Armazón eliminado: ${productData.sku} por usuario ${userId}`);
+      
+      return { error: null };
+    } catch (error) {
+      console.error('Error eliminando armazón:', error);
+      return { error: error?.message };
+    }
+  },
+
   // Update stock
   async updateStock(id, newStock, userId, movementType = 'Ajuste Manual') {
     try {

@@ -1,14 +1,19 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
+import DeleteConfirmModal from './DeleteConfirmModal';
 
 const ProductTable = ({ 
   products, 
   onEdit, 
+  onDelete,
   sortConfig,
   onSort 
 }) => {
   const [expandedRows, setExpandedRows] = useState(new Set());
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const topScrollRef = useRef(null);
   const tableScrollRef = useRef(null);
   const [tableWidth, setTableWidth] = useState(0);
@@ -74,6 +79,31 @@ const ProductTable = ({
   const getStockStatusText = (stock) => {
     if (stock === 0) return 'Agotado';
     return 'En Stock';
+  };
+
+  const handleDeleteClick = (product) => {
+    setProductToDelete(product);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async (pin) => {
+    if (!productToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      await onDelete(productToDelete, pin);
+      setDeleteModalOpen(false);
+      setProductToDelete(null);
+    } catch (error) {
+      console.error('Error eliminando producto:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteModalOpen(false);
+    setProductToDelete(null);
   };
 
   const formatPrice = (price) => {
@@ -149,6 +179,15 @@ const ProductTable = ({
                       onClick={() => onEdit(product)}
                     >
                       Editar
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      iconName="Trash2"
+                      onClick={() => handleDeleteClick(product)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      Eliminar
                     </Button>
                   </div>
                 </td>
@@ -276,7 +315,7 @@ const ProductTable = ({
               </span>
             </div>
 
-            {/* Botón de acción compacto */}
+            {/* Botones de acción compactos */}
             <div className="flex space-x-2 mb-2">
               <Button
                 variant="outline"
@@ -286,6 +325,15 @@ const ProductTable = ({
                 className="flex-1 text-xs py-1"
               >
                 Editar
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                iconName="Trash2"
+                onClick={() => handleDeleteClick(product)}
+                className="flex-1 text-xs py-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                Eliminar
               </Button>
             </div>
 
@@ -328,6 +376,15 @@ const ProductTable = ({
           </p>
         </div>
       )}
+
+      {/* Modal de confirmación de eliminación */}
+      <DeleteConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        productName={productToDelete?.sku || productToDelete?.name || 'Producto'}
+        isLoading={isDeleting}
+      />
     </div>
   );
 };

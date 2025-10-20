@@ -230,16 +230,26 @@ const InventoryManagement = () => {
     setIsModalOpen(true);
   };
 
-  const handleDeleteProduct = async (product) => {
-    if (window.confirm(`¿Estás seguro de que deseas eliminar "${product?.name}"?`)) {
-      let result = await inventoryService?.deleteProduct(product?.id);
+  const handleDeleteProduct = async (product, pin) => {
+    try {
+      // Usar el nuevo método con autenticación
+      let result = await inventoryService?.deleteProductWithAuth(
+        product?.id, 
+        userProfile?.id, 
+        pin
+      );
+      
       if (result?.error) {
         toast.error(`Error al eliminar producto: ${result?.error}`);
         setError(`Error deleting product: ${result?.error}`);
+        throw new Error(result?.error);
       } else {
         toast.success(`Producto "${product?.name}" eliminado exitosamente`);
         setProducts(prev => prev?.filter(p => p?.id !== product?.id));
       }
+    } catch (error) {
+      console.error('Error eliminando producto:', error);
+      throw error;
     }
   };
 
@@ -419,6 +429,7 @@ const InventoryManagement = () => {
           <ProductTable
             products={paginatedProducts}
             onEdit={handleEditProduct}
+            onDelete={handleDeleteProduct}
             sortConfig={sortConfig}
             onSort={handleSort}
           />
