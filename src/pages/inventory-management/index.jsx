@@ -10,6 +10,7 @@ import ProductModal from './components/ProductModal';
 import ProductFilters from './components/ProductFilters';
 import { inventoryService } from '../../services/inventoryService';
 import { useAuth } from '../../contexts/AuthContext';
+import { useRealtimeSync } from '../../hooks/useRealtimeSync';
 
 const InventoryManagement = () => {
   const { user, userProfile } = useAuth();
@@ -80,6 +81,26 @@ const InventoryManagement = () => {
 
     loadData();
   }, []);
+
+  // Sincronización en tiempo real para cambios en armazones
+  useRealtimeSync(
+    'armazones',
+    // onUpdate - cuando se actualiza un armazón
+    (newProduct, oldProduct) => {
+      console.log('Armazón actualizado:', newProduct);
+      setProducts(prev => prev.map(p => p.id === newProduct.id ? newProduct : p));
+    },
+    // onInsert - cuando se crea un nuevo armazón
+    (newProduct) => {
+      console.log('Nuevo armazón creado:', newProduct);
+      setProducts(prev => [newProduct, ...prev]);
+    },
+    // onDelete - cuando se elimina un armazón
+    (deletedProduct) => {
+      console.log('Armazón eliminado:', deletedProduct);
+      setProducts(prev => prev.filter(p => p.id !== deletedProduct.id));
+    }
+  );
 
   // Transform products for display
   const transformedProducts = useMemo(() => {

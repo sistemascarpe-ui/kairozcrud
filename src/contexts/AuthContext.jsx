@@ -9,6 +9,7 @@ export const AuthProvider = ({ children }) => {
   const [userProfile, setUserProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [profileLoading, setProfileLoading] = useState(false)
+  const [sessionTimeout, setSessionTimeout] = useState(null)
 
   // Separate async operations object to avoid auth callback issues
   const profileOperations = {
@@ -43,6 +44,29 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  // Timeout de sesión (30 minutos de inactividad)
+  const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutos en milisegundos
+
+  const resetSessionTimeout = () => {
+    if (sessionTimeout) {
+      clearTimeout(sessionTimeout);
+    }
+    
+    const timeout = setTimeout(() => {
+      console.log('Sesión expirada por inactividad');
+      signOut();
+    }, SESSION_TIMEOUT);
+    
+    setSessionTimeout(timeout);
+  };
+
+  const clearSessionTimeout = () => {
+    if (sessionTimeout) {
+      clearTimeout(sessionTimeout);
+      setSessionTimeout(null);
+    }
+  };
+
   // Protected auth handlers - NEVER make these async
   const authStateHandlers = {
     onChange: (event, session) => {
@@ -51,8 +75,10 @@ export const AuthProvider = ({ children }) => {
       
       if (session?.user) {
         profileOperations?.load(session?.user?.id) // Fire-and-forget
+        resetSessionTimeout(); // Reiniciar timeout al hacer login
       } else {
         profileOperations?.clear()
+        clearSessionTimeout(); // Limpiar timeout al hacer logout
       }
     }
   }
@@ -68,8 +94,28 @@ export const AuthProvider = ({ children }) => {
       authStateHandlers?.onChange
     )
 
-    return () => subscription?.unsubscribe()
-  }, [])
+    // Event listeners para resetear timeout en actividad del usuario
+    const resetTimeoutOnActivity = () => {
+      if (user) {
+        resetSessionTimeout();
+      }
+    };
+
+    // Agregar listeners de actividad
+    window.addEventListener('mousedown', resetTimeoutOnActivity);
+    window.addEventListener('keypress', resetTimeoutOnActivity);
+    window.addEventListener('scroll', resetTimeoutOnActivity);
+    window.addEventListener('touchstart', resetTimeoutOnActivity);
+
+    return () => {
+      subscription?.unsubscribe()
+      clearSessionTimeout();
+      window.removeEventListener('mousedown', resetTimeoutOnActivity);
+      window.removeEventListener('keypress', resetTimeoutOnActivity);
+      window.removeEventListener('scroll', resetTimeoutOnActivity);
+      window.removeEventListener('touchstart', resetTimeoutOnActivity);
+    }
+  }, [user])
 
   const signIn = async (email, password) => {
     try {
@@ -124,6 +170,7 @@ export const AuthProvider = ({ children }) => {
 
   const signOut = async () => {
     try {
+      clearSessionTimeout(); // Limpiar timeout al cerrar sesión
       const { error } = await supabase?.auth?.signOut()
       if (error) {
         return { error: error?.message };
