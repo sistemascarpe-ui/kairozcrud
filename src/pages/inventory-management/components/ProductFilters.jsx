@@ -84,16 +84,16 @@ const ProductFilters = ({
         
         <div className="flex items-center gap-4">
           <div className="text-center">
-            <div className="bg-orange-500 text-white px-4 py-2 rounded-lg font-bold text-lg shadow-md">
+            <div className="bg-orange-500 text-white px-4 py-3 rounded-lg font-bold text-xl shadow-lg">
               {resultCount}
             </div>
-            <div className="text-sm text-gray-700 mt-1 font-medium">tipos de armazones</div>
+            <div className="text-sm text-gray-800 mt-2 font-semibold bg-orange-100 px-2 py-1 rounded-full">tipos de armazones</div>
           </div>
           <div className="text-center">
-            <div className="bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-lg shadow-md">
+            <div className="bg-blue-500 text-white px-4 py-3 rounded-lg font-bold text-xl shadow-lg">
               {totalUnits}
             </div>
-            <div className="text-sm text-gray-700 mt-1 font-medium">armazones</div>
+            <div className="text-sm text-gray-800 mt-2 font-semibold bg-blue-100 px-2 py-1 rounded-full">total de armazones</div>
           </div>
         </div>
       </div>

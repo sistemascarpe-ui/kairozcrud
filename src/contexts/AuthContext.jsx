@@ -44,18 +44,21 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  // Timeout de sesión (30 minutos de inactividad)
+  // Timeout de sesión (30 minutos de inactividad, 7 días si recordarme)
   const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutos en milisegundos
+  const REMEMBER_ME_TIMEOUT = 7 * 24 * 60 * 60 * 1000; // 7 días en milisegundos
 
-  const resetSessionTimeout = () => {
+  const resetSessionTimeout = (rememberMe = false) => {
     if (sessionTimeout) {
       clearTimeout(sessionTimeout);
     }
     
+    const timeoutDuration = rememberMe ? REMEMBER_ME_TIMEOUT : SESSION_TIMEOUT;
+    
     const timeout = setTimeout(() => {
       console.log('Sesión expirada por inactividad');
       signOut();
-    }, SESSION_TIMEOUT);
+    }, timeoutDuration);
     
     setSessionTimeout(timeout);
   };
@@ -75,7 +78,9 @@ export const AuthProvider = ({ children }) => {
       
       if (session?.user) {
         profileOperations?.load(session?.user?.id) // Fire-and-forget
-        resetSessionTimeout(); // Reiniciar timeout al hacer login
+        // Verificar si recordarme está activo
+        const rememberMe = localStorage.getItem('kairoz_remember_me') === 'true';
+        resetSessionTimeout(rememberMe); // Reiniciar timeout al hacer login
       } else {
         profileOperations?.clear()
         clearSessionTimeout(); // Limpiar timeout al hacer logout
@@ -97,7 +102,8 @@ export const AuthProvider = ({ children }) => {
     // Event listeners para resetear timeout en actividad del usuario
     const resetTimeoutOnActivity = () => {
       if (user) {
-        resetSessionTimeout();
+        const rememberMe = localStorage.getItem('kairoz_remember_me') === 'true';
+        resetSessionTimeout(rememberMe);
       }
     };
 
@@ -117,11 +123,18 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user])
 
-  const signIn = async (email, password) => {
+  const signIn = async (email, password, rememberMe = false) => {
     try {
       const { data, error } = await supabase?.auth?.signInWithPassword({
         email,
-        password
+        password,
+        options: {
+          // Configurar duración de sesión basada en recordarme
+          ...(rememberMe && {
+            // Para recordarme, usar una sesión más larga
+            // Esto se maneja principalmente en el frontend con localStorage
+          })
+        }
       })
       
       if (error) {
@@ -129,6 +142,15 @@ export const AuthProvider = ({ children }) => {
           return { error: 'Credenciales inválidas. Verifica tu email y contraseña.' }
         }
         return { error: error?.message };
+      }
+      
+      // Guardar preferencia de recordarme
+      if (rememberMe) {
+        localStorage.setItem('kairoz_remember_me', 'true');
+        localStorage.setItem('kairoz_remembered_email', email);
+      } else {
+        localStorage.removeItem('kairoz_remember_me');
+        localStorage.removeItem('kairoz_remembered_email');
       }
       
       return { data }

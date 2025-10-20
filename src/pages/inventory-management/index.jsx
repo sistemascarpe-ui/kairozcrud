@@ -11,9 +11,11 @@ import ProductFilters from './components/ProductFilters';
 import { inventoryService } from '../../services/inventoryService';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRealtimeSync } from '../../hooks/useRealtimeSync';
+import { useImprovedPDFReport } from '../../hooks/useImprovedPDFReport.js';
 
 const InventoryManagement = () => {
   const { user, userProfile } = useAuth();
+  const { generateReport, isGenerating } = useImprovedPDFReport();
   
   // State management
   const [products, setProducts] = useState([]);
@@ -370,6 +372,40 @@ const InventoryManagement = () => {
     }
   };
 
+  const handleGenerateReport = async () => {
+    try {
+      const reportData = {
+        products: transformedProducts,
+        brands,
+        groups,
+        descriptions,
+        subBrands,
+        totalProducts: totalProducts,
+        totalUnits: totalUnits,
+        userProfile,
+        filters: {
+          searchTerm,
+          selectedBrand,
+          selectedGroup,
+          selectedDescription,
+          selectedSubBrand,
+          selectedStockStatus
+        }
+      };
+
+      const result = await generateReport(reportData);
+      
+      if (result.success) {
+        toast.success('Reporte generado exitosamente');
+      } else {
+        toast.error(`Error generando reporte: ${result.error}`);
+      }
+    } catch (error) {
+      toast.error('Error generando reporte');
+      console.error('Error:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -416,7 +452,16 @@ const InventoryManagement = () => {
                 Administra productos, stock y proveedores de manera eficiente
               </p>
             </div>
-            <div className="mt-4 sm:mt-0">
+            <div className="mt-4 sm:mt-0 flex gap-3">
+              <Button
+                iconName="FileText"
+                onClick={handleGenerateReport}
+                size="lg"
+                variant="outline"
+                disabled={isGenerating}
+              >
+                {isGenerating ? 'Generando...' : 'Generar Reporte PDF'}
+              </Button>
               <Button
                 iconName="Plus"
                 onClick={handleAddProduct}

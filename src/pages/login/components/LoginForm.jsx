@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
@@ -14,6 +14,21 @@ const LoginForm = ({ onSignIn, isLoading: parentLoading, error: parentError }) =
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Cargar datos guardados al montar el componente
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('kairoz_remembered_email');
+    const savedRememberMe = localStorage.getItem('kairoz_remember_me') === 'true';
+    
+    if (savedEmail && savedRememberMe) {
+      setFormData(prev => ({
+        ...prev,
+        email: savedEmail,
+        rememberMe: savedRememberMe
+      }));
+    }
+  }, []);
 
   const validateForm = () => {
     const newErrors = {};
@@ -57,14 +72,23 @@ const LoginForm = ({ onSignIn, isLoading: parentLoading, error: parentError }) =
       return;
     }
 
+    // Manejar "Recordarme"
+    if (formData.rememberMe) {
+      localStorage.setItem('kairoz_remembered_email', formData.email);
+      localStorage.setItem('kairoz_remember_me', 'true');
+    } else {
+      localStorage.removeItem('kairoz_remembered_email');
+      localStorage.removeItem('kairoz_remember_me');
+    }
+
     if (onSignIn) {
       // Use parent's sign in handler
-      onSignIn(formData.email, formData.password);
+      onSignIn(formData.email, formData.password, formData.rememberMe);
     } else {
       // Fallback to direct auth context usage
       setIsLoading(true);
       try {
-        const result = await signIn(formData.email, formData.password);
+        const result = await signIn(formData.email, formData.password, formData.rememberMe);
         if (result?.error) {
           setErrors({ general: result.error });
         }
@@ -108,18 +132,31 @@ const LoginForm = ({ onSignIn, isLoading: parentLoading, error: parentError }) =
         />
 
         {/* Password Input */}
-        <Input
-          label="Contraseña"
-          type="password"
-          name="password"
-          placeholder="Ingrese su contraseña"
-          value={formData?.password}
-          onChange={handleInputChange}
-          error={errors?.password}
-          required
-          disabled={isLoading}
-          className="w-full"
-        />
+        <div className="relative">
+          <Input
+            label="Contraseña"
+            type={showPassword ? "text" : "password"}
+            name="password"
+            placeholder="Ingrese su contraseña"
+            value={formData?.password}
+            onChange={handleInputChange}
+            error={errors?.password}
+            required
+            disabled={isLoading}
+            className="w-full pr-10"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-8 text-muted-foreground hover:text-foreground transition-colors"
+            disabled={isLoading}
+          >
+            <Icon 
+              name={showPassword ? "EyeOff" : "Eye"} 
+              size={20} 
+            />
+          </button>
+        </div>
 
         {/* Remember Me Checkbox */}
         <div className="flex items-center justify-between">

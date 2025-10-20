@@ -216,10 +216,10 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode = 'create', brand
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-lg border border-border shadow-soft w-full max-w-4xl max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-border">
-          <h2 className="text-xl font-semibold text-foreground">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-0">
+      <div className="bg-card w-full h-full max-w-none max-h-none overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between p-6 border-b border-border bg-white">
+          <h2 className="text-2xl font-bold text-foreground">
             {getModalTitle()}
           </h2>
           <Button
@@ -227,105 +227,130 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode = 'create', brand
             size="sm"
             iconName="X"
             onClick={onClose}
+            className="text-gray-500 hover:text-gray-700"
           />
         </div>
 
-        <form onSubmit={handleSubmit} className="overflow-y-auto max-h-[calc(90vh-140px)]">
-          <div className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
+          <div className="p-8 space-y-8">
             {/* Basic Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                label="Modelo"
-                type="text"
-                value={formData?.sku}
-                onChange={(e) => handleInputChange('sku', e?.target?.value)}
-                error={errors?.sku}
-                required
-                placeholder="Ej: RB-001"
-              />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-2">
+                <Input
+                  label="Modelo"
+                  type="text"
+                  value={formData?.sku}
+                  onChange={(e) => handleInputChange('sku', e?.target?.value)}
+                  error={errors?.sku}
+                  required
+                  placeholder="Ej: RB-001"
+                  className="h-12 text-lg"
+                />
+              </div>
 
-              <Input
-                label="Color"
-                type="text"
-                value={formData?.color}
-                onChange={(e) => handleInputChange('color', e?.target?.value)}
-                placeholder="Ej: Negro, Transparente"
-              />
+              <div className="space-y-2">
+                <Input
+                  label="Color"
+                  type="text"
+                  value={formData?.color}
+                  onChange={(e) => handleInputChange('color', e?.target?.value)}
+                  placeholder="Ej: Negro, Transparente"
+                  className="h-12 text-lg"
+                />
+              </div>
             </div>
 
             {/* Dropdowns for relationships */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Select
-                label="Marca"
-                options={brandOptions}
-                value={formData?.marca_id}
-                onChange={(value) => handleInputChange('marca_id', value)}
-                error={errors?.marca_id}
-                required
-                placeholder="Seleccionar marca"
-                searchable
-              />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-2">
+                <Select
+                  label="Marca"
+                  options={brandOptions}
+                  value={formData?.marca_id}
+                  onChange={(value) => handleInputChange('marca_id', value)}
+                  error={errors?.marca_id}
+                  required
+                  placeholder="Seleccionar marca"
+                  searchable
+                  className="[&>div>button]:h-12 [&>div>button]:text-lg"
+                />
+              </div>
 
-              <Select
-                label="Grupo"
-                options={groupOptions}
-                value={formData?.grupo_id}
-                onChange={(value) => handleInputChange('grupo_id', value)}
-                error={errors?.grupo_id}
-                required
-                placeholder="Seleccionar grupo"
-                searchable
-              />
+              <div className="space-y-2">
+                <Select
+                  label="Grupo"
+                  options={groupOptions}
+                  value={formData?.grupo_id}
+                  onChange={(value) => handleInputChange('grupo_id', value)}
+                  error={errors?.grupo_id}
+                  required
+                  placeholder="Seleccionar grupo"
+                  searchable
+                  className="[&>div>button]:h-12 [&>div>button]:text-lg"
+                />
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Select
-                label="Descripción"
-                options={descriptionOptions}
-                value={formData?.descripcion_id}
-                onChange={(value) => handleInputChange('descripcion_id', value)}
-                placeholder="Seleccionar descripción"
-                searchable
-              />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-2">
+                <Select
+                  label="Descripción"
+                  options={descriptionOptions}
+                  value={formData?.descripcion_id}
+                  onChange={(value) => handleInputChange('descripcion_id', value)}
+                  placeholder="Seleccionar descripción"
+                  searchable
+                  className="[&>div>button]:h-12 [&>div>button]:text-lg"
+                />
+              </div>
 
-              <Select
-                label="Sub Marca"
-                options={subBrandOptions}
-                value={formData?.sub_marca_id}
-                onChange={(value) => handleInputChange('sub_marca_id', value)}
-                placeholder="Seleccionar sub marca"
-                searchable
-              />
+              <div className="space-y-2">
+                <Select
+                  label="Sub Marca"
+                  options={subBrandOptions}
+                  value={formData?.sub_marca_id}
+                  onChange={(value) => handleInputChange('sub_marca_id', value)}
+                  placeholder="Seleccionar sub marca"
+                  searchable
+                  className="[&>div>button]:h-12 [&>div>button]:text-lg"
+                />
+              </div>
             </div>
 
             {/* Pricing and Stock */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                label="Precio"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData?.precio}
-                onChange={(e) => handleInputChange('precio', e?.target?.value)}
-                error={errors?.precio}
-                required
-                placeholder="0.00"
-              />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-2">
+                <Input
+                  label="Precio"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData?.precio}
+                  onChange={(e) => handleInputChange('precio', e?.target?.value)}
+                  error={errors?.precio}
+                  required
+                  placeholder="0.00"
+                  className="h-12 text-lg"
+                />
+              </div>
 
-              <Input
-                label="Cantidad"
-                type="number"
-                min="0"
-                value={formData?.stock}
-                onChange={(e) => handleInputChange('stock', e?.target?.value)}
-                error={errors?.stock}
-                required
-                placeholder="0"
-              />
+              <div className="space-y-2">
+                <Input
+                  label="Cantidad"
+                  type="number"
+                  min="0"
+                  value={formData?.stock}
+                  onChange={(e) => handleInputChange('stock', e?.target?.value)}
+                  error={errors?.stock}
+                  required
+                  placeholder="0"
+                  className="h-12 text-lg"
+                />
+              </div>
             </div>
 
             {/* Creado Por */}
-            <div>
+            <div className="space-y-2">
               <Select
                 label="Creado Por"
                 options={userOptions}
@@ -338,22 +363,25 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode = 'create', brand
                 searchable
                 description="Selecciona el usuario que registra este producto"
                 error={errors?.creado_por_id}
+                className="[&>div>button]:h-12 [&>div>button]:text-lg"
               />
             </div>
           </div>
 
-          <div className="flex items-center justify-end space-x-3 p-6 border-t border-border bg-muted/30">
+          <div className="flex items-center justify-end space-x-4 p-8 border-t border-border bg-gray-50">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
               disabled={loading}
+              className="h-12 px-8 text-lg font-semibold"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
               disabled={loading}
+              className="h-12 px-8 text-lg font-semibold"
             >
               {loading ? 'Guardando...' : `${mode === 'edit' ? 'Actualizar' : 'Crear'} Producto`}
             </Button>

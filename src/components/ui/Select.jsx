@@ -1,9 +1,17 @@
 // components/ui/Select.jsx - Shadcn style Select
-import React, { useState } from "react";
-import { ChevronDown, Check, Search, X } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { ChevronDown, Check, X } from "lucide-react";
 import { cn } from "../../utils/cn";
 import Button from "./Button";
 import Input from "./Input";
+
+// Global state to manage which select is open
+let globalOpenSelectId = null;
+const selectListeners = new Set();
+
+const notifySelects = (openSelectId) => {
+    selectListeners.forEach(listener => listener(openSelectId));
+};
 
 const Select = React.forwardRef(({
     className,
@@ -28,9 +36,54 @@ const Select = React.forwardRef(({
 }, ref) => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
+    const selectRef = useRef(null);
 
     // Generate unique ID if not provided
     const selectId = id || `select-${Math.random()?.toString(36)?.substr(2, 9)}`;
+
+    // Listen for global select state changes
+    useEffect(() => {
+        const handleGlobalSelectChange = (openSelectId) => {
+            setIsOpen(openSelectId === selectId);
+        };
+
+        selectListeners.add(handleGlobalSelectChange);
+
+        return () => {
+            selectListeners.delete(handleGlobalSelectChange);
+        };
+    }, [selectId]);
+
+    // Close select when clicking outside or pressing Escape
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (selectRef.current && !selectRef.current.contains(event.target)) {
+                if (globalOpenSelectId === selectId) {
+                    globalOpenSelectId = null;
+                    notifySelects(null);
+                    setSearchTerm("");
+                }
+            }
+        };
+
+        const handleKeyDown = (event) => {
+            if (event.key === 'Escape' && globalOpenSelectId === selectId) {
+                globalOpenSelectId = null;
+                notifySelects(null);
+                setSearchTerm("");
+            }
+        };
+
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+            document.addEventListener('keydown', handleKeyDown);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isOpen, selectId]);
 
     // Filter options based on search
     const filteredOptions = searchable && searchTerm
@@ -57,13 +110,39 @@ const Select = React.forwardRef(({
 
     const handleToggle = () => {
         if (!disabled) {
-            const newIsOpen = !isOpen;
-            setIsOpen(newIsOpen);
-            onOpenChange?.(newIsOpen);
-            if (!newIsOpen) {
+            if (globalOpenSelectId === selectId) {
+                // Close this select
+                globalOpenSelectId = null;
+                notifySelects(null);
+                onOpenChange?.(false);
                 setSearchTerm("");
+            } else {
+                // Open this select and close others
+                globalOpenSelectId = selectId;
+                notifySelects(selectId);
+                onOpenChange?.(true);
             }
         }
+    };
+
+    const handleInputChange = (e) => {
+        if (searchable && isOpen) {
+            setSearchTerm(e.target.value);
+        }
+    };
+
+    const handleInputKeyDown = (e) => {
+        if (e.key === 'Escape') {
+            // Cerrar el select
+            globalOpenSelectId = null;
+            notifySelects(null);
+            setSearchTerm("");
+        }
+    };
+
+    const handleInputClick = (e) => {
+        e.stopPropagation();
+        // No hacer nada aquí, el input debe permitir escribir
     };
 
     const handleOptionSelect = (option) => {
@@ -75,7 +154,8 @@ const Select = React.forwardRef(({
             onChange?.(updatedValue);
         } else {
             onChange?.(option?.value);
-            setIsOpen(false);
+            globalOpenSelectId = null;
+            notifySelects(null);
             onOpenChange?.(false);
         }
     };
@@ -85,9 +165,6 @@ const Select = React.forwardRef(({
         onChange?.(multiple ? [] : '');
     };
 
-    const handleSearchChange = (e) => {
-        setSearchTerm(e?.target?.value);
-    };
 
     const isSelected = (optionValue) => {
         if (multiple) {
@@ -99,7 +176,7 @@ const Select = React.forwardRef(({
     const hasValue = multiple ? value?.length > 0 : value !== undefined && value !== '';
 
     return (
-        <div className={cn("relative", className)}>
+        <div ref={selectRef} className={cn("relative", className)}>
             {label && (
                 <label
                     htmlFor={selectId}
@@ -113,45 +190,72 @@ const Select = React.forwardRef(({
                 </label>
             )}
             <div className="relative">
-                <button
-                    ref={ref}
-                    id={selectId}
-                    type="button"
-                    className={cn(
-                        "flex h-10 w-full items-center justify-between rounded-md border border-input bg-white text-black px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-                        error && "border-destructive focus:ring-destructive",
-                        !hasValue && "text-muted-foreground"
-                    )}
-                    onClick={handleToggle}
-                    disabled={disabled}
-                    aria-expanded={isOpen}
-                    aria-haspopup="listbox"
-                    {...props}
-                >
-                    <span className="truncate">{getSelectedDisplay()}</span>
-
-                    <div className="flex items-center gap-1">
-                        {loading && (
-                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                            </svg>
-                        )}
-
-                        {clearable && hasValue && !loading && (
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-4 w-4"
-                                onClick={handleClear}
-                            >
-                                <X className="h-3 w-3" />
-                            </Button>
-                        )}
-
-                        <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
+                {searchable && isOpen ? (
+                    <div className="relative">
+                        <input
+                            ref={ref}
+                            id={selectId}
+                            type="text"
+                            value={searchTerm}
+                            onChange={handleInputChange}
+                            onKeyDown={handleInputKeyDown}
+                            onClick={handleInputClick}
+                            placeholder={placeholder}
+                            className={cn(
+                                "flex h-10 w-full items-center rounded-md border border-input bg-white text-black px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+                                error && "border-destructive focus:ring-destructive"
+                            )}
+                            disabled={disabled}
+                            autoFocus
+                        />
+                        <div 
+                            className="absolute inset-y-0 right-0 flex items-center pr-3 cursor-pointer"
+                            onClick={handleToggle}
+                        >
+                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        </div>
                     </div>
-                </button>
+                ) : (
+                    <button
+                        ref={ref}
+                        id={selectId}
+                        type="button"
+                        className={cn(
+                            "flex h-10 w-full items-center justify-between rounded-md border border-input bg-white text-black px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+                            error && "border-destructive focus:ring-destructive",
+                            !hasValue && "text-muted-foreground"
+                        )}
+                        onClick={handleToggle}
+                        disabled={disabled}
+                        aria-expanded={isOpen}
+                        aria-haspopup="listbox"
+                        {...props}
+                    >
+                        <span className="truncate">{getSelectedDisplay()}</span>
+
+                        <div className="flex items-center gap-1">
+                            {loading && (
+                                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                </svg>
+                            )}
+
+                            {clearable && hasValue && !loading && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-4 w-4"
+                                    onClick={handleClear}
+                                >
+                                    <X className="h-3 w-3" />
+                                </Button>
+                            )}
+
+                            <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
+                        </div>
+                    </button>
+                )}
 
                 {/* Hidden native select for form submission */}
                 <select
@@ -174,20 +278,6 @@ const Select = React.forwardRef(({
                 {/* Dropdown */}
                 {isOpen && (
                     <div className="absolute z-50 w-full mt-1 bg-white text-black border-0 rounded-md shadow-md">
-                        {searchable && (
-                            <div className="p-2 border-b-0">
-                                <div className="relative">
-                                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        placeholder="Search options..."
-                                        value={searchTerm}
-                                        onChange={handleSearchChange}
-                                        className="pl-8"
-                                    />
-                                </div>
-                            </div>
-                        )}
-
                         <div className="py-1 max-h-60 overflow-auto">
                             {filteredOptions?.length === 0 ? (
                                 <div className="px-3 py-2 text-sm text-muted-foreground">
