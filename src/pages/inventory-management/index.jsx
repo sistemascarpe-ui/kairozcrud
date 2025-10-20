@@ -83,6 +83,8 @@ const InventoryManagement = () => {
   }, []);
 
   // Sincronización en tiempo real para cambios en armazones
+  // TEMPORALMENTE DESACTIVADO PARA DEBUGGING
+  /*
   useRealtimeSync(
     'armazones',
     // onUpdate - cuando se actualiza un armazón
@@ -101,6 +103,7 @@ const InventoryManagement = () => {
       setProducts(prev => prev.filter(p => p.id !== deletedProduct.id));
     }
   );
+  */
 
   // Transform products for display
   const transformedProducts = useMemo(() => {
