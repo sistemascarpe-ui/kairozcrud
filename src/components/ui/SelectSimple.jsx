@@ -72,7 +72,8 @@ const SelectSimple = ({
             const selectedOptions = options?.filter(opt => value?.includes(opt?.value));
             if (selectedOptions?.length === 0) return placeholder;
             if (selectedOptions?.length === 1) return selectedOptions?.[0]?.label;
-            return `${selectedOptions?.length} items selected`;
+            // Mostrar los nombres de los usuarios seleccionados en lugar de "X items selected"
+            return selectedOptions.map(opt => opt?.label).join(', ');
         }
 
         const selectedOption = options?.find(opt => opt?.value === value);

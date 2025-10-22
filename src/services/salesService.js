@@ -355,7 +355,7 @@ delete dataToInsert.folio_manual; // Eliminar el campo folio_manual ya que no ex
 
   async updateSalesNote(id, updates) {
     try {
-      const { vendedor_ids, items, ...restOfUpdates } = updates;
+      const { vendedor_ids, items, folio_manual, ...restOfUpdates } = updates;
 
       // Eliminar campos que no existen en la tabla ventas
       delete restOfUpdates.vendedores;
