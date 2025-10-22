@@ -1,8 +1,8 @@
 import { supabase } from '../lib/supabase';
 
 export const userService = {
-  // Get all users
-  async getUsers() {
+  // Get all users (excluding Sistemas for non-inventory use)
+  async getUsers(excludeSistemas = true) {
     try {
       console.log('🔄 Iniciando consulta de usuarios...');
       
@@ -30,6 +30,11 @@ export const userService = {
             
             // Lista de usuarios a excluir
             const excludedUsers = ['kairoz', 'usuario', 'admin', 'test'];
+            
+            // Excluir Sistemas si se especifica
+            if (excludeSistemas) {
+              excludedUsers.push('sistemas');
+            }
             
             return !excludedUsers.some(excluded => 
               nombre.includes(excluded) || 
@@ -59,6 +64,11 @@ export const userService = {
       console.error('💥 Error final en getUsers:', error);
       return { data: null, error: error?.message || 'Error desconocido' };
     }
+  },
+
+  // Get users for inventory (including Sistemas)
+  async getUsersForInventory() {
+    return this.getUsers(false);
   },
 
   // Get user by ID

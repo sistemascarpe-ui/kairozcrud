@@ -1,19 +1,8 @@
-// components/ui/Select.jsx - Shadcn style Select
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { ChevronDown, Check, X } from "lucide-react";
 import { cn } from "../../utils/cn";
-import Button from "./Button";
-import Input from "./Input";
 
-// Global state to manage which select is open
-let globalOpenSelectId = null;
-const selectListeners = new Set();
-
-const notifySelects = (openSelectId) => {
-    selectListeners.forEach(listener => listener(openSelectId));
-};
-
-const Select = React.forwardRef(({
+const SelectSimple = ({
     className,
     options = [],
     value,
@@ -33,37 +22,16 @@ const Select = React.forwardRef(({
     onChange,
     onOpenChange,
     ...props
-}, ref) => {
+}) => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const selectRef = useRef(null);
 
-    // Generate unique ID if not provided
-    const selectId = id || `select-${Math.random()?.toString(36)?.substr(2, 9)}`;
-
-    // Listen for global select state changes
+    // Close select when clicking outside
     useEffect(() => {
-        const handleGlobalSelectChange = (openSelectId) => {
-            setIsOpen(openSelectId === selectId);
-        };
-
-        selectListeners.add(handleGlobalSelectChange);
-
-        return () => {
-            selectListeners.delete(handleGlobalSelectChange);
-        };
-    }, [selectId]);
-
-    // Close select when clicking outside or pressing Escape
-    useEffect(() => {
-        if (!isOpen) return;
-
         const handleClickOutside = (event) => {
-            // Verificar si el click es fuera del select
             if (selectRef.current && !selectRef.current.contains(event.target)) {
-                console.log('Click outside detected, closing select');
-                globalOpenSelectId = null;
-                notifySelects(null);
+                setIsOpen(false);
                 setSearchTerm("");
                 onOpenChange?.(false);
             }
@@ -71,23 +39,22 @@ const Select = React.forwardRef(({
 
         const handleKeyDown = (event) => {
             if (event.key === 'Escape') {
-                console.log('Escape pressed, closing select');
-                globalOpenSelectId = null;
-                notifySelects(null);
+                setIsOpen(false);
                 setSearchTerm("");
                 onOpenChange?.(false);
             }
         };
 
-        // Agregar listeners inmediatamente
-        document.addEventListener('mousedown', handleClickOutside);
-        document.addEventListener('keydown', handleKeyDown);
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+            document.addEventListener('keydown', handleKeyDown);
+        }
 
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
             document.removeEventListener('keydown', handleKeyDown);
         };
-    }, [isOpen, selectId, onOpenChange]);
+    }, [isOpen, onOpenChange]);
 
     // Filter options based on search
     const filteredOptions = searchable && searchTerm
@@ -112,22 +79,12 @@ const Select = React.forwardRef(({
         return selectedOption ? selectedOption?.label : placeholder;
     };
 
-    const handleToggle = (e) => {
-        e?.stopPropagation();
+    const handleToggle = () => {
         if (!disabled) {
-            if (globalOpenSelectId === selectId) {
-                // Close this select
-                console.log('Closing select via toggle');
-                globalOpenSelectId = null;
-                notifySelects(null);
+            setIsOpen(!isOpen);
+            onOpenChange?.(!isOpen);
+            if (!isOpen) {
                 setSearchTerm("");
-                onOpenChange?.(false);
-            } else {
-                // Open this select and close others
-                console.log('Opening select via toggle');
-                globalOpenSelectId = selectId;
-                notifySelects(selectId);
-                onOpenChange?.(true);
             }
         }
     };
@@ -136,20 +93,6 @@ const Select = React.forwardRef(({
         if (searchable && isOpen) {
             setSearchTerm(e.target.value);
         }
-    };
-
-    const handleInputKeyDown = (e) => {
-        if (e.key === 'Escape') {
-            // Cerrar el select
-            globalOpenSelectId = null;
-            notifySelects(null);
-            setSearchTerm("");
-        }
-    };
-
-    const handleInputClick = (e) => {
-        e.stopPropagation();
-        // No hacer nada aquí, el input debe permitir escribir
     };
 
     const handleOptionSelect = (option) => {
@@ -161,8 +104,7 @@ const Select = React.forwardRef(({
             onChange?.(updatedValue);
         } else {
             onChange?.(option?.value);
-            globalOpenSelectId = null;
-            notifySelects(null);
+            setIsOpen(false);
             onOpenChange?.(false);
         }
     };
@@ -171,7 +113,6 @@ const Select = React.forwardRef(({
         e?.stopPropagation();
         onChange?.(multiple ? [] : '');
     };
-
 
     const isSelected = (optionValue) => {
         if (multiple) {
@@ -186,7 +127,7 @@ const Select = React.forwardRef(({
         <div ref={selectRef} className={cn("relative", className)}>
             {label && (
                 <label
-                    htmlFor={selectId}
+                    htmlFor={id}
                     className={cn(
                         "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-2 block",
                         error ? "text-destructive" : "text-foreground"
@@ -200,13 +141,10 @@ const Select = React.forwardRef(({
                 {searchable && isOpen ? (
                     <div className="relative">
                         <input
-                            ref={ref}
-                            id={selectId}
+                            id={id}
                             type="text"
                             value={searchTerm}
                             onChange={handleInputChange}
-                            onKeyDown={handleInputKeyDown}
-                            onClick={handleInputClick}
                             placeholder={placeholder}
                             className={cn(
                                 "flex h-10 w-full items-center rounded-md border border-input bg-white text-black px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
@@ -224,8 +162,7 @@ const Select = React.forwardRef(({
                     </div>
                 ) : (
                     <button
-                        ref={ref}
-                        id={selectId}
+                        id={id}
                         type="button"
                         className={cn(
                             "flex h-10 w-full items-center justify-between rounded-md border border-input bg-white text-black px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
@@ -249,14 +186,13 @@ const Select = React.forwardRef(({
                             )}
 
                             {clearable && hasValue && !loading && (
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-4 w-4"
+                                <button
+                                    type="button"
+                                    className="h-4 w-4 hover:bg-gray-200 rounded"
                                     onClick={handleClear}
                                 >
                                     <X className="h-3 w-3" />
-                                </Button>
+                                </button>
                             )}
 
                             <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
@@ -329,8 +265,6 @@ const Select = React.forwardRef(({
             )}
         </div>
     );
-});
+};
 
-Select.displayName = "Select";
-
-export default Select;
+export default SelectSimple;

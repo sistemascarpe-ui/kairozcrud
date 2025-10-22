@@ -87,7 +87,7 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode = 'create', brand
 
   const loadUsers = async () => {
     try {
-      const result = await userService.getUsers();
+      const result = await userService.getUsersForInventory();
       
       if (result.error) {
         console.error('Error loading users:', result.error);

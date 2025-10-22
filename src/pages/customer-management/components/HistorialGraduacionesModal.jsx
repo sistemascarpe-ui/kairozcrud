@@ -269,10 +269,12 @@ const HistorialGraduacionesModal = ({
                       ...prev,
                       creado_por_id: value
                     }))}
-                    options={users?.map(user => ({
-                      value: user?.id,
-                      label: user?.nombre ? `${user.nombre} ${user.apellido || ''}`.trim() : `Usuario ${user?.id}`
-                    }))}
+                    options={users
+                      ?.filter(user => user?.nombre?.toLowerCase() !== 'sistemas')
+                      ?.map(user => ({
+                        value: user?.id,
+                        label: user?.nombre ? `${user.nombre} ${user.apellido || ''}`.trim() : `Usuario ${user?.id}`
+                      }))}
                     placeholder="Seleccione el empleado que atendió al cliente"
                     searchable
                     required

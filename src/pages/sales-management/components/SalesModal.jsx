@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calculator } from 'lucide-react';
-import Select from 'react-select';
 import toast from 'react-hot-toast';
 
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
+import Select from '../../../components/ui/SelectSimple';
 import { Checkbox } from '../../../components/ui/Checkbox';
 import { customerService } from '../../../services/customerService';
 import { inventoryService } from '../../../services/inventoryService';
@@ -56,7 +56,17 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
     const totalConIva = finalTotal + iva;
     
     setCalculatedTotals({ subtotal: armazonPrice + micaPrice, totalDiscount, finalTotal, iva, totalConIva });
-  }, [formData]);
+  }, [
+    formData.precio_armazon, 
+    formData.precio_micas, 
+    formData.descuento_armazon_porcentaje, 
+    formData.descuento_armazon_monto,
+    formData.descuento_micas_porcentaje, 
+    formData.descuento_micas_monto,
+    formData.descuento_porcentaje, 
+    formData.descuento_monto,
+    formData.requiere_factura
+  ]);
 
   useEffect(() => {
     // ... tu useEffect para cargar datos está bien ...
@@ -219,7 +229,9 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
       value: p.id, 
       label: `${p.marcas?.nombre || 'N/A'} - ${p.sku || 'Sin SKU'} - ${p.color || 'Sin color'} (Stock: ${p.stock})`
     }));
-  const userOptions = users.map(u => ({ value: u.id, label: `${u.nombre} ${u.apellido || ''}`.trim() }));
+  const userOptions = users
+    .filter(u => u.nombre?.toLowerCase() !== 'sistemas')
+    .map(u => ({ value: u.id, label: `${u.nombre} ${u.apellido || ''}`.trim() }));
   const stateOptions = [
     { value: 'pendiente', label: 'Pendiente' },
     { value: 'completada', label: 'Completada' }
@@ -242,16 +254,22 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
                 <label className="block text-sm font-medium text-gray-700">Cliente *</label>
                 <Select
                   options={customerOptions}
-                  value={customerOptions.find(c => c.value === formData.cliente_id)}
-                  onChange={(option) => handleChange('cliente_id', option ? option.value : '')}
+                  value={formData.cliente_id}
+                  onChange={(value) => handleChange('cliente_id', value)}
                   placeholder="Buscar cliente..."
-                  isClearable isSearchable
+                  searchable
+                  clearable
+                  error={errors.cliente_id}
                 />
                 {errors.cliente_id && <p className="text-xs text-red-600 mt-1">{errors.cliente_id}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Estado</label>
-                <Select options={stateOptions} value={stateOptions.find(s => s.value === formData.estado)} onChange={(option) => handleChange('estado', option ? option.value : 'completada')} />
+                <Select 
+                  options={stateOptions} 
+                  value={formData.estado} 
+                  onChange={(value) => handleChange('estado', value)} 
+                />
               </div>
             </div>
             
@@ -277,12 +295,14 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
               <div>
                 <label className="block text-sm font-medium text-gray-700">Atendido por *</label>
                 <Select
-                  isMulti
+                  multiple
                   options={userOptions}
-                  value={userOptions.filter(u => formData.vendedor_ids.includes(u.value))}
-                  onChange={(options) => handleChange('vendedor_ids', options ? options.map(o => o.value) : [])}
+                  value={formData.vendedor_ids}
+                  onChange={(value) => handleChange('vendedor_ids', value)}
                   placeholder="Seleccionar usuarios..."
-                  isClearable isSearchable
+                  searchable
+                  clearable
+                  error={errors.vendedor_ids}
                 />
                 {errors.vendedor_ids && <p className="text-xs text-red-600 mt-1">{errors.vendedor_ids}</p>}
               </div>
@@ -292,10 +312,12 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
                 <label className="block text-sm font-medium text-gray-700">Armazón *</label>
                 <Select
                   options={productOptions}
-                  value={productOptions.find(p => p.value === formData.armazon_id)}
-                  onChange={(option) => handleChange('armazon_id', option ? option.value : '')}
+                  value={formData.armazon_id}
+                  onChange={(value) => handleChange('armazon_id', value)}
                   placeholder="Buscar armazón..."
-                  isClearable isSearchable noOptionsMessage={() => "No se encontraron armazones"}
+                  searchable
+                  clearable
+                  error={errors.armazon_id}
                 />
                 {errors.armazon_id && <p className="text-xs text-red-600 mt-1">{errors.armazon_id}</p>}
               </div>

@@ -201,10 +201,12 @@ const CustomerModal = ({
                     label="Atendido por"
                     value={formData?.creado_por_id}
                     onChange={(value) => handleInputChange('creado_por_id', value)}
-                    options={users?.map(user => ({
-                      value: user?.id,
-                      label: user?.nombre || user?.name || `Usuario ${user?.id}`
-                    }))}
+                    options={users
+                      ?.filter(user => user?.nombre?.toLowerCase() !== 'sistemas')
+                      ?.map(user => ({
+                        value: user?.id,
+                        label: user?.nombre || user?.name || `Usuario ${user?.id}`
+                      }))}
                     placeholder="Seleccione el empleado que atendió al cliente"
                     error={errors?.creado_por_id}
                     searchable

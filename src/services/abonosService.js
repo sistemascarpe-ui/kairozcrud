@@ -137,5 +137,59 @@ export const abonosService = {
     } catch (error) {
       return { data: null, error: error?.message };
     }
+  },
+
+  // Obtener estadísticas generales de pagos de adeudos
+  async getEstadisticasPagosAdeudos() {
+    try {
+      // Obtener todos los abonos
+      const { data: abonos, error: abonosError } = await supabase
+        .from('abonos')
+        .select('monto, fecha_abono, venta_id');
+
+      if (abonosError) {
+        return { data: null, error: abonosError.message };
+      }
+
+      // Obtener todas las ventas pendientes para calcular el total de adeudos
+      const { data: ventasPendientes, error: ventasError } = await supabase
+        .from('ventas')
+        .select('id, total')
+        .eq('estado', 'pendiente');
+
+      if (ventasError) {
+        return { data: null, error: ventasError.message };
+      }
+
+      // Calcular estadísticas
+      const totalPagos = abonos.reduce((sum, abono) => sum + parseFloat(abono.monto || 0), 0);
+      const cantidadPagos = abonos.length;
+      const totalAdeudos = ventasPendientes.reduce((sum, venta) => sum + parseFloat(venta.total || 0), 0);
+      const cantidadAdeudos = ventasPendientes.length;
+
+      // Calcular pagos por período (último mes)
+      const unMesAtras = new Date();
+      unMesAtras.setMonth(unMesAtras.getMonth() - 1);
+      
+      const pagosUltimoMes = abonos.filter(abono => 
+        new Date(abono.fecha_abono) >= unMesAtras
+      );
+      const totalPagosUltimoMes = pagosUltimoMes.reduce((sum, abono) => sum + parseFloat(abono.monto || 0), 0);
+
+      return {
+        data: {
+          totalPagos,
+          cantidadPagos,
+          totalAdeudos,
+          cantidadAdeudos,
+          totalPagosUltimoMes,
+          cantidadPagosUltimoMes: pagosUltimoMes.length,
+          porcentajeRecuperado: totalAdeudos > 0 ? (totalPagos / (totalPagos + totalAdeudos)) * 100 : 0
+        },
+        error: null
+      };
+    } catch (error) {
+      return { data: null, error: error?.message };
+    }
   }
 };

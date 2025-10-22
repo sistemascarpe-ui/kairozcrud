@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { RefreshCw, TrendingUp, Users, Package, DollarSign, AlertTriangle, ShoppingCart, Calendar, X } from 'lucide-react';
+import { RefreshCw, TrendingUp, Users, Package, DollarSign, AlertTriangle, ShoppingCart, Calendar, X, CreditCard } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { salesService } from '../../services/salesService';
 import { inventoryService } from '../../services/inventoryService';
 import { customerService } from '../../services/customerService';
+import { abonosService } from '../../services/abonosService';
 import { useAuth } from '../../contexts/AuthContext';
 import { useMetrics } from '../../contexts/MetricsContext';
 import Header from '../../components/ui/Header';
@@ -68,6 +69,15 @@ const MetricsManagement = () => {
       new: 0,
       active: 0,
       recentCustomers: []
+    },
+    debtPayments: {
+      totalPagos: 0,
+      cantidadPagos: 0,
+      totalAdeudos: 0,
+      cantidadAdeudos: 0,
+      totalPagosUltimoMes: 0,
+      cantidadPagosUltimoMes: 0,
+      porcentajeRecuperado: 0
     }
   });
 
@@ -98,6 +108,7 @@ const MetricsManagement = () => {
         loadSalesMetrics(),
         loadInventoryMetrics(),
         loadCustomerMetrics(),
+        loadDebtPaymentsMetrics(),
         loadAdditionalMetrics()
       ]);
     } catch (error) {
@@ -121,22 +132,51 @@ const MetricsManagement = () => {
       setAllSalesData(sales || []);
       
       // Calcular métricas iniciales (sin filtro)
-      calculateSalesMetrics(sales || []);
+      await calculateSalesMetrics(sales || []);
     } catch (error) {
       console.error('Error in loadSalesMetrics:', error);
     }
   };
   
-  const calculateSalesMetrics = (sales) => {
+  const calculateSalesMetrics = async (sales) => {
       const totalSales = sales?.length || 0;
       const completedSales = sales?.filter(sale => sale.estado === 'completada').length || 0;
       const pendingSales = sales?.filter(sale => sale.estado === 'pendiente').length || 0;
       
-      const totalRevenue = sales?.reduce((sum, sale) => sum + (parseFloat(sale.total) || 0), 0) || 0;
-      const completedRevenue = sales?.filter(sale => sale.estado === 'completada')
+      // Calcular ingresos reales (completadas + pagos de adeudos)
+      let completedRevenue = sales?.filter(sale => sale.estado === 'completada')
         .reduce((sum, sale) => sum + (parseFloat(sale.total) || 0), 0) || 0;
-      const pendingRevenue = sales?.filter(sale => sale.estado === 'pendiente')
-        .reduce((sum, sale) => sum + (parseFloat(sale.total) || 0), 0) || 0;
+      
+      // Obtener pagos de adeudos para ventas pendientes y verificar si están completamente pagadas
+      let totalPagosAdeudos = 0;
+      let ventasCompletadasPorPagos = 0;
+      let ingresosVentasCompletadasPorPagos = 0;
+      const ventasPendientes = sales?.filter(sale => sale.estado === 'pendiente') || [];
+      
+      for (const venta of ventasPendientes) {
+        try {
+          const { data: abonos } = await abonosService.getAbonosByVentaId(venta.id);
+          if (abonos) {
+            const pagosVenta = abonos.reduce((sum, abono) => sum + (parseFloat(abono.monto) || 0), 0);
+            totalPagosAdeudos += pagosVenta;
+            
+            // Si la venta está completamente pagada, contarla como completada
+            if (pagosVenta >= parseFloat(venta.total)) {
+              ventasCompletadasPorPagos++;
+              ingresosVentasCompletadasPorPagos += parseFloat(venta.total);
+            }
+          }
+        } catch (error) {
+          console.error(`Error getting payments for sale ${venta.id}:`, error);
+        }
+      }
+      
+      // Ingresos totales = ventas completadas + pagos de adeudos + ventas completadas por pagos
+      const totalRevenue = completedRevenue + totalPagosAdeudos;
+      
+      // Calcular ventas pendientes reales (solo las que no están completamente pagadas)
+      const totalVentasPendientes = ventasPendientes.reduce((sum, sale) => sum + (parseFloat(sale.total) || 0), 0);
+      const pendingRevenue = totalVentasPendientes - totalPagosAdeudos;
       
       const averageTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
 
@@ -144,10 +184,10 @@ const MetricsManagement = () => {
         ...prev,
         sales: {
           total: totalSales,
-          completed: completedSales,
-          pending: pendingSales,
+          completed: completedSales + ventasCompletadasPorPagos, // Incluir ventas completadas por pagos
+          pending: pendingSales - ventasCompletadasPorPagos, // Excluir ventas completadas por pagos
           revenue: totalRevenue,
-          completedRevenue,
+          completedRevenue: completedRevenue + ingresosVentasCompletadasPorPagos, // Incluir ingresos de ventas completadas por pagos
           pendingRevenue,
           averageTicket
         }
@@ -221,6 +261,36 @@ const MetricsManagement = () => {
         recentCustomers: []
       }
     }));
+  };
+
+  const loadDebtPaymentsMetrics = async () => {
+    try {
+      console.log('💳 Cargando métricas de pagos de adeudos...');
+      const { data: debtPaymentsData, error } = await abonosService.getEstadisticasPagosAdeudos();
+      
+      if (error) {
+        console.error('Error loading debt payments:', error);
+        return;
+      }
+
+      // Calcular adeudos pendientes reales (total - pagos recibidos)
+      const adeudosPendientesReales = Math.max(0, (debtPaymentsData?.totalAdeudos || 0) - (debtPaymentsData?.totalPagos || 0));
+
+      setMetricsData(prev => ({
+        ...prev,
+        debtPayments: {
+          totalPagos: debtPaymentsData?.totalPagos || 0,
+          cantidadPagos: debtPaymentsData?.cantidadPagos || 0,
+          totalAdeudos: adeudosPendientesReales, // Ahora muestra el saldo real
+          cantidadAdeudos: debtPaymentsData?.cantidadAdeudos || 0,
+          totalPagosUltimoMes: debtPaymentsData?.totalPagosUltimoMes || 0,
+          cantidadPagosUltimoMes: debtPaymentsData?.cantidadPagosUltimoMes || 0,
+          porcentajeRecuperado: debtPaymentsData?.porcentajeRecuperado || 0
+        }
+      }));
+    } catch (error) {
+      console.error('Error in loadDebtPaymentsMetrics:', error);
+    }
   };
 
   const loadAdditionalMetrics = async () => {
@@ -441,7 +511,7 @@ const MetricsManagement = () => {
             <h2 className="text-xl font-bold text-gray-800 mb-6">📊 Estadísticas de Negocio</h2>
             
             {/* Métricas principales filtradas */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             <MetricCard
               title="Ventas Totales"
               value={metricsData.sales.total}
@@ -450,11 +520,12 @@ const MetricsManagement = () => {
               loading={loading}
             />
             <MetricCard
-              title="Ingresos Totales"
+              title="Ingresos Reales"
               value={`$${metricsData.sales.revenue.toLocaleString()}`}
               icon={DollarSign}
               color="green"
               loading={loading}
+              subtitle="Completadas + Pagos recibidos"
             />
             <MetricCard
               title="Clientes Totales"
@@ -462,6 +533,14 @@ const MetricsManagement = () => {
               icon={Users}
               color="orange"
               loading={loading}
+            />
+            <MetricCard
+              title="Pagos de Adeudos"
+              value={`$${metricsData.debtPayments.totalPagos.toLocaleString()}`}
+              icon={CreditCard}
+              color="purple"
+              loading={loading}
+              subtitle={`${metricsData.debtPayments.cantidadPagos} pagos registrados`}
             />
           </div>
 
@@ -474,8 +553,35 @@ const MetricsManagement = () => {
                   <span className="font-semibold text-green-600">${metricsData.sales.completedRevenue.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Ventas Pendientes</span>
+                  <span className="text-gray-600">Saldo Pendiente Real</span>
                   <span className="font-semibold text-yellow-600">${metricsData.sales.pendingRevenue.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Total Ingresos (Completadas + Pagos)</span>
+                  <span className="font-semibold text-blue-600">${metricsData.sales.revenue.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Resumen de Pagos de Adeudos */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumen de Pagos de Adeudos</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Total Pagos Recibidos</span>
+                  <span className="font-semibold text-green-600">${metricsData.debtPayments.totalPagos.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Saldo Pendiente Real</span>
+                  <span className="font-semibold text-red-600">${metricsData.debtPayments.totalAdeudos.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Pagos del Último Mes</span>
+                  <span className="font-semibold text-blue-600">${metricsData.debtPayments.totalPagosUltimoMes.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Porcentaje Recuperado</span>
+                  <span className="font-semibold text-purple-600">{metricsData.debtPayments.porcentajeRecuperado.toFixed(1)}%</span>
                 </div>
               </div>
             </div>
