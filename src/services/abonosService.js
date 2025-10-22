@@ -41,6 +41,26 @@ export const abonosService = {
       return { data: null, error: error?.message };
     }
   },
+  
+  // Actualizar un abono existente
+  async updateAbono(abonoId, abonoData) {
+    try {
+      const { data, error } = await supabase
+        .from('abonos')
+        .update(abonoData)
+        .eq('id', abonoId)
+        .select()
+        .single();
+
+      if (error) {
+        return { data: null, error: error.message };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error?.message };
+    }
+  },
 
   // Calcular el saldo pendiente de una venta
   async getSaldoPendiente(ventaId) {

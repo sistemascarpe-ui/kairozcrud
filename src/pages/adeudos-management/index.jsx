@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { DollarSign, Search, Filter, AlertCircle, CheckCircle, Calendar, User, Phone, Plus, History } from 'lucide-react';
+import { DollarSign, Search, Filter, AlertCircle, CheckCircle, Calendar, User, Phone, Plus, History, Edit, X } from 'lucide-react';
 import { salesService } from '../../services/salesService';
 import { abonosService } from '../../services/abonosService';
 import Header from '../../components/ui/Header';
@@ -25,6 +25,8 @@ const AdeudosManagement = () => {
   const [selectedVentaForAbono, setSelectedVentaForAbono] = useState(null);
   const [abonoData, setAbonoData] = useState({ monto: '', observaciones: '' });
   const [historialAbonos, setHistorialAbonos] = useState([]);
+  const [editingAbonoId, setEditingAbonoId] = useState(null);
+  const [editAbonoData, setEditAbonoData] = useState({ monto: '', observaciones: '' });
 
   useEffect(() => {
     loadAdeudos();
@@ -217,6 +219,52 @@ const AdeudosManagement = () => {
     setShowHistorialModal(false);
     setSelectedVentaForAbono(null);
     setHistorialAbonos([]);
+    setEditingAbonoId(null);
+    setEditAbonoData({ monto: '', observaciones: '' });
+  };
+  
+
+  
+  const handleEditAbono = (abono) => {
+    setEditingAbonoId(abono.id);
+    setEditAbonoData({ 
+      monto: abono.monto, 
+      observaciones: abono.observaciones || '' 
+    });
+  };
+  
+  const handleSaveEditAbono = async () => {
+    if (!editingAbonoId) return;
+    
+    try {
+      const { data, error } = await abonosService.updateAbono(editingAbonoId, editAbonoData);
+      
+      if (error) {
+        toast.error('Error al actualizar el abono');
+        return;
+      }
+      
+      // Actualizar la lista de abonos
+      const updatedHistorial = historialAbonos.map(abono => 
+        abono.id === editingAbonoId ? { ...abono, ...editAbonoData } : abono
+      );
+      
+      setHistorialAbonos(updatedHistorial);
+      setEditingAbonoId(null);
+      setEditAbonoData({ monto: '', observaciones: '' });
+      
+      // Recargar los adeudos para actualizar los saldos
+      loadAdeudos();
+      
+      toast.success('Abono actualizado correctamente');
+    } catch (error) {
+      toast.error('Error al actualizar el abono');
+    }
+  };
+  
+  const handleCancelEditAbono = () => {
+    setEditingAbonoId(null);
+    setEditAbonoData({ monto: '', observaciones: '' });
   };
 
   const formatCurrency = (amount) => {
@@ -976,8 +1024,8 @@ const AdeudosManagement = () => {
                     <div className="space-y-3">
                       {historialAbonos.map((abono, index) => (
                         <div key={abono.id} className="bg-white border border-gray-200 rounded-lg p-4">
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
+                          {editingAbonoId === abono.id ? (
+                            <div className="space-y-3">
                               <div className="flex items-center space-x-2 mb-2">
                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                   Abono #{index + 1}
@@ -986,12 +1034,76 @@ const AdeudosManagement = () => {
                                   {formatDate(abono.fecha_abono)}
                                 </span>
                               </div>
-                              <p className="text-lg font-bold text-green-600">{formatCurrency(abono.monto)}</p>
-                              {abono.observaciones && (
-                                <p className="text-sm text-gray-600 mt-1">{abono.observaciones}</p>
-                              )}
+                              <div className="mb-3">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Monto
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0.01"
+                                  value={editAbonoData.monto}
+                                  onChange={(e) => setEditAbonoData({ ...editAbonoData, monto: e.target.value })}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                  placeholder="0.00"
+                                />
+                              </div>
+                              <div className="mb-3">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Observaciones
+                                </label>
+                                <textarea
+                                  value={editAbonoData.observaciones}
+                                  onChange={(e) => setEditAbonoData({ ...editAbonoData, observaciones: e.target.value })}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                  rows="2"
+                                  placeholder="Observaciones"
+                                />
+                              </div>
+                              <div className="flex space-x-2">
+                                <button
+                                  onClick={handleSaveEditAbono}
+                                  className="inline-flex items-center px-3 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-md shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Guardar
+                                </button>
+                                <button
+                                  onClick={handleCancelEditAbono}
+                                  className="inline-flex items-center px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded-md shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                                >
+                                  <X className="h-4 w-4 mr-1" />
+                                  Cancelar
+                                </button>
+                              </div>
                             </div>
-                          </div>
+                          ) : (
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    Abono #{index + 1}
+                                  </span>
+                                  <span className="text-sm text-gray-500">
+                                    {formatDate(abono.fecha_abono)}
+                                  </span>
+                                </div>
+                                <p className="text-lg font-bold text-green-600">{formatCurrency(abono.monto)}</p>
+                                {abono.observaciones && (
+                                  <p className="text-sm text-gray-600 mt-1">{abono.observaciones}</p>
+                                )}
+                              </div>
+                              <div>
+                                <button
+                                  onClick={() => handleEditAbono(abono)}
+                                  className="inline-flex items-center px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium rounded-md shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                >
+                                  <Edit className="h-3 w-3 mr-1" />
+                                  Editar
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
