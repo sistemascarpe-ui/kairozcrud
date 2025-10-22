@@ -44,23 +44,16 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  // Timeout de sesión (30 minutos de inactividad, 7 días si recordarme)
-  const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutos en milisegundos
-  const REMEMBER_ME_TIMEOUT = 7 * 24 * 60 * 60 * 1000; // 7 días en milisegundos
+  // Timeout de sesión deshabilitado - la sesión nunca se cierra automáticamente
+  // La sesión permanecerá activa hasta que el usuario cierre sesión manualmente
 
   const resetSessionTimeout = (rememberMe = false) => {
+    // Función mantenida para compatibilidad pero sin funcionalidad de timeout
+    // Limpia cualquier timeout existente
     if (sessionTimeout) {
       clearTimeout(sessionTimeout);
+      setSessionTimeout(null);
     }
-    
-    const timeoutDuration = rememberMe ? REMEMBER_ME_TIMEOUT : SESSION_TIMEOUT;
-    
-    const timeout = setTimeout(() => {
-      console.log('Sesión expirada por inactividad');
-      signOut();
-    }, timeoutDuration);
-    
-    setSessionTimeout(timeout);
   };
 
   const clearSessionTimeout = () => {
@@ -99,27 +92,13 @@ export const AuthProvider = ({ children }) => {
       authStateHandlers?.onChange
     )
 
-    // Event listeners para resetear timeout en actividad del usuario
-    const resetTimeoutOnActivity = () => {
-      if (user) {
-        const rememberMe = localStorage.getItem('kairoz_remember_me') === 'true';
-        resetSessionTimeout(rememberMe);
-      }
-    };
-
-    // Agregar listeners de actividad
-    window.addEventListener('mousedown', resetTimeoutOnActivity);
-    window.addEventListener('keypress', resetTimeoutOnActivity);
-    window.addEventListener('scroll', resetTimeoutOnActivity);
-    window.addEventListener('touchstart', resetTimeoutOnActivity);
+    // Event listeners de actividad removidos - no se necesita monitorear actividad del usuario
+    // ya que el timeout de sesión está deshabilitado
 
     return () => {
       subscription?.unsubscribe()
       clearSessionTimeout();
-      window.removeEventListener('mousedown', resetTimeoutOnActivity);
-      window.removeEventListener('keypress', resetTimeoutOnActivity);
-      window.removeEventListener('scroll', resetTimeoutOnActivity);
-      window.removeEventListener('touchstart', resetTimeoutOnActivity);
+      // No hay event listeners que limpiar - timeout deshabilitado
     }
   }, [user])
 
