@@ -7,6 +7,7 @@ CREATE TABLE public.abonos (
   monto numeric NOT NULL CHECK (monto > 0::numeric),
   fecha_abono timestamp with time zone NOT NULL DEFAULT now(),
   observaciones text,
+  forma_pago text NOT NULL DEFAULT 'efectivo' CHECK (forma_pago = ANY (ARRAY['efectivo'::text, 'tarjeta_debito'::text, 'tarjeta_credito'::text, 'transferencia'::text])),
   creado_por_id uuid,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),

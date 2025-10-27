@@ -26,7 +26,7 @@ const AdeudosManagement = () => {
   const [abonoData, setAbonoData] = useState({ monto: '', observaciones: '' });
   const [historialAbonos, setHistorialAbonos] = useState([]);
   const [editingAbonoId, setEditingAbonoId] = useState(null);
-  const [editAbonoData, setEditAbonoData] = useState({ monto: '', observaciones: '' });
+  const [editAbonoData, setEditAbonoData] = useState({ monto: '', observaciones: '', forma_pago: 'efectivo' });
 
   useEffect(() => {
     loadAdeudos();
@@ -165,7 +165,7 @@ const AdeudosManagement = () => {
 
   const handleRegistrarAbono = (adeudo) => {
     setSelectedVentaForAbono(adeudo);
-    setAbonoData({ monto: '', observaciones: '' });
+    setAbonoData({ monto: '', observaciones: '', forma_pago: 'efectivo' });
     setShowAbonoModal(true);
   };
 
@@ -199,7 +199,8 @@ const AdeudosManagement = () => {
       const { data, error } = await abonosService.createAbono({
         venta_id: selectedVentaForAbono.id,
         monto: parseFloat(abonoData.monto),
-        observaciones: abonoData.observaciones || null
+        observaciones: abonoData.observaciones || null,
+        forma_pago: abonoData.forma_pago
       });
 
       if (error) {
@@ -245,7 +246,8 @@ const AdeudosManagement = () => {
     setEditingAbonoId(abono.id);
     setEditAbonoData({ 
       monto: abono.monto, 
-      observaciones: abono.observaciones || '' 
+      observaciones: abono.observaciones || '',
+      forma_pago: abono.forma_pago || 'efectivo'
     });
   };
   
@@ -280,7 +282,7 @@ const AdeudosManagement = () => {
   
   const handleCancelEditAbono = () => {
     setEditingAbonoId(null);
-    setEditAbonoData({ monto: '', observaciones: '' });
+    setEditAbonoData({ monto: '', observaciones: '', forma_pago: 'efectivo' });
   };
 
   const formatCurrency = (amount) => {
@@ -288,6 +290,16 @@ const AdeudosManagement = () => {
       style: 'currency',
       currency: 'MXN'
     }).format(amount || 0);
+  };
+
+  const formatPaymentMethod = (formaPago) => {
+    const methods = {
+      'efectivo': 'Efectivo',
+      'tarjeta_debito': 'Tarjeta de Débito',
+      'tarjeta_credito': 'Tarjeta de Crédito',
+      'transferencia': 'Transferencia'
+    };
+    return methods[formaPago] || formaPago;
   };
 
   const formatDate = (dateString) => {
@@ -973,6 +985,22 @@ const AdeudosManagement = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Forma de Pago *
+                      </label>
+                      <select
+                        value={abonoData.forma_pago}
+                        onChange={(e) => setAbonoData({ ...abonoData, forma_pago: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      >
+                        <option value="efectivo">Efectivo</option>
+                        <option value="tarjeta_debito">Tarjeta de Débito</option>
+                        <option value="tarjeta_credito">Tarjeta de Crédito</option>
+                        <option value="transferencia">Transferencia</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
                         Observaciones (opcional)
                       </label>
                       <textarea
@@ -980,7 +1008,7 @@ const AdeudosManagement = () => {
                         onChange={(e) => setAbonoData({ ...abonoData, observaciones: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         rows="3"
-                        placeholder="Ej: Pago en efectivo, transferencia bancaria, etc."
+                        placeholder="Ej: Referencia de transferencia, número de tarjeta, etc."
                       />
                     </div>
                   </div>
@@ -1097,6 +1125,21 @@ const AdeudosManagement = () => {
                               </div>
                               <div className="mb-3">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Forma de Pago
+                                </label>
+                                <select
+                                  value={editAbonoData.forma_pago}
+                                  onChange={(e) => setEditAbonoData({ ...editAbonoData, forma_pago: e.target.value })}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                >
+                                  <option value="efectivo">Efectivo</option>
+                                  <option value="tarjeta_debito">Tarjeta de Débito</option>
+                                  <option value="tarjeta_credito">Tarjeta de Crédito</option>
+                                  <option value="transferencia">Transferencia</option>
+                                </select>
+                              </div>
+                              <div className="mb-3">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
                                   Observaciones
                                 </label>
                                 <textarea
@@ -1136,6 +1179,9 @@ const AdeudosManagement = () => {
                                   </span>
                                 </div>
                                 <p className="text-lg font-bold text-green-600">{formatCurrency(abono.monto)}</p>
+                                <p className="text-sm text-gray-500 mt-1">
+                                  Forma de pago: <span className="font-medium">{formatPaymentMethod(abono.forma_pago)}</span>
+                                </p>
                                 {abono.observaciones && (
                                   <p className="text-sm text-gray-600 mt-1">{abono.observaciones}</p>
                                 )}
