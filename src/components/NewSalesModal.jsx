@@ -26,6 +26,14 @@ const NewSalesModal = ({
     vendedor_ids: []
   });
 
+  // Estados para el abono inicial
+  const [abonoInicial, setAbonoInicial] = useState({
+    habilitado: false,
+    monto: 0,
+    forma_pago: 'efectivo',
+    observaciones: ''
+  });
+
   const [items, setItems] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [inventory, setInventory] = useState([]);
@@ -147,6 +155,12 @@ const NewSalesModal = ({
     setItems([]);
     setErrors({});
     setTotals({ subtotal: 0, total: 0 });
+    setAbonoInicial({
+      habilitado: false,
+      monto: 0,
+      forma_pago: 'efectivo',
+      observaciones: ''
+    });
   };
 
   const handleInputChange = (e) => {
@@ -163,6 +177,13 @@ const NewSalesModal = ({
         [name]: ''
       }));
     }
+  };
+
+  const handleAbonoInicialChange = (field, value) => {
+    setAbonoInicial(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   const addItem = () => {
@@ -278,7 +299,13 @@ const NewSalesModal = ({
         descuento_monto: item.descuento_monto,
         descuento_porcentaje: item.descuento_porcentaje,
         armazon_id: item.armazon_id
-      }))
+      })),
+      // Agregar datos del abono inicial si está habilitado
+      abonoInicial: abonoInicial.habilitado ? {
+        monto: parseFloat(abonoInicial.monto) || 0,
+        forma_pago: abonoInicial.forma_pago,
+        observaciones: abonoInicial.observaciones
+      } : null
     };
     
     await onSave(saleData);
@@ -596,6 +623,73 @@ const NewSalesModal = ({
                     placeholder="Observaciones adicionales..."
                   />
                 </div>
+
+                {/* Sección de Abono Inicial */}
+                <div className="border-t pt-4">
+                  <div className="flex items-center mb-3">
+                    <input
+                      type="checkbox"
+                      id="abono-inicial"
+                      checked={abonoInicial.habilitado}
+                      onChange={(e) => handleAbonoInicialChange('habilitado', e.target.checked)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="abono-inicial" className="ml-2 text-sm font-medium text-gray-700">
+                      Agregar abono inicial
+                    </label>
+                  </div>
+
+                  {abonoInicial.habilitado && (
+                    <div className="space-y-3 pl-6 border-l-2 border-blue-200">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Monto del abono
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={abonoInicial.monto}
+                            onChange={(e) => handleAbonoInicialChange('monto', e.target.value)}
+                            className="pl-8"
+                            placeholder="0.00"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Forma de pago
+                        </label>
+                        <Select
+                          value={abonoInicial.forma_pago}
+                          onChange={(value) => handleAbonoInicialChange('forma_pago', value)}
+                          options={[
+                            { value: 'efectivo', label: 'Efectivo' },
+                            { value: 'tarjeta_debito', label: 'Tarjeta de Débito' },
+                            { value: 'tarjeta_credito', label: 'Tarjeta de Crédito' },
+                            { value: 'transferencia', label: 'Transferencia' }
+                          ]}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Observaciones del abono
+                        </label>
+                        <textarea
+                          value={abonoInicial.observaciones}
+                          onChange={(e) => handleAbonoInicialChange('observaciones', e.target.value)}
+                          rows={2}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                          placeholder="Observaciones del abono..."
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="bg-gray-50 p-6 rounded-lg border">
@@ -619,6 +713,13 @@ const NewSalesModal = ({
                     </div>
                   )}
                   
+                  {abonoInicial.habilitado && abonoInicial.monto > 0 && (
+                    <div className="flex justify-between text-blue-600">
+                      <span>Abono inicial:</span>
+                      <span>{formatCurrency(abonoInicial.monto)}</span>
+                    </div>
+                  )}
+                  
                   <div className="border-t pt-3">
                     <div className="flex justify-between items-center">
                       <span className="text-xl font-bold text-gray-900">Total:</span>
@@ -626,6 +727,15 @@ const NewSalesModal = ({
                         {formatCurrency(totals.total)}
                       </span>
                     </div>
+                    
+                    {abonoInicial.habilitado && abonoInicial.monto > 0 && (
+                      <div className="flex justify-between items-center mt-2 text-sm">
+                        <span className="text-gray-600">Saldo pendiente:</span>
+                        <span className="font-semibold text-orange-600">
+                          {formatCurrency(Math.max(0, totals.total - (parseFloat(abonoInicial.monto) || 0)))}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

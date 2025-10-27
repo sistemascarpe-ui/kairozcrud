@@ -211,5 +211,115 @@ export const abonosService = {
     } catch (error) {
       return { data: null, error: error?.message };
     }
+  },
+
+  // Obtener abonos sobrantes de un cliente (abonos que exceden el total de sus ventas pendientes)
+  async getAbonosSobrantesCliente(clienteId) {
+    try {
+      // Obtener todas las ventas del cliente
+      const { data: ventasCliente, error: ventasError } = await supabase
+        .from('ventas')
+        .select('id, total, estado')
+        .eq('cliente_id', clienteId);
+
+      if (ventasError) {
+        return { data: null, error: ventasError.message };
+      }
+
+      if (!ventasCliente || ventasCliente.length === 0) {
+        return { data: { abonosSobrantes: 0, ventasConAbonos: [] }, error: null };
+      }
+
+      // Calcular total de abonos por venta y detectar sobrantes
+      let totalAbonosSobrantes = 0;
+      const ventasConAbonos = [];
+
+      for (const venta of ventasCliente) {
+        const { data: abonosVenta, error: abonosError } = await supabase
+          .from('abonos')
+          .select('monto')
+          .eq('venta_id', venta.id);
+
+        if (abonosError) {
+          console.error(`Error getting payments for sale ${venta.id}:`, abonosError);
+          continue;
+        }
+
+        const totalAbonosVenta = abonosVenta.reduce((sum, abono) => sum + parseFloat(abono.monto || 0), 0);
+        const totalVenta = parseFloat(venta.total || 0);
+        const sobrante = Math.max(0, totalAbonosVenta - totalVenta);
+
+        if (sobrante > 0) {
+          totalAbonosSobrantes += sobrante;
+          ventasConAbonos.push({
+            venta_id: venta.id,
+            total: totalVenta,
+            totalAbonos: totalAbonosVenta,
+            sobrante: sobrante
+          });
+        }
+      }
+
+      return {
+        data: {
+          abonosSobrantes: totalAbonosSobrantes,
+          ventasConAbonos: ventasConAbonos
+        },
+        error: null
+      };
+    } catch (error) {
+      return { data: null, error: error?.message };
+    }
+  },
+
+  // Aplicar abonos sobrantes a una nueva venta
+  async aplicarAbonosSobrantes(clienteId, nuevaVentaId, montoMaximoAplicar) {
+    try {
+      const { data: abonosData, error: abonosError } = await this.getAbonosSobrantesCliente(clienteId);
+      
+      if (abonosError) {
+        return { data: null, error: abonosError };
+      }
+
+      const { abonosSobrantes, ventasConAbonos } = abonosData;
+      
+      if (abonosSobrantes <= 0) {
+        return { data: { aplicados: 0, mensaje: 'No hay abonos sobrantes disponibles' }, error: null };
+      }
+
+      // Calcular cuánto se puede aplicar (el menor entre sobrantes disponibles y monto máximo)
+      const montoAplicar = Math.min(abonosSobrantes, montoMaximoAplicar);
+      
+      if (montoAplicar <= 0) {
+        return { data: { aplicados: 0, mensaje: 'No se puede aplicar ningún abono' }, error: null };
+      }
+
+      // Crear el abono para la nueva venta
+      const { data: nuevoAbono, error: crearError } = await supabase
+        .from('abonos')
+        .insert([{
+          venta_id: nuevaVentaId,
+          monto: montoAplicar,
+          observaciones: `Abono automático aplicado desde sobrantes de ventas anteriores (Cliente ID: ${clienteId})`,
+          forma_pago: 'transferencia' // Marcamos como transferencia para distinguir abonos automáticos
+        }])
+        .select()
+        .single();
+
+      if (crearError) {
+        return { data: null, error: crearError.message };
+      }
+
+      return {
+        data: {
+          aplicados: montoAplicar,
+          mensaje: `Se aplicaron $${montoAplicar.toFixed(2)} en abonos sobrantes`,
+          abonoCreado: nuevoAbono
+        },
+        error: null
+      };
+    } catch (error) {
+      return { data: null, error: error?.message };
+    }
   }
 };

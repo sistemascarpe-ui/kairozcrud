@@ -143,7 +143,7 @@ export const salesService = {
 
   async createSalesNote(salesData) {
     try {
-      const { items, vendedor_ids, folio_manual, creado_por_id, monto_compra, ...ventaDetails } = salesData;
+      const { items, vendedor_ids, folio_manual, creado_por_id, monto_compra, abonoInicial, registrar_abono, monto_abono, forma_pago_abono, observaciones_abono, ...ventaDetails } = salesData;
 
       // 1. Determinar el folio a usar (manual o automático)
       let folio;
@@ -336,6 +336,63 @@ delete dataToInsert.monto_compra; // Eliminar el campo monto_compra ya que no ex
         return { data: null, error: error.message };
       }
 
+      // 3.5. Registrar abono si se proporcionó (formato antiguo o nuevo)
+      let abonoRegistrado = null;
+      const debeRegistrarAbono = (
+        // Formato antiguo
+        (data && registrar_abono && monto_abono && parseFloat(monto_abono) > 0) ||
+        // Formato nuevo del modal
+        (data && abonoInicial && abonoInicial.monto && parseFloat(abonoInicial.monto) > 0)
+      );
+
+      if (debeRegistrarAbono) {
+        try {
+          const { abonosService } = await import('./abonosService');
+          
+          // Determinar qué datos usar (priorizar formato nuevo)
+          let abonoData;
+          if (abonoInicial && abonoInicial.monto && parseFloat(abonoInicial.monto) > 0) {
+            // Formato nuevo del modal
+            abonoData = {
+              venta_id: data.id,
+              monto: parseFloat(abonoInicial.monto),
+              observaciones: abonoInicial.observaciones || null,
+              forma_pago: abonoInicial.forma_pago || 'efectivo'
+            };
+          } else {
+            // Formato antiguo
+            abonoData = {
+              venta_id: data.id,
+              monto: parseFloat(monto_abono),
+              observaciones: observaciones_abono || null,
+              forma_pago: forma_pago_abono || 'efectivo'
+            };
+          }
+          
+          const resultadoAbono = await abonosService.createAbono(abonoData);
+          
+          if (resultadoAbono.data) {
+            abonoRegistrado = {
+              monto: abonoData.monto,
+              forma_pago: abonoData.forma_pago,
+              observaciones: abonoData.observaciones
+            };
+            logger.log(`Abono registrado: $${abonoData.monto}`);
+            
+            // Verificar si la venta queda completamente pagada
+            const { data: verificacionCompleta } = await abonosService.verificarYCompletarVenta(data.id);
+            if (verificacionCompleta && verificacionCompleta.completada) {
+              logger.log(`Venta ${data.id} marcada como completada automáticamente`);
+              // Actualizar el estado de la venta en la respuesta
+              data.estado = 'completada';
+            }
+          }
+        } catch (abonoError) {
+          logger.error('Error al registrar abono:', abonoError);
+          // No fallar la creación de la venta por errores en abonos
+        }
+      }
+
   // 4. (Opcional pero recomendado) Asociamos los vendedores.
   if (data && vendedor_ids && vendedor_ids.length > 0) {
     const ventaVendedores = vendedor_ids.map(vendedor_id => ({
@@ -371,8 +428,14 @@ delete dataToInsert.monto_compra; // Eliminar el campo monto_compra ya que no ex
     }
   }
   
-  // Retornar la venta creada (el componente recargará la lista completa con los datos relacionados)
-  return { data, error: null };
+  // Retornar la venta creada con información de abono registrado
+  return { 
+    data: { 
+      ...data, 
+      abonoRegistrado: abonoRegistrado 
+    }, 
+    error: null 
+  };
 
 
     } catch (error) {

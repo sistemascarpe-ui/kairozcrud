@@ -31,6 +31,10 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
     rfc: '',
     razon_social: '',
     folio_manual: '',
+    registrar_abono: false,
+    monto_abono: '',
+    forma_pago_abono: 'efectivo',
+    observaciones_abono: '',
   });
 
   const [formData, setFormData] = useState(getInitialFormData());
@@ -178,6 +182,7 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
     setFormData(newFormData);
   };
 
+
   const validate = () => {
     const newErrors = {};
     if (!formData.cliente_id) newErrors.cliente_id = 'Debe seleccionar un cliente.';
@@ -187,6 +192,17 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
     if (formData.requiere_factura) {
       if (!formData.rfc || formData.rfc.trim() === '') newErrors.rfc = 'El RFC es obligatorio para facturación.';
       if (!formData.razon_social || formData.razon_social.trim() === '') newErrors.razon_social = 'La razón social es obligatoria para facturación.';
+    }
+    
+    if (formData.registrar_abono) {
+      if (!formData.monto_abono || parseFloat(formData.monto_abono) <= 0) {
+        newErrors.monto_abono = 'Debe ingresar un monto válido para el abono.';
+      } else {
+        const totalVenta = formData.requiere_factura ? calculatedTotals.totalConIva : calculatedTotals.finalTotal;
+        if (parseFloat(formData.monto_abono) > totalVenta) {
+          newErrors.monto_abono = 'El monto del abono no puede ser mayor al total de la venta.';
+        }
+      }
     }
     
     setErrors(newErrors);
@@ -271,6 +287,7 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
                   error={errors.cliente_id}
                 />
                 {errors.cliente_id && <p className="text-xs text-red-600 mt-1">{errors.cliente_id}</p>}
+                
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Estado</label>
@@ -446,6 +463,92 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
                       placeholder="Nombre o Razón Social"
                     />
                     {errors.razon_social && <p className="text-xs text-red-600 mt-1">{errors.razon_social}</p>}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="border-t pt-4">
+              <h3 className="text-md font-medium text-gray-800 mb-3">Registro de Abono</h3>
+              <div className="mb-4">
+                <Checkbox
+                  id="registrar_abono"
+                  checked={formData.registrar_abono}
+                  onChange={(e) => handleChange('registrar_abono', e.target.checked)}
+                  label="Registrar abono/adelanto de pago"
+                />
+              </div>
+              
+              {formData.registrar_abono && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Monto del Abono *</label>
+                    <Input
+                      type="number"
+                      name="monto_abono"
+                      value={formData.monto_abono}
+                      onChange={(e) => handleChange(e.target.name, e.target.value)}
+                      placeholder="0.00"
+                      min="0.01"
+                      step="0.01"
+                      max={formData.requiere_factura ? calculatedTotals.totalConIva : calculatedTotals.finalTotal}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Máximo: ${formatCurrency(formData.requiere_factura ? calculatedTotals.totalConIva : calculatedTotals.finalTotal)}
+                    </p>
+                    {errors.monto_abono && <p className="text-xs text-red-600 mt-1">{errors.monto_abono}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Forma de Pago *</label>
+                    <Select
+                      options={[
+                        { value: 'efectivo', label: 'Efectivo' },
+                        { value: 'tarjeta_debito', label: 'Tarjeta de Débito' },
+                        { value: 'tarjeta_credito', label: 'Tarjeta de Crédito' },
+                        { value: 'transferencia', label: 'Transferencia' }
+                      ]}
+                      value={formData.forma_pago_abono}
+                      onChange={(value) => handleChange('forma_pago_abono', value)}
+                    />
+                  </div>
+                </div>
+              )}
+              
+              {formData.registrar_abono && (
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700">Observaciones del Abono</label>
+                  <textarea
+                    name="observaciones_abono"
+                    value={formData.observaciones_abono}
+                    onChange={(e) => handleChange(e.target.name, e.target.value)}
+                    rows="2"
+                    className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                    placeholder="Observaciones adicionales sobre el abono..."
+                  />
+                </div>
+              )}
+              
+              {formData.registrar_abono && formData.monto_abono && parseFloat(formData.monto_abono) > 0 && (
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-blue-700">
+                        <span className="font-medium">Abono:</span> ${formatCurrency(parseFloat(formData.monto_abono) || 0)}
+                      </p>
+                      <p className="text-sm text-blue-700">
+                        <span className="font-medium">Saldo pendiente:</span> ${formatCurrency((formData.requiere_factura ? calculatedTotals.totalConIva : calculatedTotals.finalTotal) - (parseFloat(formData.monto_abono) || 0))}
+                      </p>
+                      {parseFloat(formData.monto_abono) >= (formData.requiere_factura ? calculatedTotals.totalConIva : calculatedTotals.finalTotal) && (
+                        <p className="text-xs text-green-600 mt-1 font-medium">
+                          ✅ La venta quedará completamente pagada
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}

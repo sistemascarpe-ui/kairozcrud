@@ -210,7 +210,19 @@ const handleSaveSale = async (saleData) => {
       return;
     }
 
-    toast.success(`Nota de venta ${selectedSale ? 'actualizada' : 'creada'} exitosamente`);
+    // Mostrar mensaje de éxito con información de abono registrado
+    let mensajeExito = `Nota de venta ${selectedSale ? 'actualizada' : 'creada'} exitosamente`;
+    if (result.data.abonoRegistrado && result.data.abonoRegistrado.monto > 0) {
+      mensajeExito += `\nAbono registrado: $${result.data.abonoRegistrado.monto.toFixed(2)} (${result.data.abonoRegistrado.forma_pago})`;
+      if (result.data.estado === 'completada') {
+        mensajeExito += '\nLa venta ha sido marcada como completada automáticamente.';
+      } else {
+        const saldoPendiente = (parseFloat(result.data.total) || 0) - result.data.abonoRegistrado.monto;
+        mensajeExito += `\nSaldo pendiente: $${saldoPendiente.toFixed(2)}`;
+      }
+    }
+    
+    toast.success(mensajeExito);
     setIsModalOpen(false);
     await loadInitialData();
     
