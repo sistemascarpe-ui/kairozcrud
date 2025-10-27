@@ -16,7 +16,8 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
     armazon_id: '',
     descripcion_micas: '',
     precio_armazon: 0,
-    precio_micas: '', // Cambiado a cadena vacía para que el usuario pueda borrar
+    precio_micas: '', 
+    monto_compra: '', 
     descuento_armazon_porcentaje: '',
     descuento_armazon_monto: '',
     descuento_micas_porcentaje: '',
@@ -29,7 +30,7 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
     requiere_factura: false,
     rfc: '',
     razon_social: '',
-    folio_manual: '', // Nuevo campo para folio manual
+    folio_manual: '',
   });
 
   const [formData, setFormData] = useState(getInitialFormData());
@@ -39,23 +40,42 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
   const [users, setUsers] = useState([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [errors, setErrors] = useState({});
-  
+
   useEffect(() => {
-    // Calcular totales incluyendo IVA si requiere factura
-    const armazonPrice = parseFloat(formData.precio_armazon) || 0;
-    const micaPrice = parseFloat(formData.precio_micas) || 0;
-    const armazonDiscountValue = parseFloat(formData.descuento_armazon_porcentaje) > 0 ? armazonPrice * (parseFloat(formData.descuento_armazon_porcentaje) / 100) : parseFloat(formData.descuento_armazon_monto) || 0;
-    const micasDiscountValue = parseFloat(formData.descuento_micas_porcentaje) > 0 ? micaPrice * (parseFloat(formData.descuento_micas_porcentaje) / 100) : parseFloat(formData.descuento_micas_monto) || 0;
-    const subtotalAfterProductDiscounts = (armazonPrice - armazonDiscountValue) + (micaPrice - micasDiscountValue);
-    const generalDiscountValue = parseFloat(formData.descuento_porcentaje) > 0 ? subtotalAfterProductDiscounts * (parseFloat(formData.descuento_porcentaje) / 100) : parseFloat(formData.descuento_monto) || 0;
-    const totalDiscount = armazonDiscountValue + micasDiscountValue + generalDiscountValue;
-    const finalTotal = subtotalAfterProductDiscounts - generalDiscountValue;
+    const montoCompra = parseFloat(formData.monto_compra);
     
-    // Calcular IVA si requiere factura (16%)
-    const iva = formData.requiere_factura ? finalTotal * 0.16 : 0;
-    const totalConIva = finalTotal + iva;
-    
-    setCalculatedTotals({ subtotal: armazonPrice + micaPrice, totalDiscount, finalTotal, iva, totalConIva });
+    if (!isNaN(montoCompra) && montoCompra > 0) {
+      const iva = formData.requiere_factura ? montoCompra * 0.16 : 0;
+      const totalConIva = montoCompra + iva;
+      
+      setCalculatedTotals({
+        subtotal: montoCompra,
+        totalDiscount: 0,
+        finalTotal: montoCompra,
+        iva,
+        totalConIva
+      });
+    } else {
+      const armazonPrice = parseFloat(formData.precio_armazon) || 0;
+      const micaPrice = parseFloat(formData.precio_micas) || 0;
+      const armazonDiscountValue = parseFloat(formData.descuento_armazon_porcentaje) > 0 ? armazonPrice * (parseFloat(formData.descuento_armazon_porcentaje) / 100) : parseFloat(formData.descuento_armazon_monto) || 0;
+      const micasDiscountValue = parseFloat(formData.descuento_micas_porcentaje) > 0 ? micaPrice * (parseFloat(formData.descuento_micas_porcentaje) / 100) : parseFloat(formData.descuento_micas_monto) || 0;
+      const subtotalAfterProductDiscounts = (armazonPrice - armazonDiscountValue) + (micaPrice - micasDiscountValue);
+      const generalDiscountValue = parseFloat(formData.descuento_porcentaje) > 0 ? subtotalAfterProductDiscounts * (parseFloat(formData.descuento_porcentaje) / 100) : parseFloat(formData.descuento_monto) || 0;
+      const totalDiscount = armazonDiscountValue + micasDiscountValue + generalDiscountValue;
+      const finalTotal = subtotalAfterProductDiscounts - generalDiscountValue;
+      
+      const iva = formData.requiere_factura ? finalTotal * 0.16 : 0;
+      const totalConIva = finalTotal + iva;
+      
+      setCalculatedTotals({ 
+        subtotal: armazonPrice + micaPrice, 
+        totalDiscount, 
+        finalTotal, 
+        iva, 
+        totalConIva 
+      });
+    }
   }, [
     formData.precio_armazon, 
     formData.precio_micas, 
@@ -65,11 +85,11 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
     formData.descuento_micas_monto,
     formData.descuento_porcentaje, 
     formData.descuento_monto,
-    formData.requiere_factura
+    formData.requiere_factura,
+    formData.monto_compra
   ]);
 
   useEffect(() => {
-    // ... tu useEffect para cargar datos está bien ...
     if (isOpen && !isDataLoaded) {
       const loadInitialData = async () => {
         try {
@@ -93,7 +113,6 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
   useEffect(() => {
     if (isOpen && isDataLoaded) {
       if (sale) {
-        // Modo edición - cargar todos los datos de la venta
         setFormData({
           cliente_id: sale.cliente?.id || '',
           armazon_id: sale.armazon?.id || '',
@@ -112,20 +131,17 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
           requiere_factura: sale.requiere_factura || false,
           rfc: sale.rfc || '',
           razon_social: sale.razon_social || '',
-          folio_manual: '', // No mostrar folio en edición, solo en creación
+          folio_manual: '',
         });
       } else {
-        // Modo creación - limpiar COMPLETAMENTE el formulario
         const freshData = getInitialFormData();
         setFormData(freshData);
         setErrors({});
       }
     }
   }, [isOpen, isDataLoaded, sale]);
-  
+
   const handleChange = (name, value) => {
-    // No convertir precio_micas a número aquí, permitir cadena vacía
-    // Solo convertir precio_armazon porque siempre debe tener un valor
     if (name === 'precio_armazon') {
       value = value === '' ? 0 : parseFloat(value) || 0;
     }
@@ -142,7 +158,6 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
     } else if (name === 'descuento_micas_monto') {
       newFormData.descuento_micas_porcentaje = '';
     } else if (name === 'descuento_porcentaje') {
-      // Calcular el subtotal después de descuentos de productos individuales
       const armazonPrice = parseFloat(newFormData.precio_armazon) || 0;
       const micaPrice = parseFloat(newFormData.precio_micas) || 0;
       const armazonDiscountValue = parseFloat(newFormData.descuento_armazon_porcentaje) > 0 ? 
@@ -153,7 +168,6 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
         parseFloat(newFormData.descuento_micas_monto) || 0;
       const subtotalAfterProductDiscounts = (armazonPrice - armazonDiscountValue) + (micaPrice - micasDiscountValue);
       
-      // Calcular el descuento general en pesos
       newFormData.descuento_monto = (subtotalAfterProductDiscounts * numericValue) / 100;
     } else if (name === 'descuento_monto') {
       newFormData.descuento_porcentaje = '';
@@ -167,10 +181,9 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
   const validate = () => {
     const newErrors = {};
     if (!formData.cliente_id) newErrors.cliente_id = 'Debe seleccionar un cliente.';
-    if (!formData.armazon_id) newErrors.armazon_id = 'Debe seleccionar un armazón.';
+    if (!formData.armazon_id && !formData.monto_compra) newErrors.armazon_id = 'Debe seleccionar un armazón o ingresar un monto total de compra.';
     if (!formData.vendedor_ids || formData.vendedor_ids.length === 0) newErrors.vendedor_ids = 'Debe seleccionar al menos un vendedor.';
     
-    // Validar campos de factura si requiere factura
     if (formData.requiere_factura) {
       if (!formData.rfc || formData.rfc.trim() === '') newErrors.rfc = 'El RFC es obligatorio para facturación.';
       if (!formData.razon_social || formData.razon_social.trim() === '') newErrors.razon_social = 'La razón social es obligatoria para facturación.';
@@ -187,7 +200,6 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
       return;
     }
   
-    // --- CAMBIO CLAVE: CONSTRUIR EL ARRAY 'items' --- 
     const items = [];
     if (formData.armazon_id) {
       const selectedProduct = products.find(p => p.id === formData.armazon_id);
@@ -199,7 +211,6 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
       });
     }
   
-    // Agregar micas si hay precio (con o sin descripción)
     if (parseFloat(formData.precio_micas) > 0) {
       items.push({
         descripcion: formData.descripcion_micas || 'Micas',
@@ -211,7 +222,6 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
     const dataToSave = {
       ...formData,
       items: items,
-      // Calcular y enviar el IVA
       requiere_factura: formData.requiere_factura,
       monto_iva: formData.requiere_factura ? calculatedTotals.iva : 0,
       rfc: formData.requiere_factura ? formData.rfc : null,
@@ -222,7 +232,6 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
   };
 
   const customerOptions = customers.map(c => ({ value: c.id, label: c.nombre }));
-  // Filtrar productos con stock > 0 y agregar indicador de stock
   const productOptions = products
     .filter(p => p.stock > 0)
     .map(p => ({ 
@@ -273,24 +282,6 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
               </div>
             </div>
             
-            {/* Campo de folio manual - solo mostrar en modo creación */}
-            {!sale && (
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Folio (Opcional)</label>
-                  <Input
-                    name="folio_manual"
-                    value={formData.folio_manual}
-                    onChange={(e) => handleChange(e.target.name, e.target.value)}
-                    placeholder="Dejar vacío para folio automático (ej: FACT-2025-001)"
-                    maxLength={50}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Si dejas este campo vacío, se generará un folio automático. Si ingresas un folio manual, asegúrate de que sea único.
-                  </p>
-                </div>
-              </div>
-            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Atendido por *</label>
@@ -318,8 +309,9 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
                   searchable
                   clearable
                   error={errors.armazon_id}
+                  disabled={!!formData.monto_compra}
                 />
-                {errors.armazon_id && <p className="text-xs text-red-600 mt-1">{errors.armazon_id}</p>}
+                {errors.armazon_id && !formData.monto_compra && <p className="text-xs text-red-600 mt-1">{errors.armazon_id}</p>}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -328,7 +320,8 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
                     name="descripcion_micas" 
                     value={formData.descripcion_micas} 
                     onChange={(e) => handleChange(e.target.name, e.target.value)} 
-                    placeholder="Ej: BlueProtect" 
+                    placeholder="Ej: BlueProtect"
+                    disabled={!!formData.monto_compra}
                   />
                 </div>
                 <div>
@@ -341,23 +334,83 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
                     placeholder="Ingresa el precio"
                     min="0"
                     step="0.01"
+                    disabled={!!formData.monto_compra}
                   />
                 </div>
               </div>
             </div>
             <div className="border-t pt-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Monto Total de la Compra</label>
+                <Input 
+                  type="number"
+                  name="monto_compra"
+                  value={formData.monto_compra}
+                  onChange={(e) => handleChange(e.target.name, e.target.value)}
+                  placeholder="Ingrese el monto total"
+                  min="0"
+                  step="0.01"
+                  className="mb-4"
+                />
+                <p className="text-xs text-gray-500 mb-4">Si ingresa este monto, se usará como total de la compra</p>
+              </div>
               <h3 className="text-md font-medium text-gray-800">Descuentos (Opcional)</h3>
+              {formData.monto_compra && (
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-yellow-700">
+                        Al ingresar un monto total de compra, los descuentos se aplicarán sobre este monto.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium text-gray-700">Desc. Armazón (%)</label><Input type="number" name="descuento_armazon_porcentaje" value={formData.descuento_armazon_porcentaje} onChange={(e) => handleChange(e.target.name, e.target.value)} placeholder="0" /></div>
-                <div><label className="block text-sm font-medium text-gray-700">Desc. Armazón ($)</label><Input type="number" name="descuento_armazon_monto" value={formData.descuento_armazon_monto} onChange={(e) => handleChange(e.target.name, e.target.value)} placeholder="0.00" /></div>
+                {!formData.monto_compra && (
+                  <>
+                    <div><label className="block text-sm font-medium text-gray-700">Desc. Armazón (%)</label><Input type="number" name="descuento_armazon_porcentaje" value={formData.descuento_armazon_porcentaje} onChange={(e) => handleChange(e.target.name, e.target.value)} placeholder="0" disabled={!!formData.monto_compra} /></div>
+                    <div><label className="block text-sm font-medium text-gray-700">Desc. Armazón ($)</label><Input type="number" name="descuento_armazon_monto" value={formData.descuento_armazon_monto} onChange={(e) => handleChange(e.target.name, e.target.value)} placeholder="0.00" disabled={!!formData.monto_compra} /></div>
+                  </>
+                )}
               </div>
+              {!formData.monto_compra && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div><label className="block text-sm font-medium text-gray-700">Desc. Micas (%)</label><Input type="number" name="descuento_micas_porcentaje" value={formData.descuento_micas_porcentaje} onChange={(e) => handleChange(e.target.name, e.target.value)} placeholder="0" disabled={!!formData.monto_compra} /></div>
+                  <div><label className="block text-sm font-medium text-gray-700">Desc. Micas ($)</label><Input type="number" name="descuento_micas_monto" value={formData.descuento_micas_monto} onChange={(e) => handleChange(e.target.name, e.target.value)} placeholder="0.00" disabled={!!formData.monto_compra} /></div>
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium text-gray-700">Desc. Micas (%)</label><Input type="number" name="descuento_micas_porcentaje" value={formData.descuento_micas_porcentaje} onChange={(e) => handleChange(e.target.name, e.target.value)} placeholder="0" /></div>
-                <div><label className="block text-sm font-medium text-gray-700">Desc. Micas ($)</label><Input type="number" name="descuento_micas_monto" value={formData.descuento_micas_monto} onChange={(e) => handleChange(e.target.name, e.target.value)} placeholder="0.00" /></div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium text-gray-700">Desc. General (%)</label><Input type="number" name="descuento_porcentaje" value={formData.descuento_porcentaje} onChange={(e) => handleChange(e.target.name, e.target.value)} placeholder="0" /></div>
-                <div><label className="block text-sm font-medium text-gray-700">Desc. General ($)</label><Input type="number" name="descuento_monto" value={formData.descuento_monto} onChange={(e) => handleChange(e.target.name, e.target.value)} placeholder="0.00" /></div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Desc. General (%)
+                  </label>
+                  <Input 
+                    type="number" 
+                    name="descuento_porcentaje" 
+                    value={formData.descuento_porcentaje} 
+                    onChange={(e) => handleChange(e.target.name, e.target.value)} 
+                    placeholder="0" 
+                    disabled={!formData.monto_compra && !formData.precio_armazon && !formData.precio_micas}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    {formData.monto_compra ? 'Monto del Descuento ($)' : 'Desc. General ($)'}
+                  </label>
+                  <Input 
+                    type="number" 
+                    name="descuento_monto" 
+                    value={formData.descuento_monto} 
+                    onChange={(e) => handleChange(e.target.name, e.target.value)} 
+                    placeholder="0.00" 
+                  />
+                </div>
               </div>
             </div>
             <div className="border-t pt-4">
@@ -402,30 +455,85 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                 <div className="flex items-center mb-3">
                   <Calculator className="h-5 w-5 text-gray-600 mr-2" />
-                  <h4 className="text-lg font-semibold text-gray-800">Resumen</h4>
+                  <h4 className="text-lg font-semibold text-gray-800">Resumen Detallado</h4>
                 </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Subtotal:</span>
-                    <span className="font-medium text-gray-900">{formatCurrency(calculatedTotals.subtotal)}</span>
-                  </div>
-                  <div className="flex justify-between text-red-600">
-                    <span>Descuento Total:</span>
-                    <span className="font-medium">-{formatCurrency(calculatedTotals.totalDiscount)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Subtotal con Descuentos:</span>
-                    <span className="font-medium text-gray-900">{formatCurrency(calculatedTotals.finalTotal)}</span>
-                  </div>
-                  {formData.requiere_factura && (
-                    <div className="flex justify-between text-blue-600">
-                      <span>IVA (16%):</span>
-                      <span className="font-medium">+{formatCurrency(calculatedTotals.iva)}</span>
+                <div className="space-y-3 text-sm">
+                  {formData.monto_compra ? (
+                    <div className="bg-blue-50 p-3 rounded-md mb-3">
+                      <div className="flex justify-between font-medium text-blue-800">
+                        <span>Monto Total de Compra:</span>
+                        <span>{formatCurrency(parseFloat(formData.monto_compra))}</span>
+                      </div>
                     </div>
+                  ) : (
+                    <>
+                      {formData.armazon_id && (
+                        <div className="border-b pb-2 mb-2">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Armazón:</span>
+                            <span className="font-medium">{formatCurrency(parseFloat(formData.precio_armazon) || 0)}</span>
+                          </div>
+                          {(formData.descuento_armazon_porcentaje || formData.descuento_armazon_monto) && (
+                            <div className="text-red-600 text-right text-xs mt-1">
+                              Descuento: {formData.descuento_armazon_porcentaje ? 
+                                `${formData.descuento_armazon_porcentaje}% (${formatCurrency((parseFloat(formData.precio_armazon) * parseFloat(formData.descuento_armazon_porcentaje) / 100) || 0)})` : 
+                                `${formatCurrency(parseFloat(formData.descuento_armazon_monto) || 0)}`}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                      {formData.precio_micas && parseFloat(formData.precio_micas) > 0 && (
+                        <div className="border-b pb-2 mb-2">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Micas ({formData.descripcion_micas || 'Sin descripción'}):</span>
+                            <span className="font-medium">{formatCurrency(parseFloat(formData.precio_micas) || 0)}</span>
+                          </div>
+                          {(formData.descuento_micas_porcentaje || formData.descuento_micas_monto) && (
+                            <div className="text-red-600 text-right text-xs mt-1">
+                              Descuento: {formData.descuento_micas_porcentaje ? 
+                                `${formData.descuento_micas_porcentaje}% (${formatCurrency((parseFloat(formData.precio_micas) * parseFloat(formData.descuento_micas_porcentaje) / 100) || 0)})` : 
+                                `${formatCurrency(parseFloat(formData.descuento_micas_monto) || 0)}`}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
                   )}
-                  <div className="flex justify-between text-lg font-bold text-gray-900 border-t pt-2 mt-2">
-                    <span>Total a Pagar:</span>
-                    <span>{formatCurrency(formData.requiere_factura ? calculatedTotals.totalConIva : calculatedTotals.finalTotal)}</span>
+
+                  <div className="border-t pt-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Subtotal:</span>
+                      <span className="font-medium">{formatCurrency(calculatedTotals.subtotal)}</span>
+                    </div>
+
+                    {(formData.descuento_porcentaje || formData.descuento_monto) && (
+                      <div className="flex justify-between text-red-600 mt-1">
+                        <span>Descuento General:</span>
+                        <span className="font-medium">
+                          {formData.descuento_porcentaje ? 
+                            `${formData.descuento_porcentaje}% (${formatCurrency((calculatedTotals.finalTotal * parseFloat(formData.descuento_porcentaje) / 100) || 0)})` : 
+                            formatCurrency(parseFloat(formData.descuento_monto) || 0)}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between mt-2 font-medium">
+                      <span>Subtotal con Descuentos:</span>
+                      <span>{formatCurrency(calculatedTotals.finalTotal)}</span>
+                    </div>
+
+                    {formData.requiere_factura && (
+                      <div className="flex justify-between text-blue-600 mt-1">
+                        <span>IVA (16%):</span>
+                        <span className="font-medium">+{formatCurrency(calculatedTotals.iva)}</span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between text-lg font-bold text-gray-900 border-t pt-2 mt-2">
+                      <span>Total a Pagar:</span>
+                      <span>{formatCurrency(formData.requiere_factura ? calculatedTotals.totalConIva : calculatedTotals.finalTotal)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
