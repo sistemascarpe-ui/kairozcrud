@@ -159,13 +159,53 @@ const InventoryManagement = () => {
     }) || [];
   }, [products]);
 
+  // Función mejorada de búsqueda que maneja diferentes formatos de modelos
+  const normalizeSearchTerm = (term) => {
+    return term?.toLowerCase()?.replace(/\s+/g, '')?.trim();
+  };
+
+  const matchesSearchTerm = (searchTerm, product) => {
+    if (!searchTerm) return true;
+    
+    const normalizedSearch = normalizeSearchTerm(searchTerm);
+    
+    // Campos a buscar
+    const searchFields = [
+      product?.sku,
+      product?.brand,
+      product?.color,
+      product?.name
+    ];
+    
+    return searchFields.some(field => {
+      if (!field) return false;
+      
+      const normalizedField = normalizeSearchTerm(field);
+      
+      // Búsqueda exacta sin espacios
+      if (normalizedField.includes(normalizedSearch)) {
+        return true;
+      }
+      
+      // Búsqueda con espacios originales
+      if (field.toLowerCase().includes(searchTerm.toLowerCase())) {
+        return true;
+      }
+      
+      // Búsqueda por palabras individuales (para casos como "Modelo ABC" buscando "ABC")
+      const fieldWords = field.toLowerCase().split(/\s+/);
+      const searchWords = searchTerm.toLowerCase().split(/\s+/);
+      
+      return searchWords.every(searchWord => 
+        fieldWords.some(fieldWord => fieldWord.includes(searchWord))
+      );
+    });
+  };
+
   // Filter and sort products
   const filteredAndSortedProducts = useMemo(() => {
     let filtered = transformedProducts?.filter(product => {
-      const matchesSearch = !searchTerm || 
-        product?.sku?.toLowerCase()?.includes(searchTerm?.toLowerCase()) ||
-        product?.brand?.toLowerCase()?.includes(searchTerm?.toLowerCase()) ||
-        product?.color?.toLowerCase()?.includes(searchTerm?.toLowerCase());
+      const matchesSearch = matchesSearchTerm(searchTerm, product);
 
       // Find the original product to get the relationship IDs
       const originalProduct = products?.find(p => p?.id === product?.id);

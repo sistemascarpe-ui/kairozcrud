@@ -56,12 +56,50 @@ const SelectSimple = ({
         };
     }, [isOpen, onOpenChange]);
 
+    // Función mejorada de búsqueda para SelectSimple
+    const normalizeSearchTerm = (term) => {
+        return term?.toLowerCase()?.replace(/\s+/g, '')?.trim();
+    };
+
+    const matchesSearchTerm = (searchTerm, option) => {
+        if (!searchTerm) return true;
+        
+        const normalizedSearch = normalizeSearchTerm(searchTerm);
+        
+        // Campos a buscar
+        const searchFields = [
+            option?.label,
+            option?.value?.toString()
+        ];
+        
+        return searchFields.some(field => {
+            if (!field) return false;
+            
+            const normalizedField = normalizeSearchTerm(field);
+            
+            // Búsqueda exacta sin espacios
+            if (normalizedField.includes(normalizedSearch)) {
+                return true;
+            }
+            
+            // Búsqueda con espacios originales
+            if (field.toLowerCase().includes(searchTerm.toLowerCase())) {
+                return true;
+            }
+            
+            // Búsqueda por palabras individuales
+            const fieldWords = field.toLowerCase().split(/\s+/);
+            const searchWords = searchTerm.toLowerCase().split(/\s+/);
+            
+            return searchWords.every(searchWord => 
+                fieldWords.some(fieldWord => fieldWord.includes(searchWord))
+            );
+        });
+    };
+
     // Filter options based on search
     const filteredOptions = searchable && searchTerm
-        ? options?.filter(option =>
-            option?.label?.toLowerCase()?.includes(searchTerm?.toLowerCase()) ||
-            (option?.value && option?.value?.toString()?.toLowerCase()?.includes(searchTerm?.toLowerCase()))
-        )
+        ? options?.filter(option => matchesSearchTerm(searchTerm, option))
         : options;
 
     // Get selected option(s) for display
