@@ -157,6 +157,7 @@ const SalesManagement = () => {
     setMonthFilter('');
   };
 
+
   const handleCreateSale = () => { 
     setSelectedSale(null); 
     // Pequeño delay para asegurar que el modal se resetee completamente

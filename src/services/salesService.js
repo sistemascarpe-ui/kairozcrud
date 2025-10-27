@@ -143,7 +143,7 @@ export const salesService = {
 
   async createSalesNote(salesData) {
     try {
-      const { items, vendedor_ids, folio_manual, creado_por_id, ...ventaDetails } = salesData;
+      const { items, vendedor_ids, folio_manual, creado_por_id, monto_compra, ...ventaDetails } = salesData;
 
       // 1. Determinar el folio a usar (manual o automático)
       let folio;
@@ -253,20 +253,47 @@ export const salesService = {
      const descuentoGeneralMonto = parseFloat(ventaDetails.descuento_monto) || 0;
      const montoIva = parseFloat(ventaDetails.monto_iva) || 0;
      
-     // Calcular subtotal (precios - descuentos de productos)
-     const subtotal = (precioArmazon - descuentoArmazonMonto) + (precioMicas - descuentoMicasMonto);
+     let subtotal, total, precioArmazonFinal, precioMicasFinal;
      
-     // Calcular total (subtotal - descuento general + IVA)
-     const total = subtotal - descuentoGeneralMonto + montoIva;
+     // Si se proporciona monto_compra, usarlo como total base pero documentar precios individuales
+     if (monto_compra && parseFloat(monto_compra) > 0) {
+       const montoCompraValue = parseFloat(monto_compra);
+       subtotal = montoCompraValue;
+       // Aplicar descuento general si existe
+       total = montoCompraValue - descuentoGeneralMonto + montoIva;
+       
+       // Documentar los precios individuales de los productos seleccionados
+       // Si hay armazón seleccionado, usar su precio real
+       if (armazonItem && precioArmazon > 0) {
+         precioArmazonFinal = precioArmazon;
+       } else {
+         // Si no hay armazón seleccionado, usar el monto total como precio de armazón
+         precioArmazonFinal = montoCompraValue;
+       }
+       
+       // Si hay micas seleccionadas, usar su precio real
+       if (micasItem && precioMicas > 0) {
+         precioMicasFinal = precioMicas;
+       } else {
+         precioMicasFinal = 0;
+       }
+     } else {
+       // Calcular subtotal (precios - descuentos de productos)
+       subtotal = (precioArmazon - descuentoArmazonMonto) + (precioMicas - descuentoMicasMonto);
+       // Calcular total (subtotal - descuento general + IVA)
+       total = subtotal - descuentoGeneralMonto + montoIva;
+       precioArmazonFinal = precioArmazon;
+       precioMicasFinal = precioMicas;
+     }
 
      // 4. Preparamos los datos para la tabla 'ventas' original.
 const dataToInsert = {
   ...ventaDetails,
   folio: folio, // Agregar el folio (manual o automático)
   armazon_id: armazonItem ? armazonItem.armazon_id : null,
-  precio_armazon: precioArmazon,
+  precio_armazon: precioArmazonFinal,
   descripcion_micas: micasItem ? micasItem.descripcion : '',
-  precio_micas: precioMicas,
+  precio_micas: precioMicasFinal,
   
   // --- CAMBIO CLAVE: Asegurar que los valores sean numéricos ---
   descuento_armazon_monto: descuentoArmazonMonto,
@@ -296,6 +323,7 @@ delete dataToInsert.descuento_micas_porcentaje;
 delete dataToInsert.descuento_porcentaje;
 delete dataToInsert.items;
 delete dataToInsert.folio_manual; // Eliminar el campo folio_manual ya que no existe en la tabla
+delete dataToInsert.monto_compra; // Eliminar el campo monto_compra ya que no existe en la tabla
 
       // 3. Insertamos en la tabla 'ventas' como siempre lo has hecho.
       const { data, error } = await supabase
@@ -355,7 +383,7 @@ delete dataToInsert.folio_manual; // Eliminar el campo folio_manual ya que no ex
 
   async updateSalesNote(id, updates) {
     try {
-      const { vendedor_ids, items, folio_manual, ...restOfUpdates } = updates;
+      const { vendedor_ids, items, folio_manual, monto_compra, ...restOfUpdates } = updates;
 
       // Eliminar campos que no existen en la tabla ventas
       delete restOfUpdates.vendedores;
@@ -398,15 +426,49 @@ delete dataToInsert.folio_manual; // Eliminar el campo folio_manual ya que no ex
       const descuentoGeneralMonto = parseFloat(restOfUpdates.descuento_monto) || 0;
       const montoIva = parseFloat(restOfUpdates.monto_iva) || 0;
       
-      // Calcular subtotal (precios - descuentos de productos)
-      const subtotal = (armazonPrice - descuentoArmazonMonto) + (micaPrice - descuentoMicasMonto);
+      let subtotal, total, precioArmazonFinal, precioMicasFinal;
       
-      // Calcular total (subtotal - descuento general + IVA)
-      const total = subtotal - descuentoGeneralMonto + montoIva;
+      // Detectar si la venta fue creada con monto_compra
+      // Si precio_armazon + precio_micas > subtotal, probablemente fue creada con monto_compra
+      const sumaProductos = armazonPrice + micaPrice;
+      const esVentaConMontoCompra = sumaProductos > 0 && restOfUpdates.subtotal > 0 && sumaProductos > restOfUpdates.subtotal;
+      
+      // Si se proporciona monto_compra o es una venta con monto_compra, usar el subtotal existente
+      if ((monto_compra && parseFloat(monto_compra) > 0) || esVentaConMontoCompra) {
+        const montoCompraValue = monto_compra ? parseFloat(monto_compra) : restOfUpdates.subtotal;
+        subtotal = montoCompraValue;
+        // Aplicar descuento general si existe
+        total = montoCompraValue - descuentoGeneralMonto + montoIva;
+        
+        // Documentar los precios individuales de los productos seleccionados
+        // Si hay armazón seleccionado, usar su precio real
+        if (armazonPrice > 0) {
+          precioArmazonFinal = armazonPrice;
+        } else {
+          // Si no hay armazón seleccionado, usar el monto total como precio de armazón
+          precioArmazonFinal = montoCompraValue;
+        }
+        
+        // Si hay micas seleccionadas, usar su precio real
+        if (micaPrice > 0) {
+          precioMicasFinal = micaPrice;
+        } else {
+          precioMicasFinal = 0;
+        }
+      } else {
+        // Calcular subtotal (precios - descuentos de productos)
+        subtotal = (armazonPrice - descuentoArmazonMonto) + (micaPrice - descuentoMicasMonto);
+        // Calcular total (subtotal - descuento general + IVA)
+        total = subtotal - descuentoGeneralMonto + montoIva;
+        precioArmazonFinal = armazonPrice;
+        precioMicasFinal = micaPrice;
+      }
       
       // Asignar los cálculos
       restOfUpdates.subtotal = subtotal;
       restOfUpdates.total = total;
+      restOfUpdates.precio_armazon = precioArmazonFinal;
+      restOfUpdates.precio_micas = precioMicasFinal;
       
       // Asegurar que los campos de facturación sean del tipo correcto
       if (restOfUpdates.requiere_factura !== undefined) {

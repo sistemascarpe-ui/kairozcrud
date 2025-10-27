@@ -113,9 +113,25 @@ const AdeudosManagement = () => {
 
   const confirmMarcarComoPagado = async () => {
     try {
-      const { error } = await salesService.updateSalesNote(selectedAdeudo.id, {
-        estado: 'completada'
-      });
+      // Pasar todos los datos de la venta para preservar los montos
+      const ventaData = {
+        estado: 'completada',
+        // Preservar todos los datos importantes de la venta
+        precio_armazon: selectedAdeudo.precio_armazon || 0,
+        precio_micas: selectedAdeudo.precio_micas || 0,
+        subtotal: selectedAdeudo.subtotal || 0,
+        total: selectedAdeudo.total || 0,
+        descuento_armazon_monto: selectedAdeudo.descuento_armazon_monto || 0,
+        descuento_micas_monto: selectedAdeudo.descuento_micas_monto || 0,
+        descuento_monto: selectedAdeudo.descuento_monto || 0,
+        monto_iva: selectedAdeudo.monto_iva || 0,
+        requiere_factura: selectedAdeudo.requiere_factura || false,
+        rfc: selectedAdeudo.rfc || null,
+        razon_social: selectedAdeudo.razon_social || null,
+        observaciones: selectedAdeudo.observaciones || null
+      };
+
+      const { error } = await salesService.updateSalesNote(selectedAdeudo.id, ventaData);
 
       if (error) {
         toast.error('Error al actualizar el estado');
@@ -853,9 +869,40 @@ const AdeudosManagement = () => {
                     Cerrar
                   </button>
                   <button
-                    onClick={() => {
-                      closeViewNoteModal();
-                      handleMarcarComoPagado(selectedNote);
+                    onClick={async () => {
+                      try {
+                        // Pasar todos los datos de la venta para preservar los montos
+                        const ventaData = {
+                          estado: 'completada',
+                          // Preservar todos los datos importantes de la venta
+                          precio_armazon: selectedNote.precio_armazon || 0,
+                          precio_micas: selectedNote.precio_micas || 0,
+                          subtotal: selectedNote.subtotal || 0,
+                          total: selectedNote.total || 0,
+                          descuento_armazon_monto: selectedNote.descuento_armazon_monto || 0,
+                          descuento_micas_monto: selectedNote.descuento_micas_monto || 0,
+                          descuento_monto: selectedNote.descuento_monto || 0,
+                          monto_iva: selectedNote.monto_iva || 0,
+                          requiere_factura: selectedNote.requiere_factura || false,
+                          rfc: selectedNote.rfc || null,
+                          razon_social: selectedNote.razon_social || null,
+                          observaciones: selectedNote.observaciones || null
+                        };
+
+                        const { error } = await salesService.updateSalesNote(selectedNote.id, ventaData);
+
+                        if (error) {
+                          toast.error('Error al actualizar el estado');
+                          return;
+                        }
+
+                        toast.success('Venta marcada como pagada');
+                        closeViewNoteModal();
+                        loadAdeudos();
+                      } catch (error) {
+                        toast.error('Error al actualizar el estado');
+                        console.error('Error:', error);
+                      }
                     }}
                     className="flex-1 px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
                   >
