@@ -164,6 +164,21 @@ CREATE TABLE public.venta_clientes (
   CONSTRAINT venta_clientes_venta_id_fkey FOREIGN KEY (venta_id) REFERENCES public.ventas(id),
   CONSTRAINT venta_clientes_cliente_id_fkey FOREIGN KEY (cliente_id) REFERENCES public.clientes(id)
 );
+CREATE TABLE public.venta_productos (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  venta_id uuid NOT NULL,
+  tipo_producto text NOT NULL CHECK (tipo_producto = ANY (ARRAY['armazon'::text, 'mica'::text])),
+  armazon_id uuid,
+  descripcion_mica text,
+  cantidad integer NOT NULL DEFAULT 1 CHECK (cantidad > 0),
+  precio_unitario numeric NOT NULL DEFAULT 0 CHECK (precio_unitario >= 0::numeric),
+  descuento_monto numeric DEFAULT 0 CHECK (descuento_monto >= 0::numeric),
+  subtotal numeric NOT NULL DEFAULT 0,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT venta_productos_pkey PRIMARY KEY (id),
+  CONSTRAINT venta_productos_venta_id_fkey FOREIGN KEY (venta_id) REFERENCES public.ventas(id),
+  CONSTRAINT venta_productos_armazon_id_fkey FOREIGN KEY (armazon_id) REFERENCES public.armazones(id)
+);
 CREATE TABLE public.venta_vendedores (
   venta_id uuid NOT NULL,
   vendedor_id uuid NOT NULL,
@@ -174,10 +189,6 @@ CREATE TABLE public.venta_vendedores (
 CREATE TABLE public.ventas (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   folio character varying NOT NULL DEFAULT ('V-'::text || lpad((nextval('ventas_folio_seq'::regclass))::text, 4, '0'::text)) UNIQUE,
-  armazon_id uuid,
-  precio_armazon numeric NOT NULL DEFAULT 0,
-  descripcion_micas text,
-  precio_micas numeric NOT NULL DEFAULT 0,
   fecha_venta timestamp with time zone,
   subtotal numeric,
   descuento_monto numeric DEFAULT 0,
@@ -185,8 +196,6 @@ CREATE TABLE public.ventas (
   observaciones text,
   created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-  descuento_armazon_monto numeric DEFAULT 0,
-  descuento_micas_monto numeric DEFAULT 0,
   requiere_factura boolean NOT NULL DEFAULT false,
   monto_iva numeric NOT NULL DEFAULT 0,
   rfc text,
@@ -194,6 +203,5 @@ CREATE TABLE public.ventas (
   total numeric,
   creado_por_id uuid,
   CONSTRAINT ventas_pkey PRIMARY KEY (id),
-  CONSTRAINT ventas_armazon_id_fkey FOREIGN KEY (armazon_id) REFERENCES public.armazones(id),
   CONSTRAINT ventas_creado_por_id_fkey FOREIGN KEY (creado_por_id) REFERENCES public.usuarios(id)
 );

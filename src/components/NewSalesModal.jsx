@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Percent } from 'lucide-react';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
-import Select from '../components/ui/Select';
+import { X, Plus, Trash2, Calculator } from 'lucide-react';
+import Button from './ui/Button';
+import Input from './ui/Input';
+import Select from './ui/SelectSimple';
+import { Checkbox } from './ui/Checkbox';
 import { customerService } from '../services/customerService';
 import { inventoryService } from '../services/inventoryService';
-import { salesService } from '../services/salesService';
 import { userService } from '../services/userService';
+import toast from 'react-hot-toast';
 
 const NewSalesModal = ({ 
   isOpen, 
@@ -16,31 +17,44 @@ const NewSalesModal = ({
   loading = false 
 }) => {
   const [formData, setFormData] = useState({
-    cliente_id: '',
-    cliente_nombre: '',
-    descuento_total: 0,
-    descuento_porcentaje: 0,
+    cliente_ids: [],
+    vendedor_ids: [],
     estado: 'pendiente',
-    metodo_pago: 'efectivo',
     observaciones: '',
-    vendedor_ids: []
+    requiere_factura: false,
+    rfc: '',
+    razon_social: '',
+    folio_manual: '',
+    registrar_abono: false,
+    monto_abono: '',
+    forma_pago_abono: 'efectivo',
+    observaciones_abono: ''
   });
 
-  // Estados para el abono inicial
-  const [abonoInicial, setAbonoInicial] = useState({
-    habilitado: false,
-    monto: 0,
-    forma_pago: 'efectivo',
-    observaciones: ''
-  });
+  const [productos, setProductos] = useState([
+    {
+      id: Date.now(),
+      tipo_producto: 'armazon',
+      armazon_id: '',
+      descripcion_mica: '',
+      cantidad: 1,
+      precio_unitario: 0,
+      descuento_monto: 0,
+      subtotal: 0
+    }
+  ]);
 
-  const [items, setItems] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [inventory, setInventory] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [vendedores, setVendedores] = useState([]);
   const [errors, setErrors] = useState({});
-  const [totals, setTotals] = useState({ subtotal: 0, total: 0 });
+  const [totals, setTotals] = useState({ 
+    subtotal: 0, 
+    descuentoTotal: 0, 
+    total: 0, 
+    iva: 0, 
+    totalConIva: 0 
+  });
 
   // Función para formatear moneda
   const formatCurrency = (amount) => {
@@ -56,32 +70,53 @@ const NewSalesModal = ({
       loadInitialData();
       
       if (sale) {
-        // Modo edición
+        // Modo edición - cargar datos de la venta existente
         setFormData({
-          cliente_id: sale.cliente_id || '',
-          cliente_nombre: sale.cliente_nombre || '',
-          descuento_total: sale.descuento_total || 0,
-          descuento_porcentaje: sale.descuento_porcentaje || 0,
+          cliente_ids: sale.clientes ? sale.clientes.map(c => c.id) : [],
+          vendedor_ids: sale.vendedores ? sale.vendedores.map(v => v.id) : [],
           estado: sale.estado || 'pendiente',
-          metodo_pago: sale.metodo_pago || 'efectivo',
           observaciones: sale.observaciones || '',
-          vendedor_id: sale.vendedor_id || ''
+          requiere_factura: sale.requiere_factura || false,
+          rfc: sale.rfc || '',
+          razon_social: sale.razon_social || '',
+          folio_manual: '',
+          registrar_abono: false,
+          monto_abono: '',
+          forma_pago_abono: 'efectivo',
+          observaciones_abono: ''
         });
         
-        // Mapear items de la venta
-        const mappedItems = (sale.items || []).map(item => ({
-          id: item.id || Date.now() + Math.random(),
-          categoria_id: item.categoria_id || '',
-          categoria_nombre: item.categoria || '',
-          descripcion: item.descripcion || '',
-          cantidad: item.cantidad || 1,
-          precio_unitario: item.precio_unitario || 0,
-          descuento_monto: item.descuento_monto || 0,
-          descuento_porcentaje: item.descuento_porcentaje || 0,
-          armazon_id: item.armazon_id || null
-        }));
+        // Cargar productos de la venta (esto se implementará cuando tengamos la nueva estructura)
+        // Por ahora, mantener la estructura actual
+        const productosVenta = [];
+        if (sale.armazon_id) {
+          productosVenta.push({
+            id: Date.now(),
+            tipo_producto: 'armazon',
+            armazon_id: sale.armazon_id,
+            descripcion_mica: '',
+            cantidad: 1,
+            precio_unitario: sale.precio_armazon || 0,
+            descuento_monto: sale.descuento_armazon_monto || 0,
+            subtotal: (sale.precio_armazon || 0) - (sale.descuento_armazon_monto || 0)
+          });
+        }
+        if (sale.descripcion_micas) {
+          productosVenta.push({
+            id: Date.now() + 1,
+            tipo_producto: 'mica',
+            armazon_id: '',
+            descripcion_mica: sale.descripcion_micas,
+            cantidad: 1,
+            precio_unitario: sale.precio_micas || 0,
+            descuento_monto: sale.descuento_micas_monto || 0,
+            subtotal: (sale.precio_micas || 0) - (sale.descuento_micas_monto || 0)
+          });
+        }
         
-        setItems(mappedItems);
+        if (productosVenta.length > 0) {
+          setProductos(productosVenta);
+        }
       } else {
         // Modo creación
         resetForm();
@@ -91,80 +126,89 @@ const NewSalesModal = ({
 
   useEffect(() => {
     calculateTotals();
-  }, [items, formData.descuento_total, formData.descuento_porcentaje]);
+  }, [productos, formData.requiere_factura]);
 
   const loadInitialData = async () => {
     await Promise.all([
       loadCustomers(),
       loadInventory(),
-      loadCategories(),
       loadVendedores()
     ]);
   };
 
   const loadCustomers = async () => {
-    const { data } = await customerService.getCustomers();
-    if (data) {
-      setCustomers(data.map(customer => ({
-        value: customer.id,
-        label: `${customer.nombre} - ${customer.telefono || 'Sin teléfono'}`
-      })));
+    try {
+      const { data } = await customerService.getCustomers();
+      if (data) {
+        setCustomers(data.map(customer => ({
+          value: customer.id,
+          label: `${customer.nombre} - ${customer.telefono || 'Sin teléfono'}`
+        })));
+      }
+    } catch (error) {
+      toast.error('Error al cargar clientes');
     }
   };
+
   const loadVendedores = async () => {
-    const { data } = await userService.getUsers();
-    if (data) {
-      setVendedores(data.map(v => ({
-        value: v.id,
-        label: `${v.nombre} ${v.apellido || ''}`.trim()
-      })));
+    try {
+      const { data } = await userService.getUsers();
+      if (data) {
+        setVendedores(data
+          .filter(u => u.nombre?.toLowerCase() !== 'sistemas')
+          .map(v => ({
+            value: v.id,
+            label: `${v.nombre} ${v.apellido || ''}`.trim()
+          })));
+      }
+    } catch (error) {
+      toast.error('Error al cargar vendedores');
     }
   };
 
   const loadInventory = async () => {
-    const { data } = await inventoryService.getProducts();
-    console.log('Inventory data loaded:', data); // Debug log
-    console.log('First frame data structure:', data?.[0]); // Debug specific frame
-    if (data) setInventory(data);
-  };
-
-  const loadCategories = async () => {
-    // Usando inventoryService para obtener categorías desde la tabla armazones
-    const { data } = await inventoryService.getProducts();
-    if (data) {
-      // Extraer categorías únicas de los productos
-      const uniqueCategories = [...new Set(data.map(product => product.categoria))].filter(Boolean);
-      setCategories(uniqueCategories.map(cat => ({
-        value: cat,
-        label: cat.charAt(0).toUpperCase() + cat.slice(1)
-      })));
+    try {
+      const { data } = await inventoryService.getProducts();
+      if (data) {
+        setInventory(data.filter(p => p.stock > 0));
+      }
+    } catch (error) {
+      toast.error('Error al cargar inventario');
     }
   };
 
   const resetForm = () => {
     setFormData({
-      cliente_id: '',
-      cliente_nombre: '',
-      descuento_total: 0,
-      descuento_porcentaje: 0,
+      cliente_ids: [],
+      vendedor_ids: [],
       estado: 'pendiente',
-      metodo_pago: 'efectivo',
       observaciones: '',
-      vendedor_ids: []
+      requiere_factura: false,
+      rfc: '',
+      razon_social: '',
+      folio_manual: '',
+      registrar_abono: false,
+      monto_abono: '',
+      forma_pago_abono: 'efectivo',
+      observaciones_abono: ''
     });
-    setItems([]);
+    setProductos([
+      {
+        id: Date.now(),
+        tipo_producto: 'armazon',
+        armazon_id: '',
+        descripcion_mica: '',
+        cantidad: 1,
+        precio_unitario: 0,
+        descuento_monto: 0,
+        subtotal: 0
+      }
+    ]);
     setErrors({});
-    setTotals({ subtotal: 0, total: 0 });
-    setAbonoInicial({
-      habilitado: false,
-      monto: 0,
-      forma_pago: 'efectivo',
-      observaciones: ''
-    });
+    setTotals({ subtotal: 0, descuentoTotal: 0, total: 0, iva: 0, totalConIva: 0 });
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
+  const handleInputChange = (name, value) => {
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -179,105 +223,124 @@ const NewSalesModal = ({
     }
   };
 
-  const handleAbonoInicialChange = (field, value) => {
-    setAbonoInicial(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const addItem = () => {
-    const newItem = {
+  const addProducto = () => {
+    const newProducto = {
       id: Date.now(),
-      categoria_id: '',
-      categoria_nombre: '',
-      descripcion: '',
+      tipo_producto: 'armazon',
+      armazon_id: '',
+      descripcion_mica: '',
       cantidad: 1,
       precio_unitario: 0,
       descuento_monto: 0,
-      descuento_porcentaje: 0,
-      armazon_id: null
+      subtotal: 0
     };
-    
-    setItems(prev => [...prev, newItem]);
+    setProductos(prev => [...prev, newProducto]);
   };
 
-  const updateItem = (index, field, value) => {
-    setItems(prev => {
-      const updated = [...prev];
-      updated[index] = {
-        ...updated[index],
-        [field]: value
-      };
-      
-      // Si cambia la categoría, actualizar el nombre
-      if (field === 'categoria_id') {
-        const category = categories.find(cat => cat.value === value);
-        updated[index].categoria_nombre = category?.label || '';
+  const removeProducto = (id) => {
+    if (productos.length > 1) {
+      setProductos(prev => prev.filter(p => p.id !== id));
+    }
+  };
+
+  const updateProducto = (id, field, value) => {
+    setProductos(prev => prev.map(producto => {
+      if (producto.id === id) {
+        const updated = { ...producto, [field]: value };
         
-        // Resetear campos relacionados
-        if (value !== categories.find(cat => cat.label.toLowerCase() === 'armazón')?.value) {
-          updated[index].armazon_id = null;
-        }
-      }
-      
-      // Si selecciona un armazón específico
-        if (field === 'armazon_id' && value) {
-          const frame = inventory.find(item => item.id === value);
-          if (frame) {
-            const marca = frame.marcas?.nombre || 'Sin marca';
-            const sku = frame.sku || 'Sin SKU';
-            const color = frame.color || 'Sin color';
-            updated[index].descripcion = `${marca}(${sku})-${color}`;
-            updated[index].precio_unitario = frame.precio || 0;
+        // Si cambia el tipo de producto, limpiar campos específicos
+        if (field === 'tipo_producto') {
+          if (value === 'armazon') {
+            updated.descripcion_mica = '';
+          } else {
+            updated.armazon_id = '';
           }
         }
-      
-      return updated;
-    });
-  };
-
-  const removeItem = (index) => {
-    setItems(prev => prev.filter((_, i) => i !== index));
+        
+        // Si cambia el armazón, actualizar precio
+        if (field === 'armazon_id' && value) {
+          const selectedProduct = inventory.find(p => p.id === value);
+          updated.precio_unitario = selectedProduct ? selectedProduct.precio : 0;
+        }
+        
+        // Calcular subtotal
+        const cantidad = parseFloat(updated.cantidad) || 0;
+        const precioUnitario = parseFloat(updated.precio_unitario) || 0;
+        const descuento = parseFloat(updated.descuento_monto) || 0;
+        updated.subtotal = (cantidad * precioUnitario) - descuento;
+        
+        return updated;
+      }
+      return producto;
+    }));
   };
 
   const calculateTotals = () => {
-    const calculatedTotals = salesService.calculateSaleTotals(items);
-    setTotals(calculatedTotals);
+    const subtotal = productos.reduce((sum, p) => sum + (parseFloat(p.subtotal) || 0), 0);
+    const descuentoTotal = productos.reduce((sum, p) => sum + (parseFloat(p.descuento_monto) || 0), 0);
+    const total = subtotal;
+    const iva = formData.requiere_factura ? total * 0.16 : 0;
+    const totalConIva = total + iva;
+    
+    setTotals({ subtotal, descuentoTotal, total, iva, totalConIva });
   };
 
-  // REEMPLAZA TODA TU FUNCIÓN validateForm CON ESTA:
-  const validateForm = () => {
+  const validate = () => {
     const newErrors = {};
     
-    // 1. Validar Cliente
-    if (!formData.cliente_id) {
-      newErrors.cliente_id = 'Debe seleccionar un cliente';
-    }
-
-    // 2. Validar Vendedor
-    if (!formData.vendedor_ids || formData.vendedor_ids.length === 0) {
-      newErrors.vendedor_ids = 'Debe seleccionar quién atendió la venta';
+    if (!formData.cliente_ids || formData.cliente_ids.length === 0) {
+      newErrors.cliente_ids = 'Debe seleccionar al menos un cliente';
     }
     
-    // 3. Validar Items
-    if (items.length === 0) {
-      newErrors.items = 'Debe agregar al menos un producto';
-    } else {
-      items.forEach((item, index) => {
-        if (!item.categoria_id) {
-          newErrors[`item_${index}_categoria`] = 'Seleccione una categoría';
-        }
-        if (!item.descripcion.trim()) {
-          newErrors[`item_${index}_descripcion`] = 'Ingrese una descripción';
-        }
-        if (item.cantidad <= 0) {
-          newErrors[`item_${index}_cantidad`] = 'La cantidad debe ser mayor a 0';
-        }
-        if (item.precio_unitario <= 0) {
-          newErrors[`item_${index}_precio`] = 'El precio debe ser mayor a 0';
-        }
-      });
+    if (!formData.vendedor_ids || formData.vendedor_ids.length === 0) {
+      newErrors.vendedor_ids = 'Debe seleccionar al menos un vendedor';
+    }
+    
+    // Validar que haya al menos un producto válido
+    const productosValidos = productos.filter(p => {
+      if (p.tipo_producto === 'armazon') {
+        return p.armazon_id && p.cantidad > 0 && p.precio_unitario > 0;
+      } else {
+        return p.descripcion_mica && p.cantidad > 0 && p.precio_unitario > 0;
+      }
+    });
+    
+    if (productosValidos.length === 0) {
+      newErrors.productos = 'Debe agregar al menos un producto válido';
+    }
+    
+    // Validar productos individualmente
+    productos.forEach((producto, index) => {
+      if (producto.tipo_producto === 'armazon' && !producto.armazon_id) {
+        newErrors[`producto_${index}_armazon`] = 'Seleccione un armazón';
+      }
+      if (producto.tipo_producto === 'mica' && !producto.descripcion_mica) {
+        newErrors[`producto_${index}_mica`] = 'Ingrese descripción de la mica';
+      }
+      if (!producto.cantidad || producto.cantidad <= 0) {
+        newErrors[`producto_${index}_cantidad`] = 'Cantidad debe ser mayor a 0';
+      }
+      if (!producto.precio_unitario || producto.precio_unitario <= 0) {
+        newErrors[`producto_${index}_precio`] = 'Precio debe ser mayor a 0';
+      }
+    });
+    
+    if (formData.requiere_factura) {
+      if (!formData.rfc) {
+        newErrors.rfc = 'RFC es requerido para facturación';
+      }
+      if (!formData.razon_social) {
+        newErrors.razon_social = 'Razón social es requerida para facturación';
+      }
+    }
+    
+    if (formData.registrar_abono) {
+      if (!formData.monto_abono || parseFloat(formData.monto_abono) <= 0) {
+        newErrors.monto_abono = 'Monto del abono debe ser mayor a 0';
+      }
+      if (parseFloat(formData.monto_abono) > (formData.requiere_factura ? totals.totalConIva : totals.total)) {
+        newErrors.monto_abono = 'El abono no puede ser mayor al total';
+      }
     }
     
     setErrors(newErrors);
@@ -287,281 +350,231 @@ const NewSalesModal = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    if (!validate()) {
+      toast.error('Por favor, corrija los errores en el formulario');
+      return;
+    }
     
-    const saleData = {
+    const salesData = {
       ...formData,
-      items: items.map(item => ({
-        categoria_id: item.categoria_id,
-        descripcion: item.descripcion,
-        cantidad: item.cantidad,
-        precio_unitario: item.precio_unitario,
-        descuento_monto: item.descuento_monto,
-        descuento_porcentaje: item.descuento_porcentaje,
-        armazon_id: item.armazon_id
-      })),
-      // Agregar datos del abono inicial si está habilitado
-      abonoInicial: abonoInicial.habilitado ? {
-        monto: parseFloat(abonoInicial.monto) || 0,
-        forma_pago: abonoInicial.forma_pago,
-        observaciones: abonoInicial.observaciones
-      } : null
+      productos: productos.filter(p => {
+        if (p.tipo_producto === 'armazon') {
+          return p.armazon_id && p.cantidad > 0 && p.precio_unitario > 0;
+        } else {
+          return p.descripcion_mica && p.cantidad > 0 && p.precio_unitario > 0;
+        }
+      }),
+      subtotal: totals.subtotal,
+      total: totals.total,
+      monto_iva: totals.iva
     };
     
-    await onSave(saleData);
+    await onSave(salesData);
   };
+
+  // Opciones para los selects
+  const productOptions = inventory.map(p => ({ 
+    value: p.id, 
+    label: `${p.marcas?.nombre || 'N/A'} - ${p.sku || 'Sin SKU'} - ${p.color || 'Sin color'} (Stock: ${p.stock})`
+  }));
+
+  const stateOptions = [
+    { value: 'pendiente', label: 'Pendiente' },
+    { value: 'completada', label: 'Completada' }
+  ];
+
+  const paymentOptions = [
+    { value: 'efectivo', label: 'Efectivo' },
+    { value: 'tarjeta', label: 'Tarjeta' },
+    { value: 'transferencia', label: 'Transferencia' }
+  ];
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
-          <h2 className="text-xl font-semibold text-gray-900">
-            {sale ? 'Editar' : 'Nueva'} Venta
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-lg font-semibold">
+            {sale ? 'Editar Nota de Venta' : 'Nueva Nota de Venta'}
           </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X className="h-6 w-6" />
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X size={24} />
           </button>
         </div>
-
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {/* Información del cliente */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
+          <div className="p-6 space-y-6">
+            {/* Información del Cliente y Vendedor */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cliente *
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Clientes *
                 </label>
                 <Select
-                  name="cliente_id"
-                  value={formData.cliente_id}
-                  onChange={handleInputChange}
+                  isMulti
                   options={customers}
-                  placeholder="Seleccionar cliente"
-                  error={errors.cliente_id}
+                  value={formData.cliente_ids}
+                  onChange={(value) => handleInputChange('cliente_ids', value)}
+                  placeholder="Seleccionar clientes..."
                 />
+                {errors.cliente_ids && (
+                  <p className="text-xs text-red-600 mt-1">{errors.cliente_ids}</p>
+                )}
               </div>
+              
               <div>
-    <label className="block text-sm font-medium text-gray-700 mb-2">
-      Atendido por *
-    </label>
-    <select
-      multiple // Esto permite seleccionar varios vendedores con Ctrl+Click
-      name="vendedor_ids"
-      value={formData.vendedor_ids}
-      onChange={(e) => {
-        const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-        setFormData(prev => ({ ...prev, vendedor_ids: selectedOptions }));
-        if (errors.vendedor_ids) setErrors(prev => ({ ...prev, vendedor_ids: '' }));
-      }}
-      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${errors.vendedor_ids ? 'border-red-500 ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
-    >
-      {vendedores.map(vendedor => (
-        <option key={vendedor.value} value={vendedor.value}>
-          {vendedor.label}
-        </option>
-      ))}
-    </select>
-    {errors.vendedor_ids && (
-      <p className="text-red-600 text-sm mt-1">{errors.vendedor_ids}</p>
-    )}
-    </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Estado
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Vendedores *
                 </label>
                 <Select
-                  name="estado"
-                  value={formData.estado}
-                  onChange={handleInputChange}
-                  options={[
-                    { value: 'pendiente', label: 'Pendiente' },
-                    { value: 'completada', label: 'Completada' }
-                  ]}
+                  isMulti
+                  options={vendedores}
+                  value={formData.vendedor_ids}
+                  onChange={(value) => handleInputChange('vendedor_ids', value)}
+                  placeholder="Seleccionar vendedores..."
                 />
+                {errors.vendedor_ids && (
+                  <p className="text-xs text-red-600 mt-1">{errors.vendedor_ids}</p>
+                )}
               </div>
             </div>
 
-            {/* Items de venta */}
-            <div>
+            {/* Productos */}
+            <div className="border-t pt-4">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Productos</h3>
+                <h3 className="text-md font-medium text-gray-800">Productos</h3>
                 <Button
                   type="button"
-                  onClick={addItem}
-                  className="flex items-center space-x-2"
+                  variant="secondary"
+                  onClick={addProducto}
+                  className="flex items-center gap-2"
                 >
-                  <Plus className="h-4 w-4" />
-                  <span>Agregar Producto</span>
+                  <Plus size={16} />
+                  Agregar Producto
                 </Button>
               </div>
-
-              {errors.items && (
-                <p className="text-red-600 text-sm mb-4">{errors.items}</p>
+              
+              {errors.productos && (
+                <p className="text-xs text-red-600 mb-4">{errors.productos}</p>
               )}
-
+              
               <div className="space-y-4">
-                {items.map((item, index) => (
-                  <div key={item.id} className="bg-gray-50 p-4 rounded-lg border">
-                    <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                {productos.map((producto, index) => (
+                  <div key={producto.id} className="border rounded-lg p-4 bg-gray-50">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-medium text-gray-700">Producto {index + 1}</h4>
+                      {productos.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeProducto(producto.id)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Categoría *
+                          Tipo *
                         </label>
                         <Select
-                          value={item.categoria_id}
-                          onChange={(e) => updateItem(index, 'categoria_id', e.target.value)}
-                          options={categories}
-                          placeholder="Seleccionar"
-                          error={errors[`item_${index}_categoria`]}
+                          options={[
+                            { value: 'armazon', label: 'Armazón' },
+                            { value: 'mica', label: 'Mica' }
+                          ]}
+                          value={producto.tipo_producto}
+                          onChange={(value) => updateProducto(producto.id, 'tipo_producto', value)}
+                          placeholder="Seleccionar tipo..."
                         />
                       </div>
-
-                      {item.categoria_nombre?.toLowerCase() === 'armazón' && (
+                      
+                      {producto.tipo_producto === 'armazon' ? (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Armazón
+                            Armazón *
                           </label>
-                          <select
-                            value={item.armazon_id || ''}
-                            onChange={(e) => updateItem(index, 'armazon_id', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                            style={{ minWidth: '300px', maxWidth: 'none', whiteSpace: 'nowrap', overflow: 'visible' }}
-                          >
-                            <option value="">Seleccionar armazón</option>
-                            <option value="test">PRUEBA - TEST123 - ROJO</option>
-                            {inventory.map(frame => {
-                              console.log('Frame data:', frame); // Debug each frame
-                              const marca = frame.marcas?.nombre || 'Sin marca';
-                              const sku = frame.sku || 'Sin SKU';
-                              const color = frame.color || 'Sin color';
-                              
-                              // Formato: marca(sku)-color (sin modelo porque no existe en la BD)
-                              const displayText = `${marca}(${sku})-${color}`;
-                              
-                              console.log(`Renderizando opción: "${displayText}" para frame:`, frame);
-                              
-                              return (
-                                <option 
-                                  key={frame.id} 
-                                  value={frame.id}
-                                  style={{ whiteSpace: 'nowrap' }}
-                                >
-                                  {displayText}
-                                </option>
-                              );
-                            })}
-                          </select>
+                          <Select
+                            options={productOptions}
+                            value={producto.armazon_id}
+                            onChange={(value) => updateProducto(producto.id, 'armazon_id', value)}
+                            placeholder="Seleccionar armazón..."
+                          />
+                          {errors[`producto_${index}_armazon`] && (
+                            <p className="text-xs text-red-600 mt-1">{errors[`producto_${index}_armazon`]}</p>
+                          )}
+                        </div>
+                      ) : (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Descripción Mica *
+                          </label>
+                          <Input
+                            type="text"
+                            value={producto.descripcion_mica}
+                            onChange={(e) => updateProducto(producto.id, 'descripcion_mica', e.target.value)}
+                            placeholder="Descripción de la mica..."
+                          />
+                          {errors[`producto_${index}_mica`] && (
+                            <p className="text-xs text-red-600 mt-1">{errors[`producto_${index}_mica`]}</p>
+                          )}
                         </div>
                       )}
-
-                      <div className={item.categoria_nombre?.toLowerCase() === 'armazón' ? 'md:col-span-2' : 'md:col-span-3'}>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Descripción *
-                        </label>
-                        <Input
-                          value={item.descripcion}
-                          onChange={(e) => updateItem(index, 'descripcion', e.target.value)}
-                          placeholder="Descripción del producto"
-                          error={errors[`item_${index}_descripcion`]}
-                        />
-                      </div>
-
+                      
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Cantidad *
                         </label>
                         <Input
                           type="number"
+                          value={producto.cantidad}
+                          onChange={(e) => updateProducto(producto.id, 'cantidad', e.target.value)}
                           min="1"
-                          value={item.cantidad}
-                          onChange={(e) => updateItem(index, 'cantidad', parseInt(e.target.value) || 1)}
-                          error={errors[`item_${index}_cantidad`]}
+                          step="1"
+                        />
+                        {errors[`producto_${index}_cantidad`] && (
+                          <p className="text-xs text-red-600 mt-1">{errors[`producto_${index}_cantidad`]}</p>
+                        )}
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Precio Unitario *
+                        </label>
+                        <Input
+                          type="number"
+                          value={producto.precio_unitario}
+                          onChange={(e) => updateProducto(producto.id, 'precio_unitario', e.target.value)}
+                          min="0"
+                          step="0.01"
+                        />
+                        {errors[`producto_${index}_precio`] && (
+                          <p className="text-xs text-red-600 mt-1">{errors[`producto_${index}_precio`]}</p>
+                        )}
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Descuento ($)
+                        </label>
+                        <Input
+                          type="number"
+                          value={producto.descuento_monto}
+                          onChange={(e) => updateProducto(producto.id, 'descuento_monto', e.target.value)}
+                          min="0"
+                          step="0.01"
                         />
                       </div>
-
+                      
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Precio Unit. *
+                          Subtotal
                         </label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={item.precio_unitario}
-                            onChange={(e) => updateItem(index, 'precio_unitario', parseFloat(e.target.value) || 0)}
-                            className="pl-8"
-                            error={errors[`item_${index}_precio`]}
-                          />
+                        <div className="px-3 py-2 bg-gray-100 border rounded-md text-sm font-medium">
+                          {formatCurrency(producto.subtotal)}
                         </div>
-                      </div>
-                    </div>
-
-                    {/* Descuentos por item */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-200">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Descuento $
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={item.descuento_monto}
-                            onChange={(e) => updateItem(index, 'descuento_monto', parseFloat(e.target.value) || 0)}
-                            className="pl-8"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Descuento %
-                        </label>
-                        <div className="relative">
-                          <Input
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="0.01"
-                            value={item.descuento_porcentaje}
-                            onChange={(e) => updateItem(index, 'descuento_porcentaje', parseFloat(e.target.value) || 0)}
-                          />
-                          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
-                            <Percent className="h-4 w-4" />
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-end justify-between">
-                        <div>
-                          <span className="text-sm font-medium text-gray-700">Subtotal:</span>
-                          <p className="text-lg font-semibold text-green-600">
-                            {formatCurrency(
-                              (item.cantidad * item.precio_unitario) - 
-                              (item.descuento_porcentaje > 0 
-                                ? (item.cantidad * item.precio_unitario) * (item.descuento_porcentaje / 100)
-                                : item.descuento_monto)
-                            )}
-                          </p>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={() => removeItem(index)}
-                          className="text-red-600 hover:text-red-900 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
                       </div>
                     </div>
                   </div>
@@ -569,193 +582,206 @@ const NewSalesModal = ({
               </div>
             </div>
 
-            {/* Descuentos generales y totales */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Descuento General ($)
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
-                    <Input
-                      type="number"
-                      name="descuento_total"
-                      min="0"
-                      step="0.01"
-                      value={formData.descuento_total}
-                      onChange={handleInputChange}
-                      className="pl-8"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Descuento General (%)
-                  </label>
-                  <div className="relative">
-                    <Input
-                      type="number"
-                      name="descuento_porcentaje"
-                      min="0"
-                      max="100"
-                      step="0.01"
-                      value={formData.descuento_porcentaje}
-                      onChange={handleInputChange}
-                    />
-                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
-                      <Percent className="h-4 w-4" />
-                    </span>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Observaciones
-                  </label>
-                  <textarea
-                    name="observaciones"
-                    value={formData.observaciones}
-                    onChange={handleInputChange}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Observaciones adicionales..."
-                  />
-                </div>
-
-                {/* Sección de Abono Inicial */}
-                <div className="border-t pt-4">
-                  <div className="flex items-center mb-3">
-                    <input
-                      type="checkbox"
-                      id="abono-inicial"
-                      checked={abonoInicial.habilitado}
-                      onChange={(e) => handleAbonoInicialChange('habilitado', e.target.checked)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="abono-inicial" className="ml-2 text-sm font-medium text-gray-700">
-                      Agregar abono inicial
-                    </label>
-                  </div>
-
-                  {abonoInicial.habilitado && (
-                    <div className="space-y-3 pl-6 border-l-2 border-blue-200">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Monto del abono
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={abonoInicial.monto}
-                            onChange={(e) => handleAbonoInicialChange('monto', e.target.value)}
-                            className="pl-8"
-                            placeholder="0.00"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Forma de pago
-                        </label>
-                        <Select
-                          value={abonoInicial.forma_pago}
-                          onChange={(value) => handleAbonoInicialChange('forma_pago', value)}
-                          options={[
-                            { value: 'efectivo', label: 'Efectivo' },
-                            { value: 'tarjeta_debito', label: 'Tarjeta de Débito' },
-                            { value: 'tarjeta_credito', label: 'Tarjeta de Crédito' },
-                            { value: 'transferencia', label: 'Transferencia' }
-                          ]}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Observaciones del abono
-                        </label>
-                        <textarea
-                          value={abonoInicial.observaciones}
-                          onChange={(e) => handleAbonoInicialChange('observaciones', e.target.value)}
-                          rows={2}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          placeholder="Observaciones del abono..."
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
+            {/* Información Adicional */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Estado
+                </label>
+                <Select
+                  options={stateOptions}
+                  value={formData.estado}
+                  onChange={(value) => handleInputChange('estado', value)}
+                />
               </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Folio Manual (Opcional)
+                </label>
+                <Input
+                  type="text"
+                  value={formData.folio_manual}
+                  onChange={(e) => handleInputChange('folio_manual', e.target.value)}
+                  placeholder="Dejar vacío para folio automático"
+                />
+              </div>
+            </div>
 
-              <div className="bg-gray-50 p-6 rounded-lg border">
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">Resumen</h4>
-                
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Subtotal:</span>
-                    <span className="font-semibold">{formatCurrency(totals.subtotal)}</span>
-                  </div>
-                  
-                  {(formData.descuento_total > 0 || formData.descuento_porcentaje > 0) && (
-                    <div className="flex justify-between text-red-600">
-                      <span>Descuento General:</span>
-                      <span>
-                        {formData.descuento_porcentaje > 0 
-                          ? `-${formData.descuento_porcentaje}%`
-                          : formatCurrency(formData.descuento_total)
-                        }
-                      </span>
-                    </div>
-                  )}
-                  
-                  {abonoInicial.habilitado && abonoInicial.monto > 0 && (
-                    <div className="flex justify-between text-blue-600">
-                      <span>Abono inicial:</span>
-                      <span>{formatCurrency(abonoInicial.monto)}</span>
-                    </div>
-                  )}
-                  
-                  <div className="border-t pt-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xl font-bold text-gray-900">Total:</span>
-                      <span className="text-2xl font-bold text-green-600">
-                        {formatCurrency(totals.total)}
-                      </span>
-                    </div>
-                    
-                    {abonoInicial.habilitado && abonoInicial.monto > 0 && (
-                      <div className="flex justify-between items-center mt-2 text-sm">
-                        <span className="text-gray-600">Saldo pendiente:</span>
-                        <span className="font-semibold text-orange-600">
-                          {formatCurrency(Math.max(0, totals.total - (parseFloat(abonoInicial.monto) || 0)))}
-                        </span>
-                      </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Observaciones
+              </label>
+              <textarea
+                value={formData.observaciones}
+                onChange={(e) => handleInputChange('observaciones', e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Observaciones adicionales..."
+              />
+            </div>
+
+            {/* Facturación */}
+            <div className="border-t pt-4">
+              <h3 className="text-md font-medium text-gray-800 mb-3">Facturación</h3>
+              <div className="mb-4">
+                <Checkbox
+                  id="requiere_factura"
+                  checked={formData.requiere_factura}
+                  onChange={(e) => handleInputChange('requiere_factura', e.target.checked)}
+                  label="Requiere Factura"
+                />
+              </div>
+              
+              {formData.requiere_factura && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      RFC *
+                    </label>
+                    <Input
+                      type="text"
+                      value={formData.rfc}
+                      onChange={(e) => handleInputChange('rfc', e.target.value)}
+                      placeholder="RFC del cliente"
+                    />
+                    {errors.rfc && (
+                      <p className="text-xs text-red-600 mt-1">{errors.rfc}</p>
                     )}
                   </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Razón Social *
+                    </label>
+                    <Input
+                      type="text"
+                      value={formData.razon_social}
+                      onChange={(e) => handleInputChange('razon_social', e.target.value)}
+                      placeholder="Razón social del cliente"
+                    />
+                    {errors.razon_social && (
+                      <p className="text-xs text-red-600 mt-1">{errors.razon_social}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Abono Inicial */}
+            <div className="border-t pt-4">
+              <h3 className="text-md font-medium text-gray-800 mb-3">Abono Inicial</h3>
+              <div className="mb-4">
+                <Checkbox
+                  id="registrar_abono"
+                  checked={formData.registrar_abono}
+                  onChange={(e) => handleInputChange('registrar_abono', e.target.checked)}
+                  label="Registrar Abono Inicial"
+                />
+              </div>
+              
+              {formData.registrar_abono && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Monto del Abono *
+                    </label>
+                    <Input
+                      type="number"
+                      value={formData.monto_abono}
+                      onChange={(e) => handleInputChange('monto_abono', e.target.value)}
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                    />
+                    {errors.monto_abono && (
+                      <p className="text-xs text-red-600 mt-1">{errors.monto_abono}</p>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Forma de Pago
+                    </label>
+                    <Select
+                      options={paymentOptions}
+                      value={formData.forma_pago_abono}
+                      onChange={(value) => handleInputChange('forma_pago_abono', value)}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Observaciones del Abono
+                    </label>
+                    <Input
+                      type="text"
+                      value={formData.observaciones_abono}
+                      onChange={(e) => handleInputChange('observaciones_abono', e.target.value)}
+                      placeholder="Observaciones..."
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Resumen de Totales */}
+            <div className="border-t pt-4">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center mb-3">
+                  <Calculator className="h-5 w-5 text-gray-600 mr-2" />
+                  <h4 className="text-lg font-semibold text-gray-800">Resumen de Totales</h4>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Subtotal:</span>
+                    <span className="font-medium">{formatCurrency(totals.subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-red-600">
+                    <span>Descuentos:</span>
+                    <span className="font-medium">-{formatCurrency(totals.descuentoTotal)}</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-2">
+                    <span className="font-medium">Total:</span>
+                    <span className="font-bold text-lg">{formatCurrency(totals.total)}</span>
+                  </div>
+                  {formData.requiere_factura && (
+                    <>
+                      <div className="flex justify-between text-blue-600">
+                        <span>IVA (16%):</span>
+                        <span className="font-medium">{formatCurrency(totals.iva)}</span>
+                      </div>
+                      <div className="flex justify-between border-t pt-2 text-blue-800">
+                        <span className="font-bold">Total con IVA:</span>
+                        <span className="font-bold text-lg">{formatCurrency(totals.totalConIva)}</span>
+                      </div>
+                    </>
+                  )}
+                  {formData.registrar_abono && formData.monto_abono && (
+                    <div className="border-t pt-2 space-y-1">
+                      <div className="flex justify-between text-green-600">
+                        <span>Abono inicial:</span>
+                        <span className="font-medium">{formatCurrency(parseFloat(formData.monto_abono))}</span>
+                      </div>
+                      <div className="flex justify-between text-orange-600">
+                        <span className="font-medium">Saldo pendiente:</span>
+                        <span className="font-bold">
+                          {formatCurrency((formData.requiere_factura ? totals.totalConIva : totals.total) - parseFloat(formData.monto_abono || 0))}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
-
-          <div className="flex items-center justify-end space-x-4 p-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={onClose}
-              disabled={loading}
-            >
+          
+          <div className="flex items-center justify-end p-4 border-t bg-gray-50">
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancelar
             </Button>
-            <Button
-              type="submit"
-              disabled={loading}
-            >
-              {loading ? 'Guardando...' : (sale ? 'Actualizar' : 'Crear')} Venta
+            <Button type="submit" disabled={loading} className="ml-2">
+              {loading ? 'Guardando...' : (sale ? 'Actualizar' : 'Crear')}
             </Button>
           </div>
         </form>

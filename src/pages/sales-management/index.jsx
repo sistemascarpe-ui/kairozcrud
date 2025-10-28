@@ -9,6 +9,7 @@ import Button from '../../components/ui/Button';
 import Header from '../../components/ui/Header';
 import SalesTable from './components/SalesTable';
 import SalesModal from './components/SalesModal';
+
 import { salesService } from '../../services/salesService';
 import { userService } from '../../services/userService';
 import { useAuth } from '../../contexts/AuthContext';
@@ -66,13 +67,32 @@ const SalesManagement = () => {
   const loadInitialData = async () => {
     setLoading(true);
     try {
+      console.log('🔄 Cargando datos iniciales...');
       const [salesResult, vendorsResult] = await Promise.all([
         salesService.getSalesNotes(),
         userService.getUsers()
       ]);
-      if (salesResult.data) setSales(salesResult.data);
-      if (vendorsResult.data) setVendedores(vendorsResult.data);
-    } catch (error) { toast.error('Error inesperado al cargar los datos'); } 
+      
+      console.log('📊 Resultado de ventas:', salesResult);
+      console.log('👥 Resultado de vendedores:', vendorsResult);
+      
+      if (salesResult.data) {
+        console.log('✅ Datos de ventas cargados:', salesResult.data.length, 'notas');
+        setSales(salesResult.data);
+      } else {
+        console.log('❌ No se pudieron cargar las ventas:', salesResult.error);
+      }
+      
+      if (vendorsResult.data) {
+        console.log('✅ Datos de vendedores cargados:', vendorsResult.data.length, 'vendedores');
+        setVendedores(vendorsResult.data);
+      } else {
+        console.log('❌ No se pudieron cargar los vendedores:', vendorsResult.error);
+      }
+    } catch (error) { 
+      console.error('💥 Error en loadInitialData:', error);
+      toast.error('Error inesperado al cargar los datos'); 
+    } 
     finally { setLoading(false); }
   };
   
@@ -300,6 +320,8 @@ const handleSaveSale = async (saleData) => {
             </div>
             <Button onClick={handleCreateSale} className="flex items-center space-x-2"><Plus className="h-5 w-5" /><span>Nueva Nota</span></Button>
           </div>
+
+
 
           {/* Selector de Mes para Estadísticas */}
           <div className="mb-6 flex items-center justify-between bg-white p-4 rounded-lg shadow-sm border">

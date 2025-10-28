@@ -39,7 +39,14 @@ export const salesService = {
             vendedor_id,
             usuarios:vendedor_id (id, nombre, apellido) 
           ),
-          armazones:armazon_id (id, sku, color, marcas(nombre), descripciones(nombre)),
+          venta_productos (
+            id,
+            armazon_id,
+            cantidad,
+            precio_unitario,
+            subtotal,
+            armazones (id, sku, color, precio, marcas(nombre), descripciones(nombre))
+          ),
           abonos (id, monto, fecha_abono)
         `)
         .order('created_at', { ascending: false });
@@ -59,6 +66,12 @@ export const salesService = {
           .map(vc => vc.clientes)
           .filter(Boolean); // Filtrar valores null/undefined
         
+        // Extraer productos de la relación venta_productos
+        const productos = (item.venta_productos || []).filter(Boolean);
+        
+        // Para mantener compatibilidad, buscar el primer armazón
+        const primerArmazon = productos.find(p => p.armazones)?.armazones;
+        
         // Calcular saldo pendiente basado en abonos
         const totalAbonos = (item.abonos || []).reduce((sum, abono) => sum + parseFloat(abono.monto || 0), 0);
         const saldoPendiente = Math.max(0, parseFloat(item.total) - totalAbonos);
@@ -69,22 +82,23 @@ export const salesService = {
         folio: item.folio,
         clientes: clientes, // Ahora es un array de clientes
         cliente: clientes[0] || null, // Mantener compatibilidad con código existente (primer cliente)
-        armazon: {
-          ...item.armazones,
-          modelo: `${item.armazones?.marcas?.nombre || 'N/A'} - ${item.armazones?.sku || 'Sin SKU'}`,
-          precio: item.precio_armazon,
-        },
+        armazon: primerArmazon ? {
+          ...primerArmazon,
+          modelo: `${primerArmazon?.marcas?.nombre || 'N/A'} - ${primerArmazon?.sku || 'Sin SKU'}`,
+          precio: productos.find(p => p.armazones)?.precio_unitario || 0,
+        } : null,
         tipo_mica: {
-          nombre: item.descripcion_micas || 'N/A',
-          precio: item.precio_micas,
+          nombre: 'Múltiples productos', // Indicar que hay múltiples productos
+          precio: 0,
         },
+        productos: productos, // Nuevos datos de productos
         vendedores: vendedores,
-        // Mantener los datos originales para edición
-        precio_armazon: item.precio_armazon,
-        precio_micas: item.precio_micas,
-        descripcion_micas: item.descripcion_micas,
-        descuento_armazon_monto: item.descuento_armazon_monto || 0,
-        descuento_micas_monto: item.descuento_micas_monto || 0,
+        // Mantener compatibilidad con datos originales
+        precio_armazon: productos.find(p => p.armazones)?.precio_unitario || 0,
+        precio_micas: 0, // Ya no aplica con múltiples productos
+        descripcion_micas: 'Ver productos', // Indicar que hay que ver los productos
+        descuento_armazon_monto: 0,
+        descuento_micas_monto: 0,
         descuento_monto: item.descuento_monto || 0,
         subtotal: item.subtotal,
         total: item.total,
