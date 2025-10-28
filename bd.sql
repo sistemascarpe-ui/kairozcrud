@@ -156,6 +156,14 @@ CREATE TABLE public.usuarios (
   apellido text,
   CONSTRAINT usuarios_pkey PRIMARY KEY (id)
 );
+CREATE TABLE public.venta_clientes (
+  venta_id uuid NOT NULL,
+  cliente_id uuid NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT venta_clientes_pkey PRIMARY KEY (venta_id, cliente_id),
+  CONSTRAINT venta_clientes_venta_id_fkey FOREIGN KEY (venta_id) REFERENCES public.ventas(id),
+  CONSTRAINT venta_clientes_cliente_id_fkey FOREIGN KEY (cliente_id) REFERENCES public.clientes(id)
+);
 CREATE TABLE public.venta_vendedores (
   venta_id uuid NOT NULL,
   vendedor_id uuid NOT NULL,
@@ -170,7 +178,6 @@ CREATE TABLE public.ventas (
   precio_armazon numeric NOT NULL DEFAULT 0,
   descripcion_micas text,
   precio_micas numeric NOT NULL DEFAULT 0,
-  cliente_id uuid,
   fecha_venta timestamp with time zone,
   subtotal numeric,
   descuento_monto numeric DEFAULT 0,
@@ -188,6 +195,5 @@ CREATE TABLE public.ventas (
   creado_por_id uuid,
   CONSTRAINT ventas_pkey PRIMARY KEY (id),
   CONSTRAINT ventas_armazon_id_fkey FOREIGN KEY (armazon_id) REFERENCES public.armazones(id),
-  CONSTRAINT ventas_cliente_id_fkey FOREIGN KEY (cliente_id) REFERENCES public.clientes(id),
   CONSTRAINT ventas_creado_por_id_fkey FOREIGN KEY (creado_por_id) REFERENCES public.usuarios(id)
 );

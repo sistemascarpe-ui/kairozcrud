@@ -171,8 +171,8 @@ const handleSaveSale = async (saleData) => {
     
     // --- VALIDACIONES CORREGIDAS ---
     // Estas validaciones ahora se basan en los datos que envía el modal.
-    if (!saleData.cliente_id) {
-      toast.error('Error: Debe seleccionar un cliente');
+    if (!saleData.cliente_ids || saleData.cliente_ids.length === 0) {
+      toast.error('Error: Debe seleccionar al menos un cliente');
       setModalLoading(false); // Detener el spinner
       return;
     }

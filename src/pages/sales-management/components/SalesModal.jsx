@@ -12,7 +12,7 @@ import { userService } from '../../../services/userService';
 
 const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) => {
   const getInitialFormData = () => ({
-    cliente_id: '',
+    cliente_ids: [],
     armazon_id: '',
     descripcion_micas: '',
     precio_armazon: 0,
@@ -118,7 +118,7 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
     if (isOpen && isDataLoaded) {
       if (sale) {
         setFormData({
-          cliente_id: sale.cliente?.id || '',
+          cliente_ids: sale.clientes ? sale.clientes.map(c => c.id) : (sale.cliente ? [sale.cliente.id] : []),
           armazon_id: sale.armazon?.id || '',
           descripcion_micas: sale.descripcion_micas || '',
           precio_armazon: sale.precio_armazon || 0,
@@ -179,13 +179,21 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
       const selectedProduct = products.find(p => p.id === value);
       newFormData.precio_armazon = selectedProduct ? selectedProduct.precio : 0;
     }
+    
     setFormData(newFormData);
+    
+    // Limpiar errores específicos cuando se cambian los campos
+    if (name === 'cliente_ids' && errors.cliente_ids) {
+      setErrors(prev => ({ ...prev, cliente_ids: '' }));
+    }
   };
 
 
   const validate = () => {
     const newErrors = {};
-    if (!formData.cliente_id) newErrors.cliente_id = 'Debe seleccionar un cliente.';
+    if (!formData.cliente_ids || formData.cliente_ids.length === 0) {
+      newErrors.cliente_ids = 'Debe seleccionar al menos un cliente.';
+    }
     if (!formData.armazon_id && !formData.monto_compra) newErrors.armazon_id = 'Debe seleccionar un armazón o ingresar un monto total de compra.';
     if (!formData.vendedor_ids || formData.vendedor_ids.length === 0) newErrors.vendedor_ids = 'Debe seleccionar al menos un vendedor.';
     
@@ -276,17 +284,18 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
           <div className="p-6 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Cliente *</label>
+                <label className="block text-sm font-medium text-gray-700">Clientes *</label>
                 <Select
+                  multiple
                   options={customerOptions}
-                  value={formData.cliente_id}
-                  onChange={(value) => handleChange('cliente_id', value)}
-                  placeholder="Buscar cliente..."
+                  value={formData.cliente_ids}
+                  onChange={(value) => handleChange('cliente_ids', value)}
+                  placeholder="Seleccionar clientes..."
                   searchable
                   clearable
-                  error={errors.cliente_id}
+                  error={errors.cliente_ids}
                 />
-                {errors.cliente_id && <p className="text-xs text-red-600 mt-1">{errors.cliente_id}</p>}
+                {errors.cliente_ids && <p className="text-xs text-red-600 mt-1">{errors.cliente_ids}</p>}
                 
               </div>
               <div>

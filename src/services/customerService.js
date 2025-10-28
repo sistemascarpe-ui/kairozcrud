@@ -46,6 +46,22 @@ export const customerService = {
     }
   },
 
+  // Create multiple customers
+  async createMultipleCustomers(customersData) {
+    try {
+      const { data, error } = await supabase?.from('clientes')?.insert(customersData)?.select(`
+          *,
+          usuarios(nombre, apellido), empresas(id, nombre)
+        `)
+      
+      if (error) throw error
+      
+      return { data, error: null }
+    } catch (error) {
+      return { data: null, error: error?.message };
+    }
+  },
+
   // Update customer
   async updateCustomer(id, updates) {
     try {

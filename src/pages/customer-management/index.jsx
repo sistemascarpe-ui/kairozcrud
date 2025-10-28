@@ -11,6 +11,7 @@ import { empresaService } from '../../services/empresaService';
 import Header from '../../components/ui/Header';
 import CustomerTable from './components/CustomerTable';
 import CustomerModal from './components/CustomerModal';
+import MultipleCustomerModal from './components/MultipleCustomerModal';
 import HistorialGraduacionesModal from './components/HistorialGraduacionesModal';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
@@ -47,6 +48,7 @@ const CustomerManagement = () => {
   const [selectedEmpresa, setSelectedEmpresa] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [isMultipleCustomerModalOpen, setIsMultipleCustomerModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('edit');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [isHistorialModalOpen, setIsHistorialModalOpen] = useState(false);
@@ -196,6 +198,34 @@ const CustomerManagement = () => {
     setIsCustomerModalOpen(true);
   };
 
+  const handleAddMultipleCustomers = () => {
+    setIsMultipleCustomerModalOpen(true);
+  };
+
+  const handleSaveMultipleCustomers = async (customersData) => {
+    try {
+      setError('');
+      
+      const { data, error } = await customerService.createMultipleCustomers(customersData);
+
+      if (error) {
+        toast.error(`Error al crear clientes: ${error}`);
+        throw new Error(error);
+      }
+
+      // Reload customers to show the new ones
+      const loadResult = await customerService?.getCustomers();
+      if (loadResult?.data) {
+        setCustomers(loadResult.data);
+      }
+      
+      toast.success(`${customersData.length} cliente${customersData.length !== 1 ? 's' : ''} creado${customersData.length !== 1 ? 's' : ''} exitosamente`);
+      
+    } catch (error) {
+      console.error('Error saving multiple customers:', error);
+    }
+  };
+
   const handleViewHistorial = (customer) => {
     setSelectedCustomerForHistorial(customer);
     setIsHistorialModalOpen(true);
@@ -317,13 +347,21 @@ const CustomerManagement = () => {
                 Administra el historial clínico completo y datos de prescripciones de tus clientes
               </p>
             </div>
-            <div className="mt-4 sm:mt-0">
+            <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row gap-2">
               <Button
                 onClick={handleAddCustomer}
                 iconName="Plus"
                 className="w-full sm:w-auto"
               >
                 Agregar Cliente
+              </Button>
+              <Button
+                onClick={handleAddMultipleCustomers}
+                iconName="Users"
+                variant="outline"
+                className="w-full sm:w-auto"
+              >
+                Registro Múltiple
               </Button>
             </div>
           </div>
@@ -440,6 +478,15 @@ const CustomerManagement = () => {
             customer={selectedCustomer}
             onSave={handleSaveCustomer}
             mode={modalMode}
+            users={users}
+            empresas={empresas}
+          />
+
+          {/* Multiple Customer Modal */}
+          <MultipleCustomerModal
+            isOpen={isMultipleCustomerModalOpen}
+            onClose={() => setIsMultipleCustomerModalOpen(false)}
+            onSave={handleSaveMultipleCustomers}
             users={users}
             empresas={empresas}
           />

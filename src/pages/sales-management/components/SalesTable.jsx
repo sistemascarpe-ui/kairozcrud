@@ -65,7 +65,7 @@ const formatDate = (dateString) => {
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Acciones</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Folio</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Cliente</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Clientes</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Armazón</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Tipo de Mica</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Desc. Armazón</th>
@@ -100,8 +100,23 @@ const formatDate = (dateString) => {
                   </div>
                 </td>
                 <td className="px-4 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{sale.cliente?.nombre || 'N/A'}</div>
-                  <div className="text-sm text-gray-500">{sale.cliente?.telefono}</div>
+                  {sale.clientes && sale.clientes.length > 0 ? (
+                    <div className="space-y-1">
+                      {sale.clientes.map((cliente, index) => (
+                        <div key={cliente.id || index}>
+                          <div className="text-sm text-gray-900">{cliente.nombre}</div>
+                          <div className="text-sm text-gray-500">{cliente.telefono}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : sale.cliente ? (
+                    <div>
+                      <div className="text-sm text-gray-900">{sale.cliente.nombre}</div>
+                      <div className="text-sm text-gray-500">{sale.cliente.telefono}</div>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-900">N/A</div>
+                  )}
                 </td>
 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
   <div className="font-medium">

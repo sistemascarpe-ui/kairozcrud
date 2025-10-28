@@ -31,7 +31,10 @@ export const salesService = {
         .from('ventas')
         .select(`
           *,
-          clientes:cliente_id (id, nombre, telefono, correo, empresa_id, empresas:empresa_id(id, nombre)),
+          venta_clientes ( 
+            cliente_id,
+            clientes:cliente_id (id, nombre, telefono, correo, empresa_id, empresas:empresa_id(id, nombre))
+          ),
           venta_vendedores ( 
             vendedor_id,
             usuarios:vendedor_id (id, nombre, apellido) 
@@ -51,6 +54,11 @@ export const salesService = {
           .map(vv => vv.usuarios)
           .filter(Boolean); // Filtrar valores null/undefined
         
+        // Extraer clientes de la relación venta_clientes
+        const clientes = (item.venta_clientes || [])
+          .map(vc => vc.clientes)
+          .filter(Boolean); // Filtrar valores null/undefined
+        
         // Calcular saldo pendiente basado en abonos
         const totalAbonos = (item.abonos || []).reduce((sum, abono) => sum + parseFloat(abono.monto || 0), 0);
         const saldoPendiente = Math.max(0, parseFloat(item.total) - totalAbonos);
@@ -59,7 +67,8 @@ export const salesService = {
         return {
         id: item.id,
         folio: item.folio,
-        cliente: item.clientes,
+        clientes: clientes, // Ahora es un array de clientes
+        cliente: clientes[0] || null, // Mantener compatibilidad con código existente (primer cliente)
         armazon: {
           ...item.armazones,
           modelo: `${item.armazones?.marcas?.nombre || 'N/A'} - ${item.armazones?.sku || 'Sin SKU'}`,
@@ -143,7 +152,7 @@ export const salesService = {
 
   async createSalesNote(salesData) {
     try {
-      const { items, vendedor_ids, folio_manual, creado_por_id, monto_compra, abonoInicial, registrar_abono, monto_abono, forma_pago_abono, observaciones_abono, ...ventaDetails } = salesData;
+      const { items, vendedor_ids, cliente_ids, folio_manual, creado_por_id, monto_compra, abonoInicial, registrar_abono, monto_abono, forma_pago_abono, observaciones_abono, ...ventaDetails } = salesData;
 
       // 1. Determinar el folio a usar (manual o automático)
       let folio;
@@ -393,7 +402,33 @@ delete dataToInsert.monto_compra; // Eliminar el campo monto_compra ya que no ex
         }
       }
 
-  // 4. (Opcional pero recomendado) Asociamos los vendedores.
+  // 4. Asociamos los clientes a la venta
+  if (data && cliente_ids && cliente_ids.length > 0) {
+    const ventaClientes = cliente_ids.map(cliente_id => ({
+      venta_id: data.id,
+      cliente_id,
+    }));
+    const { error: vcError } = await supabase.from('venta_clientes').insert(ventaClientes);
+    if (vcError) {
+      logger.error('Error al insertar clientes:', vcError);
+      // Si falla, borramos la venta para no dejar datos inconsistentes.
+      await supabase.from('ventas').delete().eq('id', data.id);
+      return { data: null, error: `Error al asociar clientes: ${vcError.message}` };
+    }
+  } else if (data && salesData.cliente_id) {
+    // Compatibilidad con el formato anterior (un solo cliente)
+    const { error: vcError } = await supabase.from('venta_clientes').insert([{
+      venta_id: data.id,
+      cliente_id: salesData.cliente_id,
+    }]);
+    if (vcError) {
+      logger.error('Error al insertar cliente:', vcError);
+      await supabase.from('ventas').delete().eq('id', data.id);
+      return { data: null, error: `Error al asociar cliente: ${vcError.message}` };
+    }
+  }
+
+  // 5. (Opcional pero recomendado) Asociamos los vendedores.
   if (data && vendedor_ids && vendedor_ids.length > 0) {
     const ventaVendedores = vendedor_ids.map(vendedor_id => ({
       venta_id: data.id,
@@ -403,12 +438,14 @@ delete dataToInsert.monto_compra; // Eliminar el campo monto_compra ya que no ex
     if (vvError) {
       logger.error('Error al insertar vendedores:', vvError);
       // Si falla, borramos la venta para no dejar datos inconsistentes.
+      await supabase.from('venta_vendedores').delete().eq('venta_id', data.id);
+      await supabase.from('venta_clientes').delete().eq('venta_id', data.id);
       await supabase.from('ventas').delete().eq('id', data.id);
       return { data: null, error: `Error al asociar vendedores: ${vvError.message}` };
     }
   }
 
-  // 5. Reducir el stock del armazón si la venta no está cancelada
+  // 6. Reducir el stock del armazón si la venta no está cancelada
   if (data && armazonItem && armazonItem.armazon_id && ventaDetails.estado !== 'cancelada') {
     const { inventoryService } = await import('./inventoryService');
     const firstVendedorId = vendedor_ids && vendedor_ids.length > 0 ? vendedor_ids[0] : null;
@@ -446,7 +483,7 @@ delete dataToInsert.monto_compra; // Eliminar el campo monto_compra ya que no ex
 
   async updateSalesNote(id, updates) {
     try {
-      const { vendedor_ids, items, folio_manual, monto_compra, ...restOfUpdates } = updates;
+      const { vendedor_ids, cliente_ids, items, folio_manual, monto_compra, ...restOfUpdates } = updates;
 
       // Eliminar campos que no existen en la tabla ventas
       delete restOfUpdates.vendedores;
@@ -567,6 +604,21 @@ delete dataToInsert.monto_compra; // Eliminar el campo monto_compra ya que no ex
           const { error: vvError } = await supabase.from('venta_vendedores').insert(ventaVendedores);
           if (vvError) {
             return { data: null, error: `Error al actualizar vendedores: ${vvError.message}` };
+          }
+        }
+      }
+
+      // Update clients if they have changed
+      if (cliente_ids) {
+        await supabase.from('venta_clientes').delete().eq('venta_id', id);
+        if (cliente_ids.length > 0) {
+          const ventaClientes = cliente_ids.map(cliente_id => ({
+            venta_id: id,
+            cliente_id,
+          }));
+          const { error: vcError } = await supabase.from('venta_clientes').insert(ventaClientes);
+          if (vcError) {
+            return { data: null, error: `Error al actualizar clientes: ${vcError.message}` };
           }
         }
       }
