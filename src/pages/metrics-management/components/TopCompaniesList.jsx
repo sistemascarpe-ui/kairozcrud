@@ -43,49 +43,53 @@ const TopCompaniesList = () => {
     // Filtrar por mes si está seleccionado
     if (selectedMonth) {
       filteredSales = salesData.filter(sale => {
-        if (sale.estado !== 'completada') return false;
+        // Incluir ventas completadas y pendientes
+        if (sale.estado !== 'completada' && sale.estado !== 'pendiente') return false;
         const saleDate = new Date(sale.fecha_venta || sale.created_at);
         const saleYearMonth = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`;
         return saleYearMonth === selectedMonth;
       });
     } else {
-      // Solo ventas completadas
-      filteredSales = salesData.filter(sale => sale.estado === 'completada');
+      // Incluir ventas completadas y pendientes
+      filteredSales = salesData.filter(sale => sale.estado === 'completada' || sale.estado === 'pendiente');
     }
 
     // Agrupar por empresa
     const companyData = {};
     
     filteredSales.forEach(sale => {
-      const cliente = sale.cliente;
-      if (!cliente) return;
+      // Verificar que la venta tenga clientes
+      if (!sale.clientes || !Array.isArray(sale.clientes) || sale.clientes.length === 0) return;
       
-      // Verificar si el cliente tiene empresa asociada
-      const empresa = cliente.empresas; // Relación con la tabla empresas
-      const companyName = empresa?.nombre || 'Clientes Individuales';
-      const companyId = empresa?.id || 'individual';
-      
-      if (!companyData[companyId]) {
-        companyData[companyId] = {
-          id: companyId,
-          name: companyName,
-          totalSales: 0,
-          totalRevenue: 0,
-          customers: new Set(),
-          salesDetails: []
-        };
-      }
-      
-      companyData[companyId].totalSales += 1;
-      companyData[companyId].totalRevenue += parseFloat(sale.total || 0);
-      if (cliente.id) {
-        companyData[companyId].customers.add(cliente.id);
-      }
-      companyData[companyId].salesDetails.push({
-        folio: sale.folio,
-        cliente: cliente.nombre,
-        total: parseFloat(sale.total || 0),
-        fecha: sale.fecha_venta || sale.created_at
+      // Procesar cada cliente de la venta (normalmente será uno)
+      sale.clientes.forEach(cliente => {
+        // Verificar si el cliente tiene empresa asociada
+        const empresa = cliente.empresa; // Relación con la tabla empresas
+        const companyName = empresa || 'Clientes Individuales';
+        const companyId = empresa ? `empresa_${empresa}` : 'individual';
+        
+        if (!companyData[companyId]) {
+          companyData[companyId] = {
+            id: companyId,
+            name: companyName,
+            totalSales: 0,
+            totalRevenue: 0,
+            customers: new Set(),
+            salesDetails: []
+          };
+        }
+        
+        companyData[companyId].totalSales += 1;
+        companyData[companyId].totalRevenue += parseFloat(sale.total || 0);
+        if (cliente.id) {
+          companyData[companyId].customers.add(cliente.id);
+        }
+        companyData[companyId].salesDetails.push({
+          folio: sale.folio,
+          cliente: cliente.nombre,
+          total: parseFloat(sale.total || 0),
+          fecha: sale.fecha_venta || sale.created_at
+        });
       });
     });
 

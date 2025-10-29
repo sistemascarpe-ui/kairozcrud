@@ -38,44 +38,69 @@ const TopBrandsList = () => {
   };
 
   const calculateBrandStats = (salesData = allSales) => {
+    console.log('=== CALCULANDO ESTADÍSTICAS DE MARCAS ===');
+    console.log('Datos de ventas recibidos:', salesData.length);
+    
     let filteredSales = salesData;
 
     // Filtrar por mes si está seleccionado
     if (selectedMonth) {
       filteredSales = salesData.filter(sale => {
-        if (sale.estado !== 'completada') return false;
+        // Incluir ventas completadas y pendientes
+        if (sale.estado !== 'completada' && sale.estado !== 'pendiente') return false;
         const saleDate = new Date(sale.fecha_venta || sale.created_at);
         const saleYearMonth = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`;
         return saleYearMonth === selectedMonth;
       });
     } else {
-      // Solo ventas completadas
-      filteredSales = salesData.filter(sale => sale.estado === 'completada');
+      // Incluir ventas completadas y pendientes
+      filteredSales = salesData.filter(sale => sale.estado === 'completada' || sale.estado === 'pendiente');
     }
+
+    console.log('Ventas filtradas:', filteredSales.length);
+    console.log('Ejemplo de venta:', filteredSales[0]);
 
     // Agrupar por marca
     const brandData = {};
     
-    filteredSales.forEach(sale => {
-      const armazon = sale.armazon;
-      if (!armazon || !armazon.marcas) return;
-      
-      const brandName = armazon.marcas.nombre || 'Sin marca';
-      
-      if (!brandData[brandName]) {
-        brandData[brandName] = {
-          name: brandName,
-          totalSales: 0,
-          totalRevenue: 0,
-          products: new Set()
-        };
+    filteredSales.forEach((sale, index) => {
+      // Verificar que la venta tenga productos
+      if (!sale.productos || !Array.isArray(sale.productos)) {
+        console.log(`Venta ${index} no tiene productos:`, sale);
+        return;
       }
       
-      brandData[brandName].totalSales += 1;
-      brandData[brandName].totalRevenue += parseFloat(sale.precio_armazon || 0);
-      if (armazon.id) {
-        brandData[brandName].products.add(armazon.id);
-      }
+      console.log(`Procesando venta ${index} con ${sale.productos.length} productos:`, sale.productos);
+      
+      // Procesar cada producto de la venta
+      sale.productos.forEach((producto, prodIndex) => {
+        console.log(`  Producto ${prodIndex}:`, producto);
+        
+        // Solo procesar productos que sean armazones y tengan información de marca
+        if (producto.tipo !== 'armazon' || !producto.armazon || !producto.armazon.marca) {
+          console.log(`  Producto ${prodIndex} omitido - tipo: ${producto.tipo}, armazon:`, producto.armazon);
+          return;
+        }
+        
+        const brandName = producto.armazon.marca || 'Sin marca';
+        console.log(`  Procesando marca: ${brandName}`);
+        
+        if (!brandData[brandName]) {
+          brandData[brandName] = {
+            name: brandName,
+            totalSales: 0,
+            totalRevenue: 0,
+            products: new Set()
+          };
+        }
+        
+        // Incrementar ventas por la cantidad del producto
+        brandData[brandName].totalSales += parseInt(producto.cantidad || 1);
+        brandData[brandName].totalRevenue += parseFloat(producto.subtotal || 0);
+        if (producto.armazon.id) {
+          brandData[brandName].products.add(producto.armazon.id);
+        }
+      });
     });
 
     // Convertir a array y ordenar por ventas
@@ -86,6 +111,7 @@ const TopBrandsList = () => {
       }))
       .sort((a, b) => b.totalSales - a.totalSales);
 
+    console.log('Estadísticas de marcas calculadas:', sortedBrands);
     setBrandStats(sortedBrands);
   };
 

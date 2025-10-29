@@ -387,9 +387,9 @@ const MetricsManagement = () => {
       return additionalMetrics.topProducts;
     }
     
-    // Filtrar ventas por mes seleccionado y solo completadas
+    // Filtrar ventas por mes seleccionado, incluyendo completadas y pendientes
     const filteredSales = allSalesData.filter(sale => {
-      if (sale.estado !== 'completada') return false;
+      if (sale.estado !== 'completada' && sale.estado !== 'pendiente') return false;
       const saleDate = new Date(sale.fecha_venta || sale.created_at);
       const saleYearMonth = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`;
       return saleYearMonth === topProductsMonth;
@@ -398,27 +398,35 @@ const MetricsManagement = () => {
     // Agrupar productos vendidos
     const productStats = {};
     filteredSales.forEach(sale => {
-      // El armazon puede venir en sale.armazon (transformado) 
-      const armazon = sale.armazon;
-      if (!armazon || !armazon.id) return;
+      // Verificar que la venta tenga productos
+      if (!sale.productos || !Array.isArray(sale.productos) || sale.productos.length === 0) return;
       
-      const productId = armazon.id;
-      
-      if (!productStats[productId]) {
-        productStats[productId] = {
-          id: productId,
-          sku: armazon.sku || 'N/A',
-          brand: armazon.marcas?.nombre || armazon.modelo?.split(' - ')[0] || 'Sin marca',
-          marca: armazon.marcas?.nombre || armazon.modelo?.split(' - ')[0] || 'Sin marca',
-          color: armazon.color || 'N/A',
-          price: sale.precio_armazon || armazon.precio || 0,
-          precio: sale.precio_armazon || armazon.precio || 0,
-          totalSold: 0,
-          quantity: 0
-        };
-      }
-      productStats[productId].totalSold += 1;
-      productStats[productId].quantity += 1;
+      // Procesar cada producto de la venta
+      sale.productos.forEach(producto => {
+        // Solo procesar productos de tipo 'armazon'
+        if (producto.tipo !== 'armazon' || !producto.armazon) return;
+        
+        const armazon = producto.armazon;
+        const productId = armazon.id;
+        
+        if (!productStats[productId]) {
+          productStats[productId] = {
+            id: productId,
+            sku: armazon.sku || 'N/A',
+            brand: armazon.marca || 'Sin marca',
+            marca: armazon.marca || 'Sin marca',
+            color: armazon.color || 'N/A',
+            price: producto.precio_unitario || armazon.precio || 0,
+            precio: producto.precio_unitario || armazon.precio || 0,
+            totalSold: 0,
+            quantity: 0
+          };
+        }
+        
+        const cantidad = parseInt(producto.cantidad) || 1;
+        productStats[productId].totalSold += cantidad;
+        productStats[productId].quantity += cantidad;
+      });
     });
     
     // Convertir a array y ordenar por cantidad vendida
