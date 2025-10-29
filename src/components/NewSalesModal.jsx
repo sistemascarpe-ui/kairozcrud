@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Calculator } from 'lucide-react';
+import { X, Plus, Trash2, Calculator, User, Package } from 'lucide-react';
 import Button from './ui/Button';
 import Input from './ui/Input';
 import Select from './ui/SelectSimple';
@@ -517,62 +517,93 @@ const NewSalesModal = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">
-            {sale ? 'Editar Nota de Venta' : 'Nueva Nota de Venta'}
-          </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[95vh] flex flex-col">
+        {/* Header mejorado */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">
+              {sale ? 'Editar Nota de Venta' : 'Nueva Nota de Venta'}
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              {sale ? 'Modifica los datos de la venta existente' : 'Completa la información para crear una nueva venta'}
+            </p>
+          </div>
+          <button 
+            onClick={onClose} 
+            className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-full transition-colors"
+          >
             <X size={24} />
           </button>
         </div>
         
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-6">
-            {/* Información del Cliente y Vendedor */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Clientes *
-                </label>
-                <Select
-                  multiple
-                  options={customers}
-                  value={formData.cliente_ids}
-                  onChange={(value) => handleInputChange('cliente_ids', value)}
-                  placeholder="Seleccionar clientes..."
-                />
-                {errors.cliente_ids && (
-                  <p className="text-xs text-red-600 mt-1">{errors.cliente_ids}</p>
-                )}
+          <div className="p-6">
+            {/* Sección 1: Información Principal */}
+            <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6 shadow-sm">
+              <div className="flex items-center mb-4">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                  <span className="text-blue-600 font-semibold text-sm">1</span>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800">Información Principal</h3>
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Vendedores *
-                </label>
-                <Select
-                  multiple
-                  options={vendedores}
-                  value={formData.vendedor_ids}
-                  onChange={(value) => handleInputChange('vendedor_ids', value)}
-                  placeholder="Seleccionar vendedores..."
-                />
-                {errors.vendedor_ids && (
-                  <p className="text-xs text-red-600 mt-1">{errors.vendedor_ids}</p>
-                )}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Clientes *
+                  </label>
+                  <Select
+                    multiple
+                    options={customers}
+                    value={formData.cliente_ids}
+                    onChange={(value) => handleInputChange('cliente_ids', value)}
+                    placeholder="Seleccionar clientes..."
+                    className="w-full"
+                  />
+                  {errors.cliente_ids && (
+                    <p className="text-xs text-red-600 mt-1 flex items-center">
+                      <span className="w-1 h-1 bg-red-600 rounded-full mr-2"></span>
+                      {errors.cliente_ids}
+                    </p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Vendedores *
+                  </label>
+                  <Select
+                    multiple
+                    options={vendedores}
+                    value={formData.vendedor_ids}
+                    onChange={(value) => handleInputChange('vendedor_ids', value)}
+                    placeholder="Seleccionar vendedores..."
+                    className="w-full"
+                  />
+                  {errors.vendedor_ids && (
+                    <p className="text-xs text-red-600 mt-1 flex items-center">
+                      <span className="w-1 h-1 bg-red-600 rounded-full mr-2"></span>
+                      {errors.vendedor_ids}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Productos */}
-            <div className="border-t pt-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-md font-medium text-gray-800">Productos</h3>
+            {/* Sección 2: Productos */}
+            <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6 shadow-sm">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                    <span className="text-green-600 font-semibold text-sm">2</span>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-800">Productos</h3>
+                </div>
                 <Button
                   type="button"
                   variant="secondary"
                   onClick={addProducto}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
                 >
                   <Plus size={16} />
                   Agregar Producto
@@ -580,25 +611,36 @@ const NewSalesModal = ({
               </div>
               
               {errors.productos && (
-                <p className="text-xs text-red-600 mb-4">{errors.productos}</p>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-red-700 flex items-center">
+                    <span className="w-2 h-2 bg-red-500 rounded-full mr-2"></span>
+                    {errors.productos}
+                  </p>
+                </div>
               )}
               
               <div className="space-y-4">
                 {productos.map((producto, index) => (
-                  <div key={producto.id} className="border rounded-lg p-4 bg-gray-50">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-medium text-gray-700">Producto {index + 1}</h4>
+                  <div key={producto.id} className="border border-gray-200 rounded-lg p-5 bg-gradient-to-r from-gray-50 to-gray-100">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center">
+                        <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center mr-3">
+                          <span className="text-white font-medium text-xs">{index + 1}</span>
+                        </div>
+                        <h4 className="font-semibold text-gray-800">Producto {index + 1}</h4>
+                      </div>
                       {productos.length > 1 && (
                         <button
                           type="button"
                           onClick={() => removeProducto(producto.id)}
-                          className="text-red-500 hover:text-red-700"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-full transition-colors"
+                          title="Eliminar producto"
                         >
                           <Trash2 size={16} />
                         </button>
                       )}
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -760,117 +802,154 @@ const NewSalesModal = ({
               </div>
             </div>
 
-            {/* Monto Total de la Compra */}
-            <div className="border-t pt-4">
-              <h3 className="text-md font-medium text-gray-800 mb-3">Monto Total de la Compra</h3>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Ingrese el monto total
-                </label>
-                <Input
-                  type="number"
-                  value={formData.monto_total_compra}
-                  onChange={(e) => handleInputChange('monto_total_compra', e.target.value)}
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Si ingresa este monto, se usará como total de la compra
-                </p>
-              </div>
-            </div>
-
-            {/* Descuento General (Opcional) */}
-            <div className="border-t pt-4">
-              <h3 className="text-md font-medium text-gray-800 mb-3">Descuento General (Opcional)</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Desc. General (%)
-                  </label>
-                  <Input
-                    type="number"
-                    value={formData.descuento_general_porcentaje}
-                    onChange={(e) => handleInputChange('descuento_general_porcentaje', e.target.value)}
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    placeholder="0"
-                  />
+            {/* Sección 3: Configuración de Precios */}
+            <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6 shadow-sm">
+              <div className="flex items-center mb-4">
+                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                  <span className="text-purple-600 font-semibold text-sm">3</span>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Desc. General ($)
-                  </label>
-                  <Input
-                    type="number"
-                    value={formData.descuento_general_monto}
-                    onChange={(e) => handleInputChange('descuento_general_monto', e.target.value)}
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Información Adicional */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Estado
-                </label>
-                <Select
-                  options={stateOptions}
-                  value={formData.estado}
-                  onChange={(value) => handleInputChange('estado', value)}
-                />
+                <h3 className="text-lg font-semibold text-gray-800">Configuración de Precios</h3>
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Folio Manual (Opcional)
-                </label>
-                <Input
-                  type="text"
-                  value={formData.folio_manual}
-                  onChange={(e) => handleInputChange('folio_manual', e.target.value)}
-                  placeholder="Dejar vacío para folio automático"
-                />
+              <div className="space-y-6">
+                {/* Monto Total de la Compra */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="font-medium text-blue-800 mb-3">Monto Total de la Compra</h4>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Ingrese el monto total
+                    </label>
+                    <Input
+                      type="number"
+                      value={formData.monto_total_compra}
+                      onChange={(e) => handleInputChange('monto_total_compra', e.target.value)}
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      className="bg-white"
+                    />
+                    <p className="text-xs text-blue-600">
+                      Si ingresa este monto, se usará como total de la compra
+                    </p>
+                  </div>
+                </div>
+
+                {/* Descuento General */}
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                  <h4 className="font-medium text-orange-800 mb-3">Descuento General (Opcional)</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Desc. General (%)
+                      </label>
+                      <Input
+                        type="number"
+                        value={formData.descuento_general_porcentaje}
+                        onChange={(e) => handleInputChange('descuento_general_porcentaje', e.target.value)}
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        placeholder="0"
+                        className="bg-white"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Desc. General ($)
+                      </label>
+                      <Input
+                        type="number"
+                        value={formData.descuento_general_monto}
+                        onChange={(e) => handleInputChange('descuento_general_monto', e.target.value)}
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        className="bg-white"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Observaciones
-              </label>
-              <textarea
-                value={formData.observaciones}
-                onChange={(e) => handleInputChange('observaciones', e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Observaciones adicionales..."
-              />
+            {/* Sección 4: Información Adicional */}
+            <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6 shadow-sm">
+              <div className="flex items-center mb-4">
+                <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
+                  <span className="text-indigo-600 font-semibold text-sm">4</span>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800">Información Adicional</h3>
+              </div>
+              
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Estado
+                    </label>
+                    <Select
+                      options={stateOptions}
+                      value={formData.estado}
+                      onChange={(value) => handleInputChange('estado', value)}
+                      className="w-full"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Folio Manual (Opcional)
+                    </label>
+                    <Input
+                      type="text"
+                      value={formData.folio_manual}
+                      onChange={(e) => handleInputChange('folio_manual', e.target.value)}
+                      placeholder="Dejar vacío para folio automático"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Observaciones
+                  </label>
+                  <textarea
+                    value={formData.observaciones}
+                    onChange={(e) => handleInputChange('observaciones', e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    placeholder="Observaciones adicionales..."
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* Facturación */}
-            <div className="border-t pt-4">
-              <h3 className="text-md font-medium text-gray-800 mb-3">Facturación</h3>
+            {/* Sección 5: Facturación */}
+            <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6 shadow-sm">
+              <div className="flex items-center mb-4">
+                <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
+                  <span className="text-yellow-600 font-semibold text-sm">5</span>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800">Facturación</h3>
+              </div>
+
               <div className="mb-4">
-                <Checkbox
-                  id="requiere_factura"
-                  checked={formData.requiere_factura}
-                  onChange={(e) => handleInputChange('requiere_factura', e.target.checked)}
-                  label="Requiere Factura"
-                />
+                <div className="flex items-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <Checkbox
+                    id="requiere_factura"
+                    checked={formData.requiere_factura}
+                    onChange={(e) => handleInputChange('requiere_factura', e.target.checked)}
+                    className="mr-3"
+                  />
+                  <label htmlFor="requiere_factura" className="text-sm font-medium text-yellow-800 cursor-pointer">
+                    Requiere Factura
+                  </label>
+                </div>
               </div>
-              
+
               {formData.requiere_factura && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       RFC *
                     </label>
                     <Input
@@ -878,14 +957,18 @@ const NewSalesModal = ({
                       value={formData.rfc}
                       onChange={(e) => handleInputChange('rfc', e.target.value)}
                       placeholder="RFC del cliente"
+                      className="border-yellow-300 focus:border-yellow-500 focus:ring-yellow-500"
                     />
                     {errors.rfc && (
-                      <p className="text-xs text-red-600 mt-1">{errors.rfc}</p>
+                      <p className="text-xs text-red-600 mt-1 flex items-center">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        {errors.rfc}
+                      </p>
                     )}
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Razón Social *
                     </label>
                     <Input
@@ -893,9 +976,13 @@ const NewSalesModal = ({
                       value={formData.razon_social}
                       onChange={(e) => handleInputChange('razon_social', e.target.value)}
                       placeholder="Razón social del cliente"
+                      className="border-yellow-300 focus:border-yellow-500 focus:ring-yellow-500"
                     />
                     {errors.razon_social && (
-                      <p className="text-xs text-red-600 mt-1">{errors.razon_social}</p>
+                      <p className="text-xs text-red-600 mt-1 flex items-center">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        {errors.razon_social}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -903,21 +990,32 @@ const NewSalesModal = ({
             </div>
 
             {/* Abono Inicial */}
-            <div className="border-t pt-4">
-              <h3 className="text-md font-medium text-gray-800 mb-3">Abono Inicial</h3>
+            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+              <div className="flex items-center mb-4">
+                <div className="flex items-center justify-center w-8 h-8 bg-green-100 text-green-600 rounded-full text-sm font-semibold mr-3">
+                  6
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800">Abono Inicial</h3>
+              </div>
+              
               <div className="mb-4">
-                <Checkbox
-                  id="registrar_abono"
-                  checked={formData.registrar_abono}
-                  onChange={(e) => handleInputChange('registrar_abono', e.target.checked)}
-                  label="Registrar Abono Inicial"
-                />
+                <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <Checkbox
+                    id="registrar_abono"
+                    checked={formData.registrar_abono}
+                    onChange={(e) => handleInputChange('registrar_abono', e.target.checked)}
+                    className="mr-3"
+                  />
+                  <label htmlFor="registrar_abono" className="text-sm font-medium text-green-800 cursor-pointer">
+                    Registrar Abono Inicial
+                  </label>
+                </div>
               </div>
               
               {formData.registrar_abono && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Monto del Abono *
                     </label>
                     <Input
@@ -927,25 +1025,30 @@ const NewSalesModal = ({
                       min="0"
                       step="0.01"
                       placeholder="0.00"
+                      className="border-green-300 focus:border-green-500 focus:ring-green-500"
                     />
                     {errors.monto_abono && (
-                      <p className="text-xs text-red-600 mt-1">{errors.monto_abono}</p>
+                      <p className="text-xs text-red-600 mt-1 flex items-center">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        {errors.monto_abono}
+                      </p>
                     )}
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Forma de Pago
                     </label>
                     <Select
                       options={paymentOptions}
                       value={formData.forma_pago_abono}
                       onChange={(value) => handleInputChange('forma_pago_abono', value)}
+                      className="border-green-300 focus:border-green-500 focus:ring-green-500"
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Observaciones del Abono
                     </label>
                     <Input
@@ -953,6 +1056,7 @@ const NewSalesModal = ({
                       value={formData.observaciones_abono}
                       onChange={(e) => handleInputChange('observaciones_abono', e.target.value)}
                       placeholder="Observaciones..."
+                      className="border-green-300 focus:border-green-500 focus:ring-green-500"
                     />
                   </div>
                 </div>
@@ -960,70 +1064,163 @@ const NewSalesModal = ({
             </div>
 
             {/* Resumen de Totales */}
-            <div className="border-t pt-4">
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center mb-3">
-                  <Calculator className="h-5 w-5 text-gray-600 mr-2" />
-                  <h4 className="text-lg font-semibold text-gray-800">Resumen de Totales</h4>
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-6 shadow-lg">
+              <div className="flex items-center mb-4">
+                <div className="flex items-center justify-center w-10 h-10 bg-blue-100 text-blue-600 rounded-full mr-3">
+                  <Calculator className="h-5 w-5" />
                 </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">
+                <h4 className="text-xl font-bold text-gray-800">Resumen de la Venta</h4>
+              </div>
+              
+              {/* Información General */}
+              <div className="bg-white rounded-lg p-4 shadow-sm mb-4">
+                <h5 className="font-semibold text-gray-800 mb-3 flex items-center">
+                  <User className="h-4 w-4 mr-2" />
+                  Información General
+                </h5>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-gray-600">Cliente:</span>
+                    <span className="ml-2 font-medium text-gray-800">
+                      {formData.cliente_ids && formData.cliente_ids.length > 0 
+                        ? formData.cliente_ids.map(id => 
+                            customers.find(c => c.value === id)?.label
+                          ).filter(Boolean).join(', ') 
+                        : 'No seleccionado'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Vendedor(es):</span>
+                    <span className="ml-2 font-medium text-gray-800">
+                      {formData.vendedor_ids && formData.vendedor_ids.length > 0 
+                        ? formData.vendedor_ids.map(id => 
+                            vendedores.find(v => v.value === id)?.label
+                          ).filter(Boolean).join(', ') 
+                        : 'No seleccionado'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Estado:</span>
+                    <span className="ml-2 font-medium text-gray-800">{formData.estado || 'Pendiente'}</span>
+                  </div>
+                  {formData.folio_manual && (
+                    <div>
+                      <span className="text-gray-600">Folio Manual:</span>
+                      <span className="ml-2 font-medium text-gray-800">{formData.folio_manual}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Detalle de Productos */}
+              {productos && productos.length > 0 && (
+                <div className="bg-white rounded-lg p-4 shadow-sm mb-4">
+                  <h5 className="font-semibold text-gray-800 mb-3 flex items-center">
+                    <Package className="h-4 w-4 mr-2" />
+                    Productos ({productos.length})
+                  </h5>
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {productos.map((producto, index) => (
+                      <div key={index} className="flex justify-between items-center text-sm p-2 bg-gray-50 rounded">
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-800">
+                            {(() => {
+                              if (producto.tipo_producto === 'armazon' && producto.armazon_id) {
+                                const armazon = inventory.find(i => i.id === producto.armazon_id);
+                                if (armazon) {
+                                  const marca = armazon.marcas?.nombre || 'Sin marca';
+                                  const descripcion = armazon.descripciones?.nombre || armazon.sku || 'Sin descripción';
+                                  const color = armazon.color || 'Sin color';
+                                  return `${marca} - ${descripcion} (${color})`;
+                                }
+                                return 'Armazón - Sin información';
+                              } else if (producto.tipo_producto === 'mica' || producto.descripcion_mica) {
+                                return `Mica - ${producto.descripcion_mica || 'Sin descripción'}`;
+                              }
+                              return producto.tipo_producto || 'Producto';
+                            })()}
+                          </div>
+                          <div className="text-gray-600 text-xs">
+                            Cant: {producto.cantidad} | 
+                            Precio Unit: {formatCurrency(producto.precio_unitario)} |
+                            {producto.descuento_armazon_porcentaje > 0 && ` Desc Armazón: ${producto.descuento_armazon_porcentaje}% |`}
+                            {producto.descuento_armazon_monto > 0 && ` Desc Armazón: ${formatCurrency(producto.descuento_armazon_monto)} |`}
+                            {producto.descuento_micas_porcentaje > 0 && ` Desc Micas: ${producto.descuento_micas_porcentaje}% |`}
+                            {producto.descuento_micas_monto > 0 && ` Desc Micas: ${formatCurrency(producto.descuento_micas_monto)} |`}
+                          </div>
+                        </div>
+                        <div className="font-semibold text-gray-800">
+                          {formatCurrency(producto.subtotal)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Totales Financieros */}
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                    <span className="text-gray-600 font-medium">
                       {formData.monto_total_compra && parseFloat(formData.monto_total_compra) > 0 ? 'Monto Base:' : 'Subtotal:'}
                     </span>
-                    <span className="font-medium">{formatCurrency(totals.subtotal)}</span>
+                    <span className="font-semibold text-gray-800">{formatCurrency(totals.subtotal)}</span>
                   </div>
                   
                   {/* Mostrar desglose de descuentos generales cuando se usa monto total de compra */}
                   {formData.monto_total_compra && parseFloat(formData.monto_total_compra) > 0 && totals.descuentoTotal > 0 && (
-                    <div className="space-y-1 text-xs">
+                    <div className="space-y-2 text-xs bg-red-50 p-3 rounded-lg border border-red-200">
+                      <div className="font-medium text-red-700 mb-2">Descuentos Aplicados:</div>
                       {totals.descuentoGeneralPorcentaje > 0 && (
-                        <div className="flex justify-between text-red-500 pl-4">
+                        <div className="flex justify-between text-red-600 pl-2">
                           <span>• Desc. General ({formData.descuento_general_porcentaje}%):</span>
-                          <span>-{formatCurrency(totals.descuentoGeneralPorcentaje)}</span>
+                          <span className="font-medium">-{formatCurrency(totals.descuentoGeneralPorcentaje)}</span>
                         </div>
                       )}
                       {totals.descuentoGeneralMonto > 0 && (
-                        <div className="flex justify-between text-red-500 pl-4">
+                        <div className="flex justify-between text-red-600 pl-2">
                           <span>• Desc. General ($):</span>
-                          <span>-{formatCurrency(totals.descuentoGeneralMonto)}</span>
+                          <span className="font-medium">-{formatCurrency(totals.descuentoGeneralMonto)}</span>
                         </div>
                       )}
                     </div>
                   )}
                   
                   {totals.descuentoTotal > 0 && (
-                    <div className="flex justify-between text-red-600">
-                      <span>Total Descuentos:</span>
-                      <span className="font-medium">-{formatCurrency(totals.descuentoTotal)}</span>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span className="text-red-600 font-medium">Total Descuentos:</span>
+                      <span className="font-semibold text-red-600">-{formatCurrency(totals.descuentoTotal)}</span>
                     </div>
                   )}
                   
-                  <div className="flex justify-between border-t pt-2">
-                    <span className="font-medium">Total:</span>
-                    <span className="font-bold text-lg">{formatCurrency(totals.total)}</span>
+                  <div className="flex justify-between items-center py-3 border-t-2 border-gray-300 bg-gray-50 px-3 rounded-lg">
+                    <span className="font-bold text-gray-800 text-base">Total:</span>
+                    <span className="font-bold text-xl text-gray-900">{formatCurrency(totals.total)}</span>
                   </div>
+                  
                   {formData.requiere_factura && (
-                    <>
-                      <div className="flex justify-between text-blue-600">
-                        <span>IVA (16%):</span>
-                        <span className="font-medium">{formatCurrency(totals.iva)}</span>
+                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                      <div className="flex justify-between items-center py-1">
+                        <span className="text-blue-700 font-medium">IVA (16%):</span>
+                        <span className="font-semibold text-blue-700">{formatCurrency(totals.iva)}</span>
                       </div>
-                      <div className="flex justify-between border-t pt-2 text-blue-800">
-                        <span className="font-bold">Total con IVA:</span>
-                        <span className="font-bold text-lg">{formatCurrency(totals.totalConIva)}</span>
+                      <div className="flex justify-between items-center py-2 border-t border-blue-300 mt-2 pt-2">
+                        <span className="font-bold text-blue-800 text-base">Total con IVA:</span>
+                        <span className="font-bold text-xl text-blue-900">{formatCurrency(totals.totalConIva)}</span>
                       </div>
-                    </>
+                    </div>
                   )}
+                  
                   {formData.registrar_abono && formData.monto_abono && (
-                    <div className="border-t pt-2 space-y-1">
-                      <div className="flex justify-between text-green-600">
-                        <span>Abono inicial:</span>
-                        <span className="font-medium">{formatCurrency(parseFloat(formData.monto_abono))}</span>
+                    <div className="bg-green-50 p-3 rounded-lg border border-green-200 mt-3">
+                      <div className="flex justify-between items-center py-1">
+                        <span className="text-green-700 font-medium">Abono inicial:</span>
+                        <span className="font-semibold text-green-700">{formatCurrency(parseFloat(formData.monto_abono))}</span>
                       </div>
-                      <div className="flex justify-between text-orange-600">
-                        <span className="font-medium">Saldo pendiente:</span>
-                        <span className="font-bold">
+                      <div className="flex justify-between items-center py-2 border-t border-green-300 mt-2 pt-2">
+                        <span className="font-bold text-orange-700 text-base">Saldo pendiente:</span>
+                        <span className="font-bold text-lg text-orange-800">
                           {formatCurrency((formData.requiere_factura ? totals.totalConIva : totals.total) - parseFloat(formData.monto_abono || 0))}
                         </span>
                       </div>
@@ -1034,13 +1231,34 @@ const NewSalesModal = ({
             </div>
           </div>
           
-          <div className="flex items-center justify-end p-4 border-t bg-gray-50">
-            <Button type="button" variant="secondary" onClick={onClose}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={loading} className="ml-2">
-              {loading ? 'Guardando...' : (sale ? 'Actualizar' : 'Crear')}
-            </Button>
+          <div className="flex items-center justify-between p-6 border-t bg-gradient-to-r from-gray-50 to-gray-100">
+            <div className="text-sm text-gray-600">
+              {sale ? 'Actualizando venta existente' : 'Creando nueva venta'}
+            </div>
+            <div className="flex items-center space-x-3">
+              <Button 
+                type="button" 
+                variant="secondary" 
+                onClick={onClose}
+                className="px-6 py-2 border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-400 transition-colors duration-200"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={loading} 
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Guardando...
+                  </div>
+                ) : (
+                  sale ? 'Actualizar Venta' : 'Crear Venta'
+                )}
+              </Button>
+            </div>
           </div>
         </form>
       </div>

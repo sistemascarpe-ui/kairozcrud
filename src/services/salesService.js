@@ -81,9 +81,9 @@ export const salesService = {
     }
   },
 
-  async getSalesNotes() {
+  async getSalesNotes(limit = null, offset = null) {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('ventas')
         .select(`
           *,
@@ -102,12 +102,20 @@ export const salesService = {
             descripcion_mica,
             cantidad,
             precio_unitario,
+            descuento_monto,
             subtotal,
             armazones (id, sku, color, precio, marcas(nombre), descripciones(nombre))
           ),
           abonos (id, monto, fecha_abono)
         `)
         .order('created_at', { ascending: false });
+
+      // Add pagination if parameters are provided
+      if (limit !== null && offset !== null) {
+        query = query.range(offset, offset + limit - 1);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         return { data: null, error: error.message };
@@ -132,23 +140,26 @@ export const salesService = {
         })) || [];
 
         // Extraer productos
-        const productos = item.venta_productos?.map(vp => ({
-          id: vp.id,
-          tipo: vp.tipo_producto,
-          armazon_id: vp.armazon_id,
-          descripcion_mica: vp.descripcion_mica,
-          cantidad: vp.cantidad,
-          precio_unitario: vp.precio_unitario,
-          subtotal: vp.subtotal,
-          armazon: vp.armazones ? {
-            id: vp.armazones.id,
-            sku: vp.armazones.sku,
-            color: vp.armazones.color,
-            precio: vp.armazones.precio,
-            marca: vp.armazones.marcas?.nombre,
-            descripcion: vp.armazones.descripciones?.nombre
-          } : null
-        })) || [];
+        const productos = item.venta_productos?.map(vp => {
+          return {
+            id: vp.id,
+            tipo: vp.tipo_producto,
+            armazon_id: vp.armazon_id,
+            descripcion_mica: vp.descripcion_mica,
+            cantidad: vp.cantidad,
+            precio_unitario: vp.precio_unitario,
+            descuento_monto: vp.descuento_monto || 0,
+            subtotal: vp.subtotal,
+            armazon: vp.armazones ? {
+              id: vp.armazones.id,
+              sku: vp.armazones.sku,
+              color: vp.armazones.color,
+              precio: vp.armazones.precio,
+              marca: vp.armazones.marcas?.nombre,
+              descripcion: vp.armazones.descripciones?.nombre
+            } : null
+          };
+        }) || [];
 
         // Calcular totales de abonos
         const totalAbonos = item.abonos?.reduce((sum, abono) => sum + parseFloat(abono.monto || 0), 0) || 0;
@@ -159,6 +170,15 @@ export const salesService = {
         const primerArmazon = productos.find(p => p.armazon)?.armazon;
         const productosArmazon = productos.filter(p => p.tipo === 'armazon');
         const productosMica = productos.filter(p => p.tipo === 'mica');
+
+        // Calcular descuentos reales de los productos
+        const descuentoArmazonTotal = productosArmazon.reduce((total, producto) => {
+          return total + (parseFloat(producto.descuento_monto || 0));
+        }, 0);
+
+        const descuentoMicasTotal = productosMica.reduce((total, producto) => {
+          return total + (parseFloat(producto.descuento_monto || 0));
+        }, 0);
 
         return {
           id: item.id,
@@ -183,8 +203,8 @@ export const salesService = {
           precio_armazon: productosArmazon[0]?.precio_unitario || 0,
           precio_micas: productosMica[0]?.precio_unitario || 0,
           descripcion_micas: productosMica.length > 0 ? productosMica[0].descripcion_mica || 'N/A' : 'N/A',
-          descuento_armazon_monto: 0,
-          descuento_micas_monto: 0,
+          descuento_armazon_monto: descuentoArmazonTotal,
+          descuento_micas_monto: descuentoMicasTotal,
           descuento_monto: item.descuento_monto || 0,
           subtotal: item.subtotal,
           total: item.total,

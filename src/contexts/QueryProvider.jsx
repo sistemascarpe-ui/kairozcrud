@@ -51,6 +51,15 @@ const queryClient = new QueryClient({
   },
 });
 
+// Función para limpiar caché problemática
+const clearProblematicCache = () => {
+  queryClient.clear();
+  logger.log('🧹 Cache de React Query limpiada completamente');
+};
+
+// Exportar queryClient y función de limpieza para uso externo
+export { queryClient, clearProblematicCache };
+
 const QueryProvider = ({ children }) => {
   return (
     <QueryClientProvider client={queryClient}>

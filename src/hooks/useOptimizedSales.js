@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { salesService } from '../services/salesService';
 
-// Hook optimizado para obtener resumen de ventas con paginación
+// Hook optimizado para obtener ventas completas con productos, armazones y micas
 export const useOptimizedSales = (page = 1, limit = 20) => {
   const offset = (page - 1) * limit;
   
   return useQuery({
-    queryKey: ['sales-summary', page, limit],
-    queryFn: () => salesService.getSalesSummary(limit, offset),
+    queryKey: ['sales-notes', page, limit],
+    queryFn: () => salesService.getSalesNotes(limit, offset),
     staleTime: 5 * 60 * 1000, // 5 minutos
     gcTime: 10 * 60 * 1000, // 10 minutos (updated from cacheTime)
     keepPreviousData: true,
