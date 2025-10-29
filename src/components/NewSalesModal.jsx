@@ -28,7 +28,11 @@ const NewSalesModal = ({
     registrar_abono: false,
     monto_abono: '',
     forma_pago_abono: 'efectivo',
-    observaciones_abono: ''
+    observaciones_abono: '',
+    // Campos adicionales para descuentos y monto total
+    monto_total_compra: '',
+    descuento_general_porcentaje: 0,
+    descuento_general_monto: 0
   });
 
   const [productos, setProductos] = useState([
@@ -39,7 +43,11 @@ const NewSalesModal = ({
       descripcion_mica: '',
       cantidad: 1,
       precio_unitario: 0,
-      descuento_monto: 0,
+      // Descuentos específicos por producto
+      descuento_armazon_porcentaje: 0,
+      descuento_armazon_monto: 0,
+      descuento_micas_porcentaje: 0,
+      descuento_micas_monto: 0,
       subtotal: 0
     }
   ]);
@@ -126,7 +134,13 @@ const NewSalesModal = ({
 
   useEffect(() => {
     calculateTotals();
-  }, [productos, formData.requiere_factura]);
+  }, [
+    productos, 
+    formData.requiere_factura, 
+    formData.monto_total_compra,
+    formData.descuento_general_porcentaje,
+    formData.descuento_general_monto
+  ]);
 
   const loadInitialData = async () => {
     await Promise.all([
@@ -190,7 +204,11 @@ const NewSalesModal = ({
       registrar_abono: false,
       monto_abono: '',
       forma_pago_abono: 'efectivo',
-      observaciones_abono: ''
+      observaciones_abono: '',
+      // Campos adicionales para descuentos y monto total
+      monto_total_compra: '',
+      descuento_general_porcentaje: 0,
+      descuento_general_monto: 0
     });
     setProductos([
       {
@@ -200,7 +218,11 @@ const NewSalesModal = ({
         descripcion_mica: '',
         cantidad: 1,
         precio_unitario: 0,
-        descuento_monto: 0,
+        // Descuentos específicos por producto
+        descuento_armazon_porcentaje: 0,
+        descuento_armazon_monto: 0,
+        descuento_micas_porcentaje: 0,
+        descuento_micas_monto: 0,
         subtotal: 0
       }
     ]);
@@ -231,7 +253,11 @@ const NewSalesModal = ({
       descripcion_mica: '',
       cantidad: 1,
       precio_unitario: 0,
-      descuento_monto: 0,
+      // Descuentos específicos por producto
+      descuento_armazon_porcentaje: 0,
+      descuento_armazon_monto: 0,
+      descuento_micas_porcentaje: 0,
+      descuento_micas_monto: 0,
       subtotal: 0
     };
     setProductos(prev => [...prev, newProducto]);
@@ -263,11 +289,24 @@ const NewSalesModal = ({
           updated.precio_unitario = selectedProduct ? selectedProduct.precio : 0;
         }
         
-        // Calcular subtotal
+        // Calcular subtotal con descuentos específicos por tipo
         const cantidad = parseFloat(updated.cantidad) || 0;
         const precioUnitario = parseFloat(updated.precio_unitario) || 0;
-        const descuento = parseFloat(updated.descuento_monto) || 0;
-        updated.subtotal = (cantidad * precioUnitario) - descuento;
+        const descuentoGeneral = parseFloat(updated.descuento_monto) || 0;
+        
+        // Calcular descuentos específicos por tipo de producto
+        let descuentoEspecifico = 0;
+        if (updated.tipo_producto === 'armazon') {
+          const descuentoPorcentaje = (precioUnitario * cantidad * (parseFloat(updated.descuento_armazon_porcentaje) || 0)) / 100;
+          const descuentoMonto = parseFloat(updated.descuento_armazon_monto) || 0;
+          descuentoEspecifico = descuentoPorcentaje + descuentoMonto;
+        } else if (updated.tipo_producto === 'mica') {
+          const descuentoPorcentaje = (precioUnitario * cantidad * (parseFloat(updated.descuento_micas_porcentaje) || 0)) / 100;
+          const descuentoMonto = parseFloat(updated.descuento_micas_monto) || 0;
+          descuentoEspecifico = descuentoPorcentaje + descuentoMonto;
+        }
+        
+        updated.subtotal = (cantidad * precioUnitario) - descuentoGeneral - descuentoEspecifico;
         
         return updated;
       }
@@ -276,13 +315,78 @@ const NewSalesModal = ({
   };
 
   const calculateTotals = () => {
-    const subtotal = productos.reduce((sum, p) => sum + (parseFloat(p.subtotal) || 0), 0);
-    const descuentoTotal = productos.reduce((sum, p) => sum + (parseFloat(p.descuento_monto) || 0), 0);
-    const total = subtotal;
-    const iva = formData.requiere_factura ? total * 0.16 : 0;
-    const totalConIva = total + iva;
-    
-    setTotals({ subtotal, descuentoTotal, total, iva, totalConIva });
+    // Si hay monto total de compra, usarlo como base
+    if (formData.monto_total_compra && parseFloat(formData.monto_total_compra) > 0) {
+      const montoBase = parseFloat(formData.monto_total_compra);
+      
+      // Calcular descuento general
+      const descuentoGeneralPorcentaje = (montoBase * (parseFloat(formData.descuento_general_porcentaje) || 0)) / 100;
+      const descuentoGeneralMonto = parseFloat(formData.descuento_general_monto) || 0;
+      
+      const descuentoTotal = descuentoGeneralPorcentaje + descuentoGeneralMonto;
+      
+      const total = montoBase - descuentoTotal;
+      const iva = formData.requiere_factura ? total * 0.16 : 0;
+      const totalConIva = total + iva;
+      
+      setTotals({ 
+        subtotal: montoBase, 
+        descuentoTotal, 
+        total, 
+        iva, 
+        totalConIva,
+        descuentoGeneralPorcentaje,
+        descuentoGeneralMonto
+      });
+    } else {
+      // Cálculo tradicional basado en productos
+      const subtotal = productos.reduce((sum, p) => {
+        const cantidad = parseFloat(p.cantidad) || 0;
+        const precioUnitario = parseFloat(p.precio_unitario) || 0;
+        return sum + (cantidad * precioUnitario);
+      }, 0);
+      
+      // Calcular descuentos por producto
+      const descuentoProductos = productos.reduce((sum, p) => {
+        const descuentoGeneral = parseFloat(p.descuento_monto) || 0;
+        let descuentoEspecifico = 0;
+        
+        const cantidad = parseFloat(p.cantidad) || 0;
+        const precioUnitario = parseFloat(p.precio_unitario) || 0;
+        
+        if (p.tipo_producto === 'armazon') {
+          const descuentoPorcentaje = (precioUnitario * cantidad * (parseFloat(p.descuento_armazon_porcentaje) || 0)) / 100;
+          const descuentoMonto = parseFloat(p.descuento_armazon_monto) || 0;
+          descuentoEspecifico = descuentoPorcentaje + descuentoMonto;
+        } else if (p.tipo_producto === 'mica') {
+          const descuentoPorcentaje = (precioUnitario * cantidad * (parseFloat(p.descuento_micas_porcentaje) || 0)) / 100;
+          const descuentoMonto = parseFloat(p.descuento_micas_monto) || 0;
+          descuentoEspecifico = descuentoPorcentaje + descuentoMonto;
+        }
+        
+        return sum + descuentoGeneral + descuentoEspecifico;
+      }, 0);
+      
+      // Calcular descuento general adicional
+      const descuentoGeneralPorcentaje = (subtotal * (parseFloat(formData.descuento_general_porcentaje) || 0)) / 100;
+      const descuentoGeneralMonto = parseFloat(formData.descuento_general_monto) || 0;
+      const descuentoGeneral = descuentoGeneralPorcentaje + descuentoGeneralMonto;
+      
+      const descuentoTotal = descuentoProductos + descuentoGeneral;
+      const total = subtotal - descuentoTotal;
+      const iva = formData.requiere_factura ? total * 0.16 : 0;
+      const totalConIva = total + iva;
+      
+      setTotals({ 
+        subtotal, 
+        descuentoTotal, 
+        total, 
+        iva, 
+        totalConIva,
+        descuentoGeneralPorcentaje,
+        descuentoGeneralMonto
+      });
+    }
   };
 
   const validate = () => {
@@ -296,8 +400,13 @@ const NewSalesModal = ({
       newErrors.vendedor_ids = 'Debe seleccionar al menos un vendedor';
     }
     
-    // Validar que haya al menos un producto válido
-    const productosValidos = productos.filter(p => {
+    // Filtrar productos que tienen al menos algún campo completado (no están completamente vacíos)
+    const productosConDatos = productos.filter(p => {
+      return p.armazon_id || p.descripcion_mica || p.precio_unitario > 0;
+    });
+    
+    // Validar que haya al menos un producto válido entre los que tienen datos
+    const productosValidos = productosConDatos.filter(p => {
       if (p.tipo_producto === 'armazon') {
         return p.armazon_id && p.cantidad > 0 && p.precio_unitario > 0;
       } else {
@@ -305,23 +414,30 @@ const NewSalesModal = ({
       }
     });
     
-    if (productosValidos.length === 0) {
-      newErrors.productos = 'Debe agregar al menos un producto válido';
+    if (productosConDatos.length === 0) {
+      newErrors.productos = 'Debe agregar al menos un producto';
+    } else if (productosValidos.length === 0) {
+      newErrors.productos = 'Complete todos los campos requeridos de los productos';
     }
     
-    // Validar productos individualmente
+    // Validar productos individualmente (solo los que tienen al menos algún dato)
     productos.forEach((producto, index) => {
-      if (producto.tipo_producto === 'armazon' && !producto.armazon_id) {
-        newErrors[`producto_${index}_armazon`] = 'Seleccione un armazón';
-      }
-      if (producto.tipo_producto === 'mica' && !producto.descripcion_mica) {
-        newErrors[`producto_${index}_mica`] = 'Ingrese descripción de la mica';
-      }
-      if (!producto.cantidad || producto.cantidad <= 0) {
-        newErrors[`producto_${index}_cantidad`] = 'Cantidad debe ser mayor a 0';
-      }
-      if (!producto.precio_unitario || producto.precio_unitario <= 0) {
-        newErrors[`producto_${index}_precio`] = 'Precio debe ser mayor a 0';
+      const tieneDatos = producto.armazon_id || producto.descripcion_mica || producto.precio_unitario > 0;
+      
+      // Solo validar productos que tienen al menos algún campo completado
+      if (tieneDatos) {
+        if (producto.tipo_producto === 'armazon' && !producto.armazon_id) {
+          newErrors[`producto_${index}_armazon`] = 'Seleccione un armazón';
+        }
+        if (producto.tipo_producto === 'mica' && !producto.descripcion_mica) {
+          newErrors[`producto_${index}_mica`] = 'Ingrese descripción de la mica';
+        }
+        if (!producto.cantidad || producto.cantidad <= 0) {
+          newErrors[`producto_${index}_cantidad`] = 'Cantidad debe ser mayor a 0';
+        }
+        if (!producto.precio_unitario || producto.precio_unitario <= 0) {
+          newErrors[`producto_${index}_precio`] = 'Precio debe ser mayor a 0';
+        }
       }
     });
     
@@ -355,15 +471,23 @@ const NewSalesModal = ({
       return;
     }
     
+    // Filtrar solo productos válidos y completos
+    const productosValidos = productos.filter(p => {
+      // Primero verificar que tenga al menos algún dato
+      const tieneDatos = p.armazon_id || p.descripcion_mica || p.precio_unitario > 0;
+      if (!tieneDatos) return false;
+      
+      // Luego verificar que esté completo
+      if (p.tipo_producto === 'armazon') {
+        return p.armazon_id && p.cantidad > 0 && p.precio_unitario > 0;
+      } else {
+        return p.descripcion_mica && p.cantidad > 0 && p.precio_unitario > 0;
+      }
+    });
+
     const salesData = {
       ...formData,
-      productos: productos.filter(p => {
-        if (p.tipo_producto === 'armazon') {
-          return p.armazon_id && p.cantidad > 0 && p.precio_unitario > 0;
-        } else {
-          return p.descripcion_mica && p.cantidad > 0 && p.precio_unitario > 0;
-        }
-      }),
+      productos: productosValidos,
       subtotal: totals.subtotal,
       total: totals.total,
       monto_iva: totals.iva
@@ -412,7 +536,7 @@ const NewSalesModal = ({
                   Clientes *
                 </label>
                 <Select
-                  isMulti
+                  multiple
                   options={customers}
                   value={formData.cliente_ids}
                   onChange={(value) => handleInputChange('cliente_ids', value)}
@@ -428,7 +552,7 @@ const NewSalesModal = ({
                   Vendedores *
                 </label>
                 <Select
-                  isMulti
+                  multiple
                   options={vendedores}
                   value={formData.vendedor_ids}
                   onChange={(value) => handleInputChange('vendedor_ids', value)}
@@ -555,18 +679,72 @@ const NewSalesModal = ({
                         )}
                       </div>
                       
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Descuento ($)
-                        </label>
-                        <Input
-                          type="number"
-                          value={producto.descuento_monto}
-                          onChange={(e) => updateProducto(producto.id, 'descuento_monto', e.target.value)}
-                          min="0"
-                          step="0.01"
-                        />
-                      </div>
+                      {/* Descuentos específicos por tipo de producto */}
+                      {producto.tipo_producto === 'armazon' && (
+                        <>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Desc. Armazón (%)
+                            </label>
+                            <Input
+                              type="number"
+                              value={producto.descuento_armazon_porcentaje}
+                              onChange={(e) => updateProducto(producto.id, 'descuento_armazon_porcentaje', e.target.value)}
+                              min="0"
+                              max="100"
+                              step="0.01"
+                              placeholder="0"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Desc. Armazón ($)
+                            </label>
+                            <Input
+                              type="number"
+                              value={producto.descuento_armazon_monto}
+                              onChange={(e) => updateProducto(producto.id, 'descuento_armazon_monto', e.target.value)}
+                              min="0"
+                              step="0.01"
+                              placeholder="0.00"
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {producto.tipo_producto === 'mica' && (
+                        <>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Desc. Micas (%)
+                            </label>
+                            <Input
+                              type="number"
+                              value={producto.descuento_micas_porcentaje}
+                              onChange={(e) => updateProducto(producto.id, 'descuento_micas_porcentaje', e.target.value)}
+                              min="0"
+                              max="100"
+                              step="0.01"
+                              placeholder="0"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Desc. Micas ($)
+                            </label>
+                            <Input
+                              type="number"
+                              value={producto.descuento_micas_monto}
+                              onChange={(e) => updateProducto(producto.id, 'descuento_micas_monto', e.target.value)}
+                              min="0"
+                              step="0.01"
+                              placeholder="0.00"
+                            />
+                          </div>
+                        </>
+                      )}
                       
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -579,6 +757,62 @@ const NewSalesModal = ({
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Monto Total de la Compra */}
+            <div className="border-t pt-4">
+              <h3 className="text-md font-medium text-gray-800 mb-3">Monto Total de la Compra</h3>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Ingrese el monto total
+                </label>
+                <Input
+                  type="number"
+                  value={formData.monto_total_compra}
+                  onChange={(e) => handleInputChange('monto_total_compra', e.target.value)}
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Si ingresa este monto, se usará como total de la compra
+                </p>
+              </div>
+            </div>
+
+            {/* Descuento General (Opcional) */}
+            <div className="border-t pt-4">
+              <h3 className="text-md font-medium text-gray-800 mb-3">Descuento General (Opcional)</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Desc. General (%)
+                  </label>
+                  <Input
+                    type="number"
+                    value={formData.descuento_general_porcentaje}
+                    onChange={(e) => handleInputChange('descuento_general_porcentaje', e.target.value)}
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Desc. General ($)
+                  </label>
+                  <Input
+                    type="number"
+                    value={formData.descuento_general_monto}
+                    onChange={(e) => handleInputChange('descuento_general_monto', e.target.value)}
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                  />
+                </div>
               </div>
             </div>
 
@@ -734,13 +968,37 @@ const NewSalesModal = ({
                 </div>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Subtotal:</span>
+                    <span className="text-gray-600">
+                      {formData.monto_total_compra && parseFloat(formData.monto_total_compra) > 0 ? 'Monto Base:' : 'Subtotal:'}
+                    </span>
                     <span className="font-medium">{formatCurrency(totals.subtotal)}</span>
                   </div>
-                  <div className="flex justify-between text-red-600">
-                    <span>Descuentos:</span>
-                    <span className="font-medium">-{formatCurrency(totals.descuentoTotal)}</span>
-                  </div>
+                  
+                  {/* Mostrar desglose de descuentos generales cuando se usa monto total de compra */}
+                  {formData.monto_total_compra && parseFloat(formData.monto_total_compra) > 0 && totals.descuentoTotal > 0 && (
+                    <div className="space-y-1 text-xs">
+                      {totals.descuentoGeneralPorcentaje > 0 && (
+                        <div className="flex justify-between text-red-500 pl-4">
+                          <span>• Desc. General ({formData.descuento_general_porcentaje}%):</span>
+                          <span>-{formatCurrency(totals.descuentoGeneralPorcentaje)}</span>
+                        </div>
+                      )}
+                      {totals.descuentoGeneralMonto > 0 && (
+                        <div className="flex justify-between text-red-500 pl-4">
+                          <span>• Desc. General ($):</span>
+                          <span>-{formatCurrency(totals.descuentoGeneralMonto)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {totals.descuentoTotal > 0 && (
+                    <div className="flex justify-between text-red-600">
+                      <span>Total Descuentos:</span>
+                      <span className="font-medium">-{formatCurrency(totals.descuentoTotal)}</span>
+                    </div>
+                  )}
+                  
                   <div className="flex justify-between border-t pt-2">
                     <span className="font-medium">Total:</span>
                     <span className="font-bold text-lg">{formatCurrency(totals.total)}</span>

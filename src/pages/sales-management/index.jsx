@@ -8,7 +8,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import Button from '../../components/ui/Button';
 import Header from '../../components/ui/Header';
 import SalesTable from './components/SalesTable';
-import SalesModal from './components/SalesModal';
+import NewSalesModal from '../../components/NewSalesModal';
 
 import { salesService } from '../../services/salesService';
 import { userService } from '../../services/userService';
@@ -204,7 +204,7 @@ const handleSaveSale = async (saleData) => {
       return;
     }
     
-    if (!saleData.items || saleData.items.length === 0) {
+    if (!saleData.productos || saleData.productos.length === 0) {
       toast.error('Error: La venta debe tener al menos un producto');
       setModalLoading(false); // Detener el spinner
       return;
@@ -454,7 +454,7 @@ const handleSaveSale = async (saleData) => {
             <p className="text-sm text-gray-600">Mostrando {filteredSales.length} de {sales.length} notas de venta</p>
           </div>
           <SalesTable sales={filteredSales} onEdit={handleEditSale} loading={loading} />
-          <SalesModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveSale} sale={selectedSale} loading={modalLoading}/>
+          <NewSalesModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveSale} sale={selectedSale} loading={modalLoading}/>
         </div>
       </div>
     </>
