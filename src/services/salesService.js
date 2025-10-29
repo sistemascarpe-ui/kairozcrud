@@ -610,5 +610,63 @@ export const salesService = {
       const timestamp = Date.now().toString();
       return timestamp.slice(-4);
     }
+  },
+
+  // Función para actualizar la configuración de folios (solo para administradores)
+  async updateFolioConfiguration(config) {
+    try {
+      const { nuevo_prefijo, nuevo_numero, forzar_reinicio } = config;
+      
+      // Construir parámetros para la función RPC
+      const params = {};
+      if (nuevo_prefijo && nuevo_prefijo.trim() !== '') {
+        params.nuevo_prefijo = nuevo_prefijo.trim();
+      }
+      if (nuevo_numero !== undefined && nuevo_numero !== null) {
+        params.nuevo_numero = parseInt(nuevo_numero);
+      }
+      if (forzar_reinicio) {
+        params.forzar_reinicio = true;
+      }
+
+      // Si hay algo que cambiar, llamar a la función RPC
+      if (Object.keys(params).length > 0) {
+        const { data, error } = await supabase.rpc('actualizar_configuracion_folio', params);
+
+        if (error) {
+          logger.error('Error al actualizar configuración de folio:', error);
+          return { data: null, error: error.message };
+        }
+
+        logger.log('Configuración de folio actualizada exitosamente');
+        return { data: data, error: null };
+      } else {
+        return { data: null, error: 'No se proporcionaron parámetros para actualizar' };
+      }
+    } catch (error) {
+      logger.error('Error en updateFolioConfiguration:', error);
+      return { data: null, error: error.message };
+    }
+  },
+
+  // Función para obtener la configuración actual de folios
+  async getFolioConfiguration() {
+    try {
+      const { data, error } = await supabase
+        .from('configuracion_folios')
+        .select('prefijo, numero_inicio')
+        .eq('id', 1)
+        .single();
+
+      if (error) {
+        logger.error('Error al obtener configuración de folio:', error);
+        return { data: null, error: error.message };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      logger.error('Error en getFolioConfiguration:', error);
+      return { data: null, error: error.message };
+    }
   }
 };
