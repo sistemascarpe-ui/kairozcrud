@@ -575,40 +575,96 @@ export const salesService = {
 
   async generateUniqueFolio() {
     try {
-      // Obtener la fecha actual en zona horaria de México
-      const today = new Date();
-      const mexicoToday = new Date(today.toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
-      const todayString = mexicoToday.toISOString().split('T')[0];
-
-      // Buscar el último folio del día actual
-      const { data: lastSale } = await supabase
-        .from('ventas')
-        .select('folio')
-        .gte('created_at', `${todayString}T00:00:00.000Z`)
-        .lt('created_at', `${todayString}T23:59:59.999Z`)
-        .order('folio', { ascending: false })
-        .limit(1)
+      // Obtener configuración de folios
+      const { data: config, error: configError } = await supabase
+        .from('configuracion_folios')
+        .select('prefijo, numero_inicio')
+        .eq('id', 1)
         .single();
 
-      let nextNumber = 1;
+      let prefijo = 'V';
+      let numeroInicio = 1;
 
-      if (lastSale && lastSale.folio) {
-        // Extraer el número del último folio
-        const numberMatch = lastSale.folio.match(/(\d+)$/);
-        if (numberMatch) {
-          nextNumber = parseInt(numberMatch[1]) + 1;
-        }
+      if (config && !configError) {
+        prefijo = config.prefijo || 'V';
+        numeroInicio = config.numero_inicio || 1;
       }
 
-      // Formatear el número con 4 dígitos
-      const formattedNumber = nextNumber.toString().padStart(4, '0');
+      // Obtener todos los folios del día actual para encontrar el siguiente número disponible
+      const today = new Date();
+      const mexicoToday = new Date(today.toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
+      const todayStr = `${mexicoToday.getFullYear()}${String(mexicoToday.getMonth() + 1).padStart(2, '0')}${String(mexicoToday.getDate()).padStart(2, '0')}`;
+
+      // Obtener todos los folios que contengan números (automáticos y manuales)
+      const { data: allFolios, error } = await supabase
+        .from('ventas')
+        .select('folio')
+        .not('folio', 'is', null);
+
+      if (error) {
+        logger.error('Error al obtener folios:', error);
+        // Si hay error, generar folio basado en configuración con zona horaria de México
+        const now = new Date();
+        const mexicoDate = new Date(now.toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
+        const year = mexicoDate.getFullYear();
+        const month = String(mexicoDate.getMonth() + 1).padStart(2, '0');
+        const day = String(mexicoDate.getDate()).padStart(2, '0');
+        const time = String(now.getTime()).slice(-6); // Últimos 6 dígitos del timestamp
+        return `${prefijo}${year}${month}${day}${time}`;
+      }
+
+      let nextNumber = numeroInicio;
+      const usedNumbers = new Set();
+
+      if (allFolios && allFolios.length > 0) {
+        // Extraer números de todos los folios (automáticos y manuales)
+        allFolios.forEach(folioObj => {
+          const folio = folioObj.folio;
+          
+          // Para folios automáticos del día actual (formato: VYYYYMMDDNNNNNN)
+          const autoMatch = folio.match(new RegExp(`^${prefijo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}${todayStr}(\\d+)$`));
+          if (autoMatch) {
+            const number = parseInt(autoMatch[1]);
+            usedNumbers.add(number);
+          }
+          
+          // Para folios manuales que sean solo números
+          const manualMatch = folio.match(/^(\d+)$/);
+          if (manualMatch) {
+            const number = parseInt(manualMatch[1]);
+            usedNumbers.add(number);
+          }
+        });
+
+        // Encontrar el siguiente número disponible
+        let candidate = numeroInicio;
+        while (usedNumbers.has(candidate)) {
+          candidate++;
+        }
+        nextNumber = candidate;
+        
+        logger.log(`Números usados: [${Array.from(usedNumbers).sort((a,b) => a-b).join(', ')}], siguiente disponible: ${nextNumber}`);
+      }
+
+      // Generar nuevo folio usando zona horaria de México
+      const now = new Date();
+      const mexicoDate = new Date(now.toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
+      const year = mexicoDate.getFullYear();
+      const month = String(mexicoDate.getMonth() + 1).padStart(2, '0');
+      const day = String(mexicoDate.getDate()).padStart(2, '0');
+      const number = String(nextNumber).padStart(6, '0');
       
-      return formattedNumber;
+      return `${prefijo}${year}${month}${day}${number}`;
     } catch (error) {
-      console.error('Error generating folio:', error);
-      // Fallback: usar timestamp simplificado
-      const timestamp = Date.now().toString();
-      return timestamp.slice(-4);
+      logger.error('Error generando folio:', error);
+      // Fallback: folio basado en timestamp con zona horaria de México
+      const now = new Date();
+      const mexicoDate = new Date(now.toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
+      const year = mexicoDate.getFullYear();
+      const month = String(mexicoDate.getMonth() + 1).padStart(2, '0');
+      const day = String(mexicoDate.getDate()).padStart(2, '0');
+      const time = String(now.getTime()).slice(-6);
+      return `V${year}${month}${day}${time}`;
     }
   },
 
@@ -617,21 +673,27 @@ export const salesService = {
     try {
       const { nuevo_prefijo, nuevo_numero, forzar_reinicio } = config;
       
-      // Construir parámetros para la función RPC
-      const params = {};
+      // Primero, asegurar que existe un registro de configuración
+      await this.ensureFolioConfigExists();
+      
+      // Construir objeto de actualización
+      const updateData = {};
       if (nuevo_prefijo && nuevo_prefijo.trim() !== '') {
-        params.nuevo_prefijo = nuevo_prefijo.trim();
+        updateData.prefijo = nuevo_prefijo.trim();
       }
       if (nuevo_numero !== undefined && nuevo_numero !== null) {
-        params.nuevo_numero = parseInt(nuevo_numero);
+        updateData.numero_inicio = parseInt(nuevo_numero);
       }
-      if (forzar_reinicio) {
-        params.forzar_reinicio = true;
-      }
+      
+      updateData.updated_at = new Date().toISOString();
 
-      // Si hay algo que cambiar, llamar a la función RPC
-      if (Object.keys(params).length > 0) {
-        const { data, error } = await supabase.rpc('actualizar_configuracion_folio', params);
+      // Si hay algo que cambiar, actualizar directamente
+      if (Object.keys(updateData).length > 1) { // > 1 porque siempre tenemos updated_at
+        const { data, error } = await supabase
+          .from('configuracion_folios')
+          .update(updateData)
+          .eq('id', 1)
+          .select();
 
         if (error) {
           logger.error('Error al actualizar configuración de folio:', error);
@@ -639,7 +701,7 @@ export const salesService = {
         }
 
         logger.log('Configuración de folio actualizada exitosamente');
-        return { data: data, error: null };
+        return { data: data[0], error: null };
       } else {
         return { data: null, error: 'No se proporcionaron parámetros para actualizar' };
       }
@@ -649,9 +711,51 @@ export const salesService = {
     }
   },
 
+  // Función para asegurar que existe la configuración de folios
+  async ensureFolioConfigExists() {
+    try {
+      // Verificar si ya existe un registro
+      const { data: existing, error: checkError } = await supabase
+        .from('configuracion_folios')
+        .select('id')
+        .eq('id', 1)
+        .single();
+
+      if (checkError && checkError.code === 'PGRST116') {
+        // No existe, crear el registro inicial
+        const { data, error } = await supabase
+          .from('configuracion_folios')
+          .insert({
+            id: 1,
+            prefijo: 'V',
+            numero_inicio: 1
+          })
+          .select();
+
+        if (error) {
+          logger.error('Error al crear configuración inicial de folio:', error);
+          throw error;
+        }
+        
+        logger.log('Configuración inicial de folio creada');
+        return data[0];
+      } else if (checkError) {
+        throw checkError;
+      }
+      
+      return existing;
+    } catch (error) {
+      logger.error('Error en ensureFolioConfigExists:', error);
+      throw error;
+    }
+  },
+
   // Función para obtener la configuración actual de folios
   async getFolioConfiguration() {
     try {
+      // Asegurar que existe la configuración
+      await this.ensureFolioConfigExists();
+      
       const { data, error } = await supabase
         .from('configuracion_folios')
         .select('prefijo, numero_inicio')
