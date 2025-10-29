@@ -1,6 +1,47 @@
 import { supabase } from '../lib/supabase';
 
 export const inventoryService = {
+  // OPTIMIZED: Get products summary (lightweight version for tables)
+  async getProductsSummary(limit = 50, offset = 0) {
+    try {
+      const { data, error } = await supabase
+        .from('armazones')
+        .select(`
+          id,
+          sku,
+          color,
+          stock,
+          precio,
+          estado,
+          created_at,
+          marcas(id, nombre),
+          grupos(id, nombre)
+        `)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+      
+      if (error) throw error;
+      
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error?.message };
+    }
+  },
+
+  // OPTIMIZED: Get products count for pagination
+  async getProductsCount() {
+    try {
+      const { count, error } = await supabase
+        .from('armazones')
+        .select('*', { count: 'exact', head: true });
+      
+      if (error) throw error;
+      return { count, error: null };
+    } catch (error) {
+      return { count: 0, error: error?.message };
+    }
+  },
+
   // Get all products with relationships
   async getProducts() {
     try {

@@ -1,132 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Package, TrendingUp, Award } from 'lucide-react';
-import { salesService } from '../../../services/salesService';
+import React from 'react';
+import { Package, Award } from 'lucide-react';
+import { useTopBrands } from '../../../hooks/useOptimizedSales';
 
 const TopBrandsList = () => {
-  const [loading, setLoading] = useState(true);
-  const [allSales, setAllSales] = useState([]);
-  const [brandStats, setBrandStats] = useState([]);
-  const [selectedMonth, setSelectedMonth] = useState('');
+  const { data: queryData, loading, error } = useTopBrands(10);
 
-  useEffect(() => {
-    loadSalesData();
-  }, []);
-
-  useEffect(() => {
-    if (allSales.length > 0) {
-      calculateBrandStats();
-    }
-  }, [selectedMonth, allSales]);
-
-  const loadSalesData = async () => {
-    setLoading(true);
-    try {
-      const { data: sales, error } = await salesService.getSalesNotes();
-      
-      if (error) {
-        console.error('Error loading sales:', error);
-        return;
-      }
-
-      setAllSales(sales || []);
-      calculateBrandStats(sales || []);
-    } catch (error) {
-      console.error('Error in loadSalesData:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const calculateBrandStats = (salesData = allSales) => {
-    console.log('=== CALCULANDO ESTADÍSTICAS DE MARCAS ===');
-    console.log('Datos de ventas recibidos:', salesData.length);
-    
-    let filteredSales = salesData;
-
-    // Filtrar por mes si está seleccionado
-    if (selectedMonth) {
-      filteredSales = salesData.filter(sale => {
-        // Incluir ventas completadas y pendientes
-        if (sale.estado !== 'completada' && sale.estado !== 'pendiente') return false;
-        const saleDate = new Date(sale.fecha_venta || sale.created_at);
-        const saleYearMonth = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`;
-        return saleYearMonth === selectedMonth;
-      });
-    } else {
-      // Incluir ventas completadas y pendientes
-      filteredSales = salesData.filter(sale => sale.estado === 'completada' || sale.estado === 'pendiente');
-    }
-
-    console.log('Ventas filtradas:', filteredSales.length);
-    console.log('Ejemplo de venta:', filteredSales[0]);
-
-    // Agrupar por marca
-    const brandData = {};
-    
-    filteredSales.forEach((sale, index) => {
-      // Verificar que la venta tenga productos
-      if (!sale.productos || !Array.isArray(sale.productos)) {
-        console.log(`Venta ${index} no tiene productos:`, sale);
-        return;
-      }
-      
-      console.log(`Procesando venta ${index} con ${sale.productos.length} productos:`, sale.productos);
-      
-      // Procesar cada producto de la venta
-      sale.productos.forEach((producto, prodIndex) => {
-        console.log(`  Producto ${prodIndex}:`, producto);
-        
-        // Solo procesar productos que sean armazones y tengan información de marca
-        if (producto.tipo !== 'armazon' || !producto.armazon || !producto.armazon.marca) {
-          console.log(`  Producto ${prodIndex} omitido - tipo: ${producto.tipo}, armazon:`, producto.armazon);
-          return;
-        }
-        
-        const brandName = producto.armazon.marca || 'Sin marca';
-        console.log(`  Procesando marca: ${brandName}`);
-        
-        if (!brandData[brandName]) {
-          brandData[brandName] = {
-            name: brandName,
-            totalSales: 0,
-            totalRevenue: 0,
-            products: new Set()
-          };
-        }
-        
-        // Incrementar ventas por la cantidad del producto
-        brandData[brandName].totalSales += parseInt(producto.cantidad || 1);
-        brandData[brandName].totalRevenue += parseFloat(producto.subtotal || 0);
-        if (producto.armazon.id) {
-          brandData[brandName].products.add(producto.armazon.id);
-        }
-      });
-    });
-
-    // Convertir a array y ordenar por ventas
-    const sortedBrands = Object.values(brandData)
-      .map(brand => ({
-        ...brand,
-        productsCount: brand.products.size
-      }))
-      .sort((a, b) => b.totalSales - a.totalSales);
-
-    console.log('Estadísticas de marcas calculadas:', sortedBrands);
-    setBrandStats(sortedBrands);
-  };
-
-  const generateMonthOptions = () => {
-    const options = [];
-    const currentDate = new Date();
-    
-    for (let i = 0; i < 12; i++) {
-      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
-      const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      const label = date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long' });
-      options.push({ value, label });
-    }
-    return options;
-  };
+  // Ensure data is always an array
+  const data = Array.isArray(queryData?.data) ? queryData.data : [];
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('es-MX', {
@@ -149,7 +29,7 @@ const TopBrandsList = () => {
     return colors[index % colors.length];
   };
 
-  const maxSales = brandStats.length > 0 ? brandStats[0].totalSales : 0;
+  const maxSales = data.length > 0 ? data[0].cantidad : 0;
 
   if (loading) {
     return (
@@ -181,60 +61,35 @@ const TopBrandsList = () => {
             </p>
           </div>
           
-          <div className="flex items-center gap-3">
-            {/* Filtro de mes */}
-            <div className="min-w-[200px]">
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                className="w-full px-4 py-2 bg-white/20 backdrop-blur-sm border-2 border-white/30 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-white/50 transition-all cursor-pointer hover:bg-white/30"
-                style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 0.5rem center',
-                  backgroundSize: '1.5em 1.5em',
-                  paddingRight: '2.5rem',
-                  appearance: 'none'
-                }}
-              >
-                <option value="" className="bg-purple-600 text-white">Todos los meses</option>
-                {generateMonthOptions().map(option => (
-                  <option key={option.value} value={option.value} className="bg-purple-600 text-white">
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg border-2 border-white/30">
-              <span className="text-sm font-semibold text-white">
-                {brandStats.length} marcas
-              </span>
-            </div>
+          <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg border-2 border-white/30">
+            <span className="text-sm font-semibold text-white">
+              {data.length || 0} marcas
+            </span>
           </div>
         </div>
       </div>
 
       {/* Content */}
       <div className="p-6">
-        {brandStats.length === 0 ? (
+        {data.length === 0 ? (
           <div className="text-center py-12">
             <Package className="h-16 w-16 mx-auto mb-4 text-gray-300" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No hay datos disponibles</h3>
             <p className="text-gray-500">
-              {selectedMonth ? 'No se encontraron ventas para el mes seleccionado' : 'No hay ventas registradas'}
+              No hay ventas registradas
             </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {brandStats.slice(0, 10).map((brand, index) => {
+            {data.slice(0, 10).map((brand, index) => {
               const colors = getBrandColor(index);
-              const percentage = maxSales > 0 ? (brand.totalSales / maxSales) * 100 : 0;
-              const averagePrice = brand.totalSales > 0 ? brand.totalRevenue / brand.totalSales : 0;
+              const maxSales = data[0]?.cantidad || 1;
+              const percentage = maxSales > 0 ? (brand.cantidad / maxSales) * 100 : 0;
+              const averagePrice = brand.cantidad > 0 ? brand.ingresos / brand.cantidad : 0;
 
               return (
                 <div
-                  key={brand.name}
+                  key={brand.id || brand.nombre || index}
                   className={`relative overflow-hidden rounded-xl border-2 border-purple-200 ${colors.bg} shadow-md transition-all duration-300 hover:scale-[1.02] hover:shadow-lg`}
                 >
                   <div className="p-5">
@@ -248,10 +103,10 @@ const TopBrandsList = () => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4 className={`text-xl font-bold ${colors.text} truncate`}>
-                            {brand.name}
+                            {brand.nombre}
                           </h4>
                           <p className="text-sm text-gray-600">
-                            {brand.productsCount} {brand.productsCount === 1 ? 'modelo' : 'modelos'} diferentes
+                            Marca de armazones
                           </p>
                         </div>
                       </div>
@@ -259,7 +114,7 @@ const TopBrandsList = () => {
                       {/* Estadísticas */}
                       <div className="text-right ml-4">
                         <p className={`text-2xl font-bold ${colors.text}`}>
-                          {brand.totalSales}
+                          {brand.cantidad}
                         </p>
                         <p className="text-xs text-gray-500">
                           ventas
@@ -280,7 +135,7 @@ const TopBrandsList = () => {
                           {formatCurrency(averagePrice)} promedio
                         </span>
                         <span className={`text-sm font-semibold ${colors.text}`}>
-                          {formatCurrency(brand.totalRevenue)} total
+                          {formatCurrency(brand.ingresos)} total
                         </span>
                       </div>
                     </div>
@@ -291,10 +146,10 @@ const TopBrandsList = () => {
           </div>
         )}
 
-        {brandStats.length > 10 && (
+        {(data?.length || 0) > 10 && (
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-500">
-              Y {brandStats.length - 10} marcas más
+              Y {(data?.length || 0) - 10} marcas más
             </p>
           </div>
         )}

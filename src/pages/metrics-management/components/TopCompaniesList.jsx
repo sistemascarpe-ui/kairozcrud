@@ -1,122 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Building2, TrendingUp, Users, ShoppingBag } from 'lucide-react';
-import { salesService } from '../../../services/salesService';
+import { useTopCompanies } from '../../../hooks/useOptimizedSales';
 
 const TopCompaniesList = () => {
-  const [loading, setLoading] = useState(true);
-  const [allSales, setAllSales] = useState([]);
-  const [companyStats, setCompanyStats] = useState([]);
-  const [selectedMonth, setSelectedMonth] = useState('');
+  const { data: queryData, loading, error } = useTopCompanies(10);
+  
+  // Ensure data is always an array
+  const data = Array.isArray(queryData?.data) ? queryData.data : [];
 
-  useEffect(() => {
-    loadSalesData();
-  }, []);
 
-  useEffect(() => {
-    if (allSales.length > 0) {
-      calculateCompanyStats();
-    }
-  }, [selectedMonth, allSales]);
 
-  const loadSalesData = async () => {
-    setLoading(true);
-    try {
-      const { data: sales, error } = await salesService.getSalesNotes();
-      
-      if (error) {
-        console.error('Error loading sales:', error);
-        return;
-      }
 
-      setAllSales(sales || []);
-      calculateCompanyStats(sales || []);
-    } catch (error) {
-      console.error('Error in loadSalesData:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const calculateCompanyStats = (salesData = allSales) => {
-    let filteredSales = salesData;
-
-    // Filtrar por mes si está seleccionado
-    if (selectedMonth) {
-      filteredSales = salesData.filter(sale => {
-        // Incluir ventas completadas y pendientes
-        if (sale.estado !== 'completada' && sale.estado !== 'pendiente') return false;
-        const saleDate = new Date(sale.fecha_venta || sale.created_at);
-        const saleYearMonth = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`;
-        return saleYearMonth === selectedMonth;
-      });
-    } else {
-      // Incluir ventas completadas y pendientes
-      filteredSales = salesData.filter(sale => sale.estado === 'completada' || sale.estado === 'pendiente');
-    }
-
-    // Agrupar por empresa
-    const companyData = {};
-    
-    filteredSales.forEach(sale => {
-      // Verificar que la venta tenga clientes
-      if (!sale.clientes || !Array.isArray(sale.clientes) || sale.clientes.length === 0) return;
-      
-      // Procesar cada cliente de la venta (normalmente será uno)
-      sale.clientes.forEach(cliente => {
-        // Verificar si el cliente tiene empresa asociada
-        const empresa = cliente.empresa; // Relación con la tabla empresas
-        const companyName = empresa || 'Clientes Individuales';
-        const companyId = empresa ? `empresa_${empresa}` : 'individual';
-        
-        if (!companyData[companyId]) {
-          companyData[companyId] = {
-            id: companyId,
-            name: companyName,
-            totalSales: 0,
-            totalRevenue: 0,
-            customers: new Set(),
-            salesDetails: []
-          };
-        }
-        
-        companyData[companyId].totalSales += 1;
-        companyData[companyId].totalRevenue += parseFloat(sale.total || 0);
-        if (cliente.id) {
-          companyData[companyId].customers.add(cliente.id);
-        }
-        companyData[companyId].salesDetails.push({
-          folio: sale.folio,
-          cliente: cliente.nombre,
-          total: parseFloat(sale.total || 0),
-          fecha: sale.fecha_venta || sale.created_at
-        });
-      });
-    });
-
-    // Convertir a array y ordenar por ingresos (en lugar de cantidad de ventas)
-    const sortedCompanies = Object.values(companyData)
-      .map(company => ({
-        ...company,
-        customersCount: company.customers.size,
-        averageTicket: company.totalSales > 0 ? company.totalRevenue / company.totalSales : 0
-      }))
-      .sort((a, b) => b.totalRevenue - a.totalRevenue);
-
-    setCompanyStats(sortedCompanies);
-  };
-
-  const generateMonthOptions = () => {
-    const options = [];
-    const currentDate = new Date();
-    
-    for (let i = 0; i < 12; i++) {
-      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
-      const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      const label = date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long' });
-      options.push({ value, label });
-    }
-    return options;
-  };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('es-MX', {
@@ -139,7 +33,7 @@ const TopCompaniesList = () => {
     return colors[index % colors.length];
   };
 
-  const maxRevenue = companyStats.length > 0 ? companyStats[0].totalRevenue : 0;
+  const maxRevenue = data?.length > 0 ? data[0].ingresos : 0;
 
   if (loading) {
     return (
@@ -171,55 +65,30 @@ const TopCompaniesList = () => {
             </p>
           </div>
           
-          <div className="flex items-center gap-3">
-            {/* Filtro de mes */}
-            <div className="flex-1 sm:min-w-[200px]">
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                className="w-full px-3 sm:px-4 py-2 bg-white/20 backdrop-blur-sm border-2 border-white/30 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-white/50 transition-all cursor-pointer hover:bg-white/30 text-sm sm:text-base"
-                style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 0.5rem center',
-                  backgroundSize: '1.5em 1.5em',
-                  paddingRight: '2.5rem',
-                  appearance: 'none'
-                }}
-              >
-                <option value="" className="bg-emerald-600 text-white">Todos los meses</option>
-                {generateMonthOptions().map(option => (
-                  <option key={option.value} value={option.value} className="bg-emerald-600 text-white">
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg border-2 border-white/30">
-              <span className="text-sm font-semibold text-white">
-                {companyStats.length} {companyStats.length === 1 ? 'empresa' : 'empresas'}
-              </span>
-            </div>
+          <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg border-2 border-white/30">
+            <span className="text-sm font-semibold text-white">
+              {data?.length || 0} {(data?.length || 0) === 1 ? 'empresa' : 'empresas'}
+            </span>
           </div>
         </div>
       </div>
 
       {/* Content */}
       <div className="p-4 sm:p-6">
-        {companyStats.length === 0 ? (
+        {data?.length === 0 ? (
           <div className="text-center py-12">
             <Building2 className="h-16 w-16 mx-auto mb-4 text-gray-300" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No hay datos disponibles</h3>
             <p className="text-gray-500">
-              {selectedMonth ? 'No se encontraron ventas para el mes seleccionado' : 'No hay ventas registradas'}
+              No hay ventas registradas
             </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {companyStats.slice(0, 10).map((company, index) => {
+            {data?.slice(0, 10).map((company, index) => {
               const colors = getCompanyColor(index);
-              const percentage = maxRevenue > 0 ? (company.totalRevenue / maxRevenue) * 100 : 0;
+              const maxRevenue = data[0]?.ingresos || 1;
+              const percentage = maxRevenue > 0 ? (company.ingresos / maxRevenue) * 100 : 0;
 
               return (
                 <div
@@ -238,17 +107,17 @@ const TopCompaniesList = () => {
                         <div className="flex items-center gap-2 mb-2">
                           <Building2 className={`h-4 w-4 sm:h-5 sm:w-5 ${colors.icon}`} />
                           <h4 className={`text-lg sm:text-xl font-bold ${colors.text} truncate`}>
-                            {company.name}
+                            {company.nombre}
                           </h4>
                         </div>
                         <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-gray-600">
                           <span className="flex items-center gap-1">
                             <Users className="h-3 w-3 sm:h-4 sm:w-4" />
-                            {company.customersCount} {company.customersCount === 1 ? 'cliente' : 'clientes'}
+                            {company.cantidadClientes} {company.cantidadClientes === 1 ? 'cliente' : 'clientes'}
                           </span>
                           <span className="flex items-center gap-1">
                             <ShoppingBag className="h-3 w-3 sm:h-4 sm:w-4" />
-                            {company.totalSales} {company.totalSales === 1 ? 'compra' : 'compras'}
+                            {company.totalVentas} {company.totalVentas === 1 ? 'compra' : 'compras'}
                           </span>
                         </div>
                       </div>
@@ -258,7 +127,7 @@ const TopCompaniesList = () => {
                     <div className="bg-white bg-opacity-50 rounded-lg p-3 sm:p-4 mb-4">
                       <div className="text-center sm:text-left">
                         <p className={`text-xl sm:text-2xl font-bold ${colors.text} mb-1`}>
-                          {formatCurrency(company.totalRevenue)}
+                          {formatCurrency(company.ingresos)}
                         </p>
                         <p className="text-xs sm:text-sm text-gray-600">
                           ingresos totales
@@ -276,10 +145,10 @@ const TopCompaniesList = () => {
                       </div>
                       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mt-2 gap-1 sm:gap-0">
                         <span className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
-                          {formatCurrency(company.averageTicket)} ticket promedio
+                          {formatCurrency(company.ticketPromedio)} ticket promedio
                         </span>
                         <span className={`text-xs sm:text-sm font-semibold ${colors.text} text-center sm:text-right`}>
-                          {company.totalSales} ventas
+                          {company.totalVentas} ventas
                         </span>
                       </div>
                     </div>
@@ -290,10 +159,10 @@ const TopCompaniesList = () => {
           </div>
         )}
 
-        {companyStats.length > 10 && (
+        {(data?.length || 0) > 10 && (
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-500">
-              Y {companyStats.length - 10} {companyStats.length - 10 === 1 ? 'empresa' : 'empresas'} más
+              Y {(data?.length || 0) - 10} {(data?.length || 0) - 10 === 1 ? 'empresa' : 'empresas'} más
             </p>
           </div>
         )}

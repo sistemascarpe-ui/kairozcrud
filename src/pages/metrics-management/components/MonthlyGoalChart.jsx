@@ -2,139 +2,37 @@ import React, { useState, useEffect } from 'react';
 import { Target, TrendingUp, CheckCircle, AlertCircle, Calendar, DollarSign } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select from '../../../components/ui/Select';
-import { salesService } from '../../../services/salesService';
+import { useMonthlyData } from '../../../hooks/useOptimizedSales';
 import toast from 'react-hot-toast';
 
 const MonthlyGoalChart = ({ refreshTrigger }) => {
-  const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
-  const [monthlyData, setMonthlyData] = useState({
+
+  // Extract year and month from selectedMonth
+  const [year, month] = selectedMonth.split('-');
+  
+  // Hook optimizado para datos mensuales
+  const { data: monthlyDataResponse, isLoading, error, refetch } = useMonthlyData(year, month);
+  const monthlyData = monthlyDataResponse?.data || {
     totalSales: 0,
     completedSales: 0,
     pendingSales: 0,
     goal: 100000,
     goalAchieved: false,
-    progressPercentage: 0
-  });
-  const [dailyData, setDailyData] = useState([]);
-
-  const MONTHLY_GOAL = 100000; // $100k meta mensual
-
-  useEffect(() => {
-    loadMonthlyData();
-  }, [selectedMonth, refreshTrigger]);
-
-  const loadMonthlyData = async () => {
-    setLoading(true);
-    try {
-      const [year, month] = selectedMonth.split('-');
-      const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
-      const endDate = new Date(parseInt(year), parseInt(month), 0);
-      
-      // Obtener ventas del mes específico
-      const { data: sales, error } = await salesService.getSalesWithVendors();
-      
-      if (error) {
-        toast.error('Error al cargar datos del mes');
-        return;
-      }
-
-      // Filtrar ventas del mes seleccionado
-      const monthSales = sales?.filter(sale => {
-        const saleDate = new Date(sale.created_at);
-        // Normalizar fecha a medianoche para comparación precisa
-        const saleDateNormalized = new Date(saleDate.getFullYear(), saleDate.getMonth(), saleDate.getDate());
-        return saleDateNormalized >= startDate && saleDateNormalized <= endDate;
-      }) || [];
-
-      // Calcular totales mensuales
-      let totalRevenue = 0;
-      let completedRevenue = 0;
-      let pendingRevenue = 0;
-
-      monthSales.forEach(sale => {
-        const saleAmount = parseFloat(sale.total || 0);
-        totalRevenue += saleAmount;
-        
-        if (sale.estado === 'completada') {
-          completedRevenue += saleAmount;
-        } else {
-          pendingRevenue += saleAmount;
-        }
-      });
-
-      // Calcular datos diarios para el calendario
-      const dailySales = {};
-      const daysInMonth = endDate.getDate();
-      
-      // Obtener la fecha de hoy sin hora (solo año, mes, día)
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      // Inicializar todos los días del mes
-      for (let day = 1; day <= daysInMonth; day++) {
-        const dayDate = new Date(parseInt(year), parseInt(month) - 1, day);
-        dayDate.setHours(0, 0, 0, 0); // Eliminar la hora para comparación precisa
-        const dayKey = `${year}-${String(parseInt(month)).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        
-        // Comparar solo fechas sin hora
-        const isToday = dayDate.getTime() === today.getTime();
-        
-        dailySales[dayKey] = {
-          date: dayDate,
-          day: day,
-          totalSales: 0,
-          completedSales: 0,
-          pendingSales: 0,
-          salesCount: 0,
-          isFuture: dayDate.getTime() > today.getTime(),
-          isToday: isToday
-        };
-      }
-
-      // Agrupar ventas por día
-      monthSales.forEach(sale => {
-        // Convertir la fecha de la venta a fecha local y obtener solo año-mes-día
-        const saleDate = new Date(sale.created_at);
-        const dayKey = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}-${String(saleDate.getDate()).padStart(2, '0')}`;
-        
-        if (dailySales[dayKey]) {
-          const saleAmount = parseFloat(sale.total || 0);
-          dailySales[dayKey].totalSales += saleAmount;
-          dailySales[dayKey].salesCount += 1;
-          
-          if (sale.estado === 'completada') {
-            dailySales[dayKey].completedSales += saleAmount;
-          } else {
-            dailySales[dayKey].pendingSales += saleAmount;
-          }
-        }
-      });
-
-      const progressPercentage = (totalRevenue / MONTHLY_GOAL) * 100;
-      const goalAchieved = totalRevenue >= MONTHLY_GOAL;
-
-      setMonthlyData({
-        totalSales: totalRevenue,
-        completedSales: completedRevenue,
-        pendingSales: pendingRevenue,
-        goal: MONTHLY_GOAL,
-        goalAchieved,
-        progressPercentage: progressPercentage // Permitir valores superiores al 100%
-      });
-
-      setDailyData(Object.values(dailySales));
-
-    } catch (error) {
-      console.error('Error loading monthly data:', error);
-      toast.error('Error al cargar datos del mes');
-    } finally {
-      setLoading(false);
-    }
+    progressPercentage: 0,
+    dailyData: []
   };
+  const dailyData = monthlyData.dailyData || [];
+
+  // Mostrar error si existe
+  if (error) {
+    console.error('Error loading monthly data:', error);
+  }
+
+
 
   const getMonthOptions = () => {
     const options = [];
@@ -265,12 +163,29 @@ const MonthlyGoalChart = ({ refreshTrigger }) => {
     return weeks;
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="animate-pulse">
           <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
           <div className="h-64 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="text-center">
+          <div className="text-red-500 mb-2">Error al cargar datos del mes</div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.location.reload()}
+          >
+            Reintentar
+          </Button>
         </div>
       </div>
     );
@@ -287,15 +202,15 @@ const MonthlyGoalChart = ({ refreshTrigger }) => {
             </div>
             <div>
               <h3 className="text-xl font-bold text-gray-800 mb-1">Meta Mensual de Ventas</h3>
-              <p className="text-sm text-gray-600">Objetivo: ${MONTHLY_GOAL.toLocaleString()} por mes</p>
+              <p className="text-sm text-gray-600">Objetivo: ${(monthlyData.goal || 100000).toLocaleString()} por mes</p>
             </div>
           </div>
           <Button
             variant="outline"
             size="sm"
             iconName="RefreshCw"
-            onClick={loadMonthlyData}
-            disabled={loading}
+            onClick={() => refetch()}
+            disabled={isLoading}
           >
             Actualizar
           </Button>
@@ -372,29 +287,29 @@ const MonthlyGoalChart = ({ refreshTrigger }) => {
           </div>
           
           <div className={`p-6 rounded-xl border sm:col-span-2 lg:col-span-1 ${
-            monthlyData.totalSales >= MONTHLY_GOAL 
+            monthlyData.totalSales >= (monthlyData.goal || 100000) 
               ? 'bg-gradient-to-br from-green-50 to-green-100 border-green-200'
               : 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200'
           }`}>
             <div className="flex flex-col items-center text-center">
               <div className="p-3 bg-white rounded-full shadow-sm mb-3">
-                {monthlyData.totalSales >= MONTHLY_GOAL ? (
+                {monthlyData.totalSales >= (monthlyData.goal || 100000) ? (
                   <TrendingUp className="h-6 w-6 text-green-600" />
                 ) : (
                   <Target className="h-6 w-6 text-purple-600" />
                 )}
               </div>
               <h4 className={`text-sm font-medium mb-1 ${
-                monthlyData.totalSales >= MONTHLY_GOAL ? 'text-green-700' : 'text-purple-700'
+                monthlyData.totalSales >= (monthlyData.goal || 100000) ? 'text-green-700' : 'text-purple-700'
               }`}>
-                {monthlyData.totalSales >= MONTHLY_GOAL ? 'Excedente' : 'Restante'}
+                {monthlyData.totalSales >= (monthlyData.goal || 100000) ? 'Excedente' : 'Restante'}
               </h4>
               <p className={`text-xl font-bold truncate w-full ${
-                monthlyData.totalSales >= MONTHLY_GOAL ? 'text-green-600' : 'text-purple-900'
+                monthlyData.totalSales >= (monthlyData.goal || 100000) ? 'text-green-600' : 'text-purple-900'
               }`}>
-                {monthlyData.totalSales >= MONTHLY_GOAL 
-                  ? `+$${(monthlyData.totalSales - MONTHLY_GOAL).toLocaleString()}`
-                  : `$${(MONTHLY_GOAL - monthlyData.totalSales).toLocaleString()}`
+                {monthlyData.totalSales >= (monthlyData.goal || 100000) 
+                  ? `+$${(monthlyData.totalSales - (monthlyData.goal || 100000)).toLocaleString()}`
+                  : `$${((monthlyData.goal || 100000) - monthlyData.totalSales).toLocaleString()}`
                 }
               </p>
             </div>

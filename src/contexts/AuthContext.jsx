@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
   // Separate async operations object to avoid auth callback issues
   const profileOperations = {
     async load(userId) {
-      if (!userId) return
+      if (!userId || profileLoading) return // Prevent multiple simultaneous loads
       setProfileLoading(true)
       try {
         // Primero intentar sincronizar el usuario
@@ -22,13 +22,21 @@ export const AuthProvider = ({ children }) => {
         
         if (syncResult.data) {
           setUserProfile(syncResult.data)
+        } else if (syncResult.userNotFound) {
+          // Usuario autenticado pero no existe en tabla usuarios
+          // Esto es normal y no requiere fallback ni warnings
+          console.debug('Usuario autenticado pero no registrado en tabla usuarios:', userId)
+          setUserProfile(null)
         } else if (syncResult.error) {
-          console.warn('No se pudo sincronizar usuario, intentando carga directa:', syncResult.error)
-          // Fallback: intentar cargar directamente
+          console.warn('Error al sincronizar usuario:', syncResult.error)
+          // Fallback: intentar cargar directamente solo si hay un error real
           const { data, error } = await supabase?.from('usuarios')?.select('*')?.eq('id', userId)?.single()
           
           if (!error && data) {
             setUserProfile(data)
+          } else {
+            console.debug('Usuario no encontrado en tabla usuarios:', userId)
+            setUserProfile(null)
           }
         }
       } catch (error) {
@@ -100,7 +108,7 @@ export const AuthProvider = ({ children }) => {
       clearSessionTimeout();
       // No hay event listeners que limpiar - timeout deshabilitado
     }
-  }, [user])
+  }, []) // Removed user dependency to prevent infinite loop
 
   const signIn = async (email, password, rememberMe = false) => {
     try {

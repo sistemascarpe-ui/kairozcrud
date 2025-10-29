@@ -3,6 +3,61 @@ import { logger } from '../utils/logger';
 import { authSyncService } from './authSyncService';
 
 export const salesService = {
+  // OPTIMIZED: Get sales summary (lightweight version for tables)
+  async getSalesSummary(limit = 50, offset = 0) {
+    try {
+      const { data, error } = await supabase
+        .from('ventas')
+        .select(`
+          id,
+          folio,
+          total,
+          subtotal,
+          monto_iva,
+          requiere_factura,
+          rfc,
+          razon_social,
+          estado,
+          created_at,
+          venta_clientes!inner(
+            clientes(id, nombre, telefono)
+          ),
+          venta_vendedores(
+            usuarios(id, nombre, apellido)
+          )
+        `)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+      
+      if (error) throw error;
+      
+      // Transform data for frontend
+      const transformedData = data.map(item => ({
+        ...item,
+        clientes: item.venta_clientes?.map(vc => vc.clientes) || [],
+        vendedores: item.venta_vendedores?.map(vv => vv.usuarios) || []
+      }));
+      
+      return { data: transformedData, error: null };
+    } catch (error) {
+      return { data: null, error: error?.message };
+    }
+  },
+
+  // OPTIMIZED: Get sales count for pagination
+  async getSalesCount() {
+    try {
+      const { count, error } = await supabase
+        .from('ventas')
+        .select('*', { count: 'exact', head: true });
+      
+      if (error) throw error;
+      return { count, error: null };
+    } catch (error) {
+      return { count: 0, error: error?.message };
+    }
+  },
+
   // Get sales with vendor information for performance analysis
   async getSalesWithVendors() {
     try {
@@ -772,5 +827,616 @@ export const salesService = {
       logger.error('Error en getFolioConfiguration:', error);
       return { data: null, error: error.message };
     }
+  },
+
+  // OPTIMIZED: Get sales metrics without heavy joins
+  async getSalesMetrics(startDate = null, endDate = null) {
+    try {
+      let query = supabase
+        .from('ventas')
+        .select(`
+          id,
+          total,
+          estado,
+          created_at,
+          venta_vendedores(vendedor_id)
+        `);
+
+      if (startDate) {
+        query = query.gte('created_at', startDate);
+      }
+      if (endDate) {
+        query = query.lte('created_at', endDate);
+      }
+
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error?.message };
+    }
+  },
+
+  // OPTIMIZED: Get top brands without heavy product joins
+  async getTopBrands(limit = 10) {
+    try {
+      const { data, error } = await supabase
+        .from('venta_productos')
+        .select(`
+          armazones(marcas(id, nombre)),
+          cantidad,
+          precio_unitario
+        `)
+        .not('armazon_id', 'is', null);
+      
+      if (error) throw error;
+      
+      // Process data to get top brands
+      const brandStats = {};
+      data.forEach(item => {
+        if (item.armazones?.marcas) {
+          const brand = item.armazones.marcas;
+          if (!brandStats[brand.id]) {
+            brandStats[brand.id] = {
+              id: brand.id,
+              nombre: brand.nombre,
+              cantidad: 0,
+              ingresos: 0
+            };
+          }
+          brandStats[brand.id].cantidad += item.cantidad || 0;
+          brandStats[brand.id].ingresos += (item.cantidad || 0) * (item.precio_unitario || 0);
+        }
+      });
+      
+      const sortedBrands = Object.values(brandStats)
+        .sort((a, b) => b.ingresos - a.ingresos)
+        .slice(0, limit);
+      
+      return { data: sortedBrands, error: null };
+    } catch (error) {
+      return { data: null, error: error?.message };
+    }
+  },
+
+  // OPTIMIZED: Get vendor performance without heavy joins
+  async getVendorPerformance(startDate = null, endDate = null) {
+    try {
+      let query = supabase
+        .from('ventas')
+        .select(`
+          id,
+          total,
+          estado,
+          created_at,
+          venta_vendedores(
+            vendedor_id,
+            usuarios(id, nombre, apellido)
+          ),
+          venta_clientes(
+            clientes(nombre)
+          )
+        `);
+
+      if (startDate) {
+        query = query.gte('created_at', startDate);
+      }
+      if (endDate) {
+        query = query.lte('created_at', endDate);
+      }
+
+      const { data: salesData, error } = await query;
+      
+      if (error) throw error;
+      
+      // Process data into vendor performance structure
+      const vendorMap = new Map();
+      
+      salesData.forEach(sale => {
+        const vendors = sale.venta_vendedores || [];
+        const saleTotal = parseFloat(sale.total) || 0;
+        const isShared = vendors.length > 1;
+        const clientName = sale.venta_clientes?.[0]?.clientes?.nombre || 'Cliente';
+        
+        vendors.forEach(vendorRel => {
+          const vendor = vendorRel.usuarios;
+          if (!vendor) return;
+          
+          const vendorId = vendor.id;
+          const vendorName = `${vendor.nombre || ''} ${vendor.apellido || ''}`.trim();
+          
+          if (!vendorMap.has(vendorId)) {
+            vendorMap.set(vendorId, {
+              id: vendorId,
+              name: vendorName,
+              totalSales: { count: 0, revenue: 0 },
+              individualSales: { count: 0, revenue: 0, completed: 0, pending: 0, completedRevenue: 0, pendingRevenue: 0 },
+              sharedSales: { count: 0, revenue: 0, completed: 0, pending: 0, completedRevenue: 0, pendingRevenue: 0 },
+              recentSales: []
+            });
+          }
+          
+          const vendorData = vendorMap.get(vendorId);
+          const shareAmount = isShared ? saleTotal / vendors.length : saleTotal;
+          const isCompleted = sale.estado === 'completada';
+          
+          // Update totals
+          vendorData.totalSales.count++;
+          vendorData.totalSales.revenue += shareAmount;
+          
+          // Update individual or shared sales
+          if (isShared) {
+            vendorData.sharedSales.count++;
+            vendorData.sharedSales.revenue += shareAmount;
+            if (isCompleted) {
+              vendorData.sharedSales.completed++;
+              vendorData.sharedSales.completedRevenue += shareAmount;
+            } else {
+              vendorData.sharedSales.pending++;
+              vendorData.sharedSales.pendingRevenue += shareAmount;
+            }
+          } else {
+            vendorData.individualSales.count++;
+            vendorData.individualSales.revenue += shareAmount;
+            if (isCompleted) {
+              vendorData.individualSales.completed++;
+              vendorData.individualSales.completedRevenue += shareAmount;
+            } else {
+              vendorData.individualSales.pending++;
+              vendorData.individualSales.pendingRevenue += shareAmount;
+            }
+          }
+          
+          // Add to recent sales (limit to 5 most recent)
+          if (vendorData.recentSales.length < 5) {
+            vendorData.recentSales.push({
+              id: sale.id,
+              fecha: sale.created_at,
+              cliente: clientName,
+              total: saleTotal,
+              shareAmount: shareAmount,
+              estado: sale.estado,
+              isShared: isShared,
+              otherVendors: isShared ? vendors
+                .filter(v => v.usuarios?.id !== vendorId)
+                .map(v => `${v.usuarios?.nombre || ''} ${v.usuarios?.apellido || ''}`.trim())
+                .filter(name => name) : []
+            });
+          }
+        });
+      });
+      
+      const processedData = Array.from(vendorMap.values()).sort((a, b) => b.totalSales.revenue - a.totalSales.revenue);
+      
+      return { data: processedData, error: null };
+    } catch (error) {
+      logger.error('Error in getVendorPerformance:', error);
+      return { data: null, error: error?.message };
+    }
+  },
+
+  // OPTIMIZED: Get top companies by revenue
+  async getTopCompanies(limit = 10) {
+    try {
+      const { data, error } = await supabase
+        .from('ventas')
+        .select(`
+          id,
+          total,
+          estado,
+          created_at,
+          venta_clientes(
+            cliente_id,
+            clientes(id, nombre, empresa_id, empresas(id, nombre))
+          )
+        `)
+        .in('estado', ['completada', 'pendiente']);
+      
+      if (error) throw error;
+      
+      // Process data to get top companies
+      const companyStats = {};
+      data.forEach(sale => {
+        if (sale.venta_clientes && sale.venta_clientes.length > 0) {
+          sale.venta_clientes.forEach(ventaCliente => {
+            const cliente = ventaCliente.clientes;
+            if (cliente) {
+              const empresa = cliente.empresas;
+              const companyId = empresa ? empresa.id : 'individual';
+              const companyName = empresa ? empresa.nombre : 'Clientes Individuales';
+              
+              if (!companyStats[companyId]) {
+                companyStats[companyId] = {
+                  id: companyId,
+                  nombre: companyName,
+                  totalVentas: 0,
+                  ingresos: 0,
+                  clientes: new Set()
+                };
+              }
+              
+              companyStats[companyId].totalVentas += 1;
+              companyStats[companyId].ingresos += parseFloat(sale.total || 0);
+              companyStats[companyId].clientes.add(cliente.id);
+            }
+          });
+        }
+      });
+      
+      const sortedCompanies = Object.values(companyStats)
+        .map(company => ({
+          ...company,
+          cantidadClientes: company.clientes.size,
+          ticketPromedio: company.totalVentas > 0 ? company.ingresos / company.totalVentas : 0
+        }))
+        .sort((a, b) => b.ingresos - a.ingresos)
+        .slice(0, limit);
+      
+      return { data: sortedCompanies, error: null };
+    } catch (error) {
+      return { data: null, error: error?.message };
+    }
+  },
+
+  // Obtener productos más vendidos
+  async getTopProducts(limit = 10, month = null) {
+    try {
+      logger.log('🔍 Cargando productos más vendidos...');
+      
+      const { data, error } = await supabase
+        .from('venta_productos')
+        .select(`
+          cantidad,
+          precio_unitario,
+          ventas!inner(
+            id,
+            fecha_venta,
+            created_at,
+            estado
+          ),
+          armazones(
+            id,
+            sku,
+            color,
+            precio,
+            marcas(id, nombre)
+          )
+        `)
+        .eq('tipo_producto', 'armazon')
+        .in('ventas.estado', ['completada', 'pendiente']);
+      
+      if (error) {
+        logger.error('❌ Error en getTopProducts:', error);
+        throw error;
+      }
+      
+      logger.debug('📊 Datos de productos más vendidos:', data?.length || 0, 'registros');
+      
+      // Filter by month if specified
+      let filteredProducts = data;
+      if (month) {
+        filteredProducts = data.filter(product => {
+          const saleDate = new Date(product.ventas.fecha_venta || product.ventas.created_at);
+          const saleYearMonth = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`;
+          return saleYearMonth === month;
+        });
+      }
+      
+      // Process products
+      const productStats = {};
+      filteredProducts.forEach(product => {
+        if (!product.armazones) return;
+        
+        const armazon = product.armazones;
+        const productId = armazon.id;
+        
+        if (!productStats[productId]) {
+          productStats[productId] = {
+            id: productId,
+            sku: armazon.sku || 'N/A',
+            brand: armazon.marcas?.nombre || 'Sin marca',
+            marca: armazon.marcas?.nombre || 'Sin marca',
+            color: armazon.color || 'N/A',
+            price: product.precio_unitario || armazon.precio || 0,
+            precio: product.precio_unitario || armazon.precio || 0,
+            totalSold: 0,
+            quantity: 0
+          };
+        }
+        
+        const cantidad = parseInt(product.cantidad) || 1;
+        productStats[productId].totalSold += cantidad;
+        productStats[productId].quantity += cantidad;
+      });
+      
+      const sortedProducts = Object.values(productStats)
+        .filter(product => product.totalSold > 0)
+        .sort((a, b) => b.totalSold - a.totalSold)
+        .slice(0, limit);
+      
+      logger.debug('🏆 Productos más vendidos calculados:', sortedProducts.length, 'productos');
+      
+      return { data: sortedProducts, error: null };
+    } catch (error) {
+      logger.error('❌ Error en getTopProducts:', error);
+      return { data: null, error: error?.message };
+    }
+  },
+
+  // Obtener datos mensuales optimizados
+  async getMonthlyData(year, month) {
+    try {
+      const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+      const endDate = new Date(parseInt(year), parseInt(month), 0);
+      
+      const { data, error } = await supabase
+        .from('ventas')
+        .select(`
+          id,
+          total,
+          estado,
+          created_at
+        `)
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString())
+        .in('estado', ['completada', 'pendiente']);
+      
+      if (error) throw error;
+      
+      // Process monthly totals
+      let totalRevenue = 0;
+      let completedRevenue = 0;
+      let pendingRevenue = 0;
+      
+      // Process daily data
+      const dailySales = {};
+      const daysInMonth = endDate.getDate();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Initialize all days of the month
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dayDate = new Date(parseInt(year), parseInt(month) - 1, day);
+        dayDate.setHours(0, 0, 0, 0);
+        const dayKey = `${year}-${String(parseInt(month)).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        
+        const isToday = dayDate.getTime() === today.getTime();
+        
+        dailySales[dayKey] = {
+          date: dayDate,
+          day: day,
+          totalSales: 0,
+          completedSales: 0,
+          pendingSales: 0,
+          salesCount: 0,
+          isFuture: dayDate.getTime() > today.getTime(),
+          isToday: isToday
+        };
+      }
+      
+      // Process sales data
+      data.forEach(sale => {
+        const saleAmount = parseFloat(sale.total || 0);
+        totalRevenue += saleAmount;
+        
+        if (sale.estado === 'completada') {
+          completedRevenue += saleAmount;
+        } else {
+          pendingRevenue += saleAmount;
+        }
+        
+        // Group by day
+        const saleDate = new Date(sale.created_at);
+        const dayKey = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}-${String(saleDate.getDate()).padStart(2, '0')}`;
+        
+        if (dailySales[dayKey]) {
+          dailySales[dayKey].salesCount++;
+          dailySales[dayKey].totalSales += saleAmount;
+          
+          if (sale.estado === 'completada') {
+            dailySales[dayKey].completedSales += saleAmount;
+          } else {
+            dailySales[dayKey].pendingSales += saleAmount;
+          }
+        }
+      });
+      
+      const MONTHLY_GOAL = 100000;
+      const progressPercentage = Math.min((totalRevenue / MONTHLY_GOAL) * 100, 100);
+      
+      return {
+        data: {
+          totalSales: totalRevenue,
+          completedSales: completedRevenue,
+          pendingSales: pendingRevenue,
+          goal: MONTHLY_GOAL,
+          goalAchieved: totalRevenue >= MONTHLY_GOAL,
+          progressPercentage: progressPercentage,
+          dailyData: Object.values(dailySales).sort((a, b) => a.day - b.day)
+        },
+        error: null
+      };
+    } catch (error) {
+      return { data: null, error: error?.message };
+    }
+  },
+
+  async getSalesByVendor() {
+    try {
+      logger.log('🔍 Cargando rendimiento por vendedor...');
+      
+      const { data, error } = await supabase
+        .from('ventas')
+        .select(`
+          total,
+          estado,
+          created_at,
+          venta_vendedores ( 
+            usuarios (id, nombre, apellido) 
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        logger.error('❌ Error en getSalesByVendor:', error);
+        throw error;
+      }
+
+      logger.debug('📊 Datos de ventas para vendedores:', data?.length || 0, 'registros');
+
+      const vendorStats = {};
+      let totalVentasConVendedor = 0;
+      let ventasSinVendedor = 0;
+
+      data?.forEach(sale => {
+        const saleTotal = parseFloat(sale.total) || 0;
+        const vendedores = sale.venta_vendedores || [];
+        
+        if (vendedores.length === 0) {
+          ventasSinVendedor++;
+          return;
+        }
+
+        totalVentasConVendedor++;
+        const numVendedores = vendedores.length;
+        const dividedTotal = saleTotal / numVendedores;
+
+        vendedores.forEach(vv => {
+          const vendor = vv.usuarios;
+          if (!vendor) return;
+
+          const vendorId = vendor.id;
+          const vendorName = `${vendor.nombre || ''} ${vendor.apellido || ''}`.trim();
+          
+          if (!vendorStats[vendorId]) {
+            vendorStats[vendorId] = {
+              id: vendorId,
+              name: vendorName || 'Sin nombre',
+              totalSales: 0,
+              totalRevenue: 0,
+              completedSales: 0,
+              pendingSales: 0,
+              completedRevenue: 0,
+              pendingRevenue: 0,
+              averageTicket: 0
+            };
+          }
+          
+          // Para el conteo de ventas: cada vendedor obtiene 1 venta completa
+          // Para los ingresos: se divide entre los vendedores
+          vendorStats[vendorId].totalSales += 1; // Venta completa para cada vendedor
+          vendorStats[vendorId].totalRevenue += dividedTotal; // Ingreso dividido
+          
+          if (sale.estado === 'completada') {
+            vendorStats[vendorId].completedSales += 1; // Venta completa
+            vendorStats[vendorId].completedRevenue += dividedTotal; // Ingreso dividido
+          } else if (sale.estado === 'pendiente') {
+            vendorStats[vendorId].pendingSales += 1; // Venta completa
+            vendorStats[vendorId].pendingRevenue += dividedTotal; // Ingreso dividido
+          }
+        });
+      });
+
+      logger.debug('📈 Estadísticas de procesamiento:', {
+        totalVentas: data?.length || 0,
+        ventasConVendedor: totalVentasConVendedor,
+        ventasSinVendedor: ventasSinVendedor,
+        vendedoresEncontrados: Object.keys(vendorStats).length
+      });
+
+      const vendorArray = Object.values(vendorStats)
+        .map(vendor => ({
+          ...vendor,
+          // Los valores de ventas ya son enteros, solo calcular el ticket promedio
+          averageTicket: vendor.totalSales > 0 ? vendor.totalRevenue / vendor.totalSales : 0
+        }))
+        .filter(vendor => vendor.totalSales > 0) // Solo vendedores con ventas
+        .sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+      logger.debug('🏆 Top 3 vendedores:', vendorArray.slice(0, 3).map(v => 
+        `${v.name}: $${v.totalRevenue.toLocaleString()} (${v.totalSales} ventas)`
+      ));
+
+      return { data: vendorArray, error: null };
+    } catch (error) {
+      logger.error('❌ Error en getSalesByVendor:', error);
+      return { data: [], error: error?.message };
+    }
+  },
+
+  async getBestSellingProducts() {
+    try {
+      logger.log('🔍 Cargando productos más vendidos...');
+      
+      const { data, error } = await supabase
+        .from('venta_productos')
+        .select(`
+          cantidad,
+          precio_unitario,
+          ventas!inner(
+            id,
+            fecha_venta,
+            created_at,
+            estado
+          ),
+          armazones(
+            id,
+            sku,
+            color,
+            precio,
+            marcas(id, nombre)
+          )
+        `)
+        .eq('tipo_producto', 'armazon')
+        .in('ventas.estado', ['completada']);
+
+      if (error) {
+        logger.error('❌ Error en getBestSellingProducts:', error);
+        throw error;
+      }
+
+      logger.debug('📊 Datos de productos más vendidos:', data?.length || 0, 'registros');
+
+      // Agrupar por producto
+      const productStats = {};
+      data.forEach((product, index) => {
+        if (!product.armazones) return;
+        
+        const armazon = product.armazones;
+        const productId = armazon.id;
+        
+        if (!productStats[productId]) {
+          productStats[productId] = {
+            id: productId,
+            sku: armazon.sku || 'N/A',
+            color: armazon.color || 'N/A',
+            brand: armazon.marcas?.nombre || 'Sin marca',
+            description: armazon.sku || 'N/A',
+            price: product.precio_unitario || armazon.precio || 0,
+            totalSold: 0
+          };
+        }
+        
+        const cantidad = parseInt(product.cantidad) || 1;
+        productStats[productId].totalSold += cantidad;
+      });
+
+      // Convertir a array y ordenar por cantidad vendida
+      const productArray = Object.values(productStats)
+        .filter(product => product.totalSold > 0) // Solo productos con ventas
+        .sort((a, b) => b.totalSold - a.totalSold)
+        .slice(0, 10); // Top 10 productos
+
+      logger.debug('🏆 Productos más vendidos calculados:', productArray.length, 'productos');
+
+      return { data: productArray, error: null };
+    } catch (error) {
+      logger.error('❌ Error en getBestSellingProducts:', error);
+      return { data: [], error: error?.message };
+    }
   }
 };
+
+export default salesService;

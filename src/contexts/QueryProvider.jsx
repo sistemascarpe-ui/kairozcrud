@@ -7,25 +7,35 @@ import { logger } from '../utils/logger';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Tiempo de cache por defecto: 5 minutos
-      staleTime: 5 * 60 * 1000,
-      // Tiempo de garbage collection: 10 minutos
-      gcTime: 10 * 60 * 1000,
+      // OPTIMIZED: Tiempo de cache más largo para reducir egress
+      staleTime: 10 * 60 * 1000, // 10 minutos
+      // Tiempo de garbage collection: 20 minutos
+      gcTime: 20 * 60 * 1000,
       // Reintentar automáticamente en caso de error
       retry: (failureCount, error) => {
         // No reintentar para errores 4xx (errores del cliente)
         if (error?.status >= 400 && error?.status < 500) {
+          logger.warn('No retrying 4xx error:', error?.status, error?.message);
           return false;
         }
-        // Reintentar máximo 3 veces para otros errores
-        return failureCount < 3;
+        // No reintentar para errores específicos de Supabase
+        if (error?.message?.includes('406') || 
+            error?.message?.includes('Failed to load resource') ||
+            error?.message?.includes('server responded with a status of 406')) {
+          logger.warn('No retrying Supabase 406 error:', error?.message);
+          return false;
+        }
+        // Reintentar máximo 1 vez para reducir requests
+        return failureCount < 1;
       },
       // Tiempo entre reintentos
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-      // Refetch automático cuando la ventana vuelve a estar activa
-      refetchOnWindowFocus: true,
-      // Refetch automático cuando se reconecta la red
+      // OPTIMIZED: Desactivar refetch automático en focus para reducir egress
+      refetchOnWindowFocus: false,
+      // OPTIMIZED: Mantener refetch en reconexión pero con throttle
       refetchOnReconnect: true,
+      // OPTIMIZED: Desactivar refetch en mount para queries con cache válido
+      refetchOnMount: 'stale',
     },
     mutations: {
       // Reintentar mutaciones en caso de error de red

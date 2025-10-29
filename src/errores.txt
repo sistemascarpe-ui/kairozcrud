@@ -1,0 +1,381 @@
+salesService.js:1249 🔍 Cargando productos más vendidos...
+@supabase_supabase-js.js?v=a1bb6c62:4293  GET https://bgtlqwlgvedfyltptvbi.supabase.co/rest/v1/usuarios?select=id%2Cnombre%2Capellido&id=eq.5102fc4c-61d3-4714-894b-3bdbbf2ddf18 406 (Not Acceptable)
+(anónimas) @ @supabase_supabase-js.js?v=a1bb6c62:4293
+(anónimas) @ @supabase_supabase-js.js?v=a1bb6c62:4314
+fulfilled @ @supabase_supabase-js.js?v=a1bb6c62:4266
+Promise.then
+step @ @supabase_supabase-js.js?v=a1bb6c62:4279
+(anónimas) @ @supabase_supabase-js.js?v=a1bb6c62:4281
+__awaiter6 @ @supabase_supabase-js.js?v=a1bb6c62:4263
+(anónimas) @ @supabase_supabase-js.js?v=a1bb6c62:4304
+then @ @supabase_supabase-js.js?v=a1bb6c62:90Comprende este error
+userService.js:46 ✅ Usuarios obtenidos exitosamente: 4 (filtrados)
+@supabase_supabase-js.js?v=a1bb6c62:4293  GET https://bgtlqwlgvedfyltptvbi.supabase.co/rest/v1/ventas?select=id%2Cfecha_venta%2Ccreated_at%2Cestado%2Cproductos&estado=in.%28completada%2Cpendiente%29 400 (Bad Request)
+(anónimas) @ @supabase_supabase-js.js?v=a1bb6c62:4293
+(anónimas) @ @supabase_supabase-js.js?v=a1bb6c62:4314
+fulfilled @ @supabase_supabase-js.js?v=a1bb6c62:4266
+Promise.then
+step @ @supabase_supabase-js.js?v=a1bb6c62:4279
+(anónimas) @ @supabase_supabase-js.js?v=a1bb6c62:4281
+__awaiter6 @ @supabase_supabase-js.js?v=a1bb6c62:4263
+(anónimas) @ @supabase_supabase-js.js?v=a1bb6c62:4304
+then @ @supabase_supabase-js.js?v=a1bb6c62:90Comprende este error
+@supabase_supabase-js.js?v=a1bb6c62:4293  GET https://bgtlqwlgvedfyltptvbi.supabase.co/rest/v1/ventas?select=armazon_id%2Cestado%2Ccreated_at%2Carmazones%3Aarmazon_id%28id%2Csku%2Ccolor%2Cprecio%2Cmarcas%28nombre%29%2Cdescripciones%28nombre%29%29&armazon_id=not.is.null&order=created_at.desc 400 (Bad Request)
+(anónimas) @ @supabase_supabase-js.js?v=a1bb6c62:4293
+(anónimas) @ @supabase_supabase-js.js?v=a1bb6c62:4314
+fulfilled @ @supabase_supabase-js.js?v=a1bb6c62:4266
+Promise.then
+step @ @supabase_supabase-js.js?v=a1bb6c62:4279
+(anónimas) @ @supabase_supabase-js.js?v=a1bb6c62:4281
+__awaiter6 @ @supabase_supabase-js.js?v=a1bb6c62:4263
+(anónimas) @ @supabase_supabase-js.js?v=a1bb6c62:4304
+then @ @supabase_supabase-js.js?v=a1bb6c62:90Comprende este error
+TopBrandsList.jsx:83 Warning: Each child in a list should have a unique "key" prop.
+
+Check the render method of `TopBrandsList`. See https://reactjs.org/link/warning-keys for more information.
+    at div
+    at TopBrandsList (http://localhost:4028/src/pages/metrics-management/components/TopBrandsList.jsx?t=1761760083845:23:47)
+    at div
+    at main
+    at div
+    at MetricsManagement (http://localhost:4028/src/pages/metrics-management/index.jsx?t=1761760083845:45:20)
+    at ProtectedRoute (http://localhost:4028/src/components/ProtectedRoute.jsx?t=1761759755457:21:27)
+    at Routes (http://localhost:4028/node_modules/.vite/deps/react-router-dom.js?v=a1bb6c62:730:5)
+    at ErrorBoundary (http://localhost:4028/src/components/ErrorBoundary.jsx:8:5)
+    at Router (http://localhost:4028/node_modules/.vite/deps/react-router-dom.js?v=a1bb6c62:677:15)
+    at BrowserRouter (http://localhost:4028/node_modules/.vite/deps/react-router-dom.js?v=a1bb6c62:1250:5)
+    at Routes
+    at MetricsProvider (http://localhost:4028/src/contexts/MetricsContext.jsx:20:35)
+    at AuthProvider (http://localhost:4028/src/contexts/AuthContext.jsx?t=1761759755457:22:32)
+    at QueryClientProvider (http://localhost:4028/node_modules/.vite/deps/chunk-AXEFNHXP.js?v=a1bb6c62:3103:3)
+    at QueryProvider (http://localhost:4028/src/contexts/QueryProvider.jsx:63:26)
+    at _a (http://localhost:4028/node_modules/.vite/deps/react-helmet-async.js?v=a1bb6c62:550:5)
+    at App
+overrideMethod @ hook.js:608
+printWarning @ react_jsx-dev-runtime.js?v=a1bb6c62:64
+error @ react_jsx-dev-runtime.js?v=a1bb6c62:48
+validateExplicitKey @ react_jsx-dev-runtime.js?v=a1bb6c62:724
+validateChildKeys @ react_jsx-dev-runtime.js?v=a1bb6c62:737
+jsxWithValidation @ react_jsx-dev-runtime.js?v=a1bb6c62:855
+TopBrandsList @ TopBrandsList.jsx:83
+renderWithHooks @ chunk-3QO5DIOC.js?v=a1bb6c62:11568
+updateFunctionComponent @ chunk-3QO5DIOC.js?v=a1bb6c62:14602
+beginWork @ chunk-3QO5DIOC.js?v=a1bb6c62:15944
+beginWork$1 @ chunk-3QO5DIOC.js?v=a1bb6c62:19781
+performUnitOfWork @ chunk-3QO5DIOC.js?v=a1bb6c62:19226
+workLoopSync @ chunk-3QO5DIOC.js?v=a1bb6c62:19165
+renderRootSync @ chunk-3QO5DIOC.js?v=a1bb6c62:19144
+performSyncWorkOnRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:18902
+flushSyncCallbacks @ chunk-3QO5DIOC.js?v=a1bb6c62:9135
+(anónimas) @ chunk-3QO5DIOC.js?v=a1bb6c62:18655
+setTimeout
+systemSetTimeoutZero @ chunk-AXEFNHXP.js?v=a1bb6c62:103
+flush @ chunk-AXEFNHXP.js?v=a1bb6c62:613
+batch @ chunk-AXEFNHXP.js?v=a1bb6c62:631
+dispatch_fn @ chunk-AXEFNHXP.js?v=a1bb6c62:1263
+setData @ chunk-AXEFNHXP.js?v=a1bb6c62:934
+fetch @ chunk-AXEFNHXP.js?v=a1bb6c62:1156
+await in fetch
+executeFetch_fn @ chunk-AXEFNHXP.js?v=a1bb6c62:1650
+onSubscribe @ chunk-AXEFNHXP.js?v=a1bb6c62:1346
+subscribe @ chunk-AXEFNHXP.js?v=a1bb6c62:24
+(anónimas) @ chunk-AXEFNHXP.js?v=a1bb6c62:3320
+subscribeToStore @ chunk-3QO5DIOC.js?v=a1bb6c62:12004
+commitHookEffectListMount @ chunk-3QO5DIOC.js?v=a1bb6c62:16936
+commitPassiveMountOnFiber @ chunk-3QO5DIOC.js?v=a1bb6c62:18184
+commitPassiveMountEffects_complete @ chunk-3QO5DIOC.js?v=a1bb6c62:18157
+commitPassiveMountEffects_begin @ chunk-3QO5DIOC.js?v=a1bb6c62:18147
+commitPassiveMountEffects @ chunk-3QO5DIOC.js?v=a1bb6c62:18137
+flushPassiveEffectsImpl @ chunk-3QO5DIOC.js?v=a1bb6c62:19518
+flushPassiveEffects @ chunk-3QO5DIOC.js?v=a1bb6c62:19475
+performSyncWorkOnRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:18896
+flushSyncCallbacks @ chunk-3QO5DIOC.js?v=a1bb6c62:9135
+commitRootImpl @ chunk-3QO5DIOC.js?v=a1bb6c62:19460
+commitRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:19305
+finishConcurrentRender @ chunk-3QO5DIOC.js?v=a1bb6c62:18833
+performConcurrentWorkOnRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:18746
+workLoop @ chunk-3QO5DIOC.js?v=a1bb6c62:197
+flushWork @ chunk-3QO5DIOC.js?v=a1bb6c62:176
+performWorkUntilDeadline @ chunk-3QO5DIOC.js?v=a1bb6c62:384Comprende este error
+salesService.js:1270 ❌ Error en getBestSellingProducts: {code: 'PGRST200', details: "Searched for a foreign key relationship between 'v…n the schema 'public', but no matches were found.", hint: null, message: "Could not find a relationship between 'ventas' and 'armazon_id' in the schema cache"}
+overrideMethod @ hook.js:608
+getBestSellingProducts @ salesService.js:1270
+await in getBestSellingProducts
+loadAdditionalMetrics @ index.jsx:306
+loadMetricsData @ index.jsx:116
+(anónimas) @ index.jsx:100
+commitHookEffectListMount @ chunk-3QO5DIOC.js?v=a1bb6c62:16936
+commitPassiveMountOnFiber @ chunk-3QO5DIOC.js?v=a1bb6c62:18184
+commitPassiveMountEffects_complete @ chunk-3QO5DIOC.js?v=a1bb6c62:18157
+commitPassiveMountEffects_begin @ chunk-3QO5DIOC.js?v=a1bb6c62:18147
+commitPassiveMountEffects @ chunk-3QO5DIOC.js?v=a1bb6c62:18137
+flushPassiveEffectsImpl @ chunk-3QO5DIOC.js?v=a1bb6c62:19518
+flushPassiveEffects @ chunk-3QO5DIOC.js?v=a1bb6c62:19475
+performSyncWorkOnRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:18896
+flushSyncCallbacks @ chunk-3QO5DIOC.js?v=a1bb6c62:9135
+commitRootImpl @ chunk-3QO5DIOC.js?v=a1bb6c62:19460
+commitRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:19305
+finishConcurrentRender @ chunk-3QO5DIOC.js?v=a1bb6c62:18833
+performConcurrentWorkOnRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:18746
+workLoop @ chunk-3QO5DIOC.js?v=a1bb6c62:197
+flushWork @ chunk-3QO5DIOC.js?v=a1bb6c62:176
+performWorkUntilDeadline @ chunk-3QO5DIOC.js?v=a1bb6c62:384Comprende este error
+salesService.js:1313 ❌ Error en getBestSellingProducts: {code: 'PGRST200', details: "Searched for a foreign key relationship between 'v…n the schema 'public', but no matches were found.", hint: null, message: "Could not find a relationship between 'ventas' and 'armazon_id' in the schema cache"}
+overrideMethod @ hook.js:608
+getBestSellingProducts @ salesService.js:1313
+await in getBestSellingProducts
+loadAdditionalMetrics @ index.jsx:306
+loadMetricsData @ index.jsx:116
+(anónimas) @ index.jsx:100
+commitHookEffectListMount @ chunk-3QO5DIOC.js?v=a1bb6c62:16936
+commitPassiveMountOnFiber @ chunk-3QO5DIOC.js?v=a1bb6c62:18184
+commitPassiveMountEffects_complete @ chunk-3QO5DIOC.js?v=a1bb6c62:18157
+commitPassiveMountEffects_begin @ chunk-3QO5DIOC.js?v=a1bb6c62:18147
+commitPassiveMountEffects @ chunk-3QO5DIOC.js?v=a1bb6c62:18137
+flushPassiveEffectsImpl @ chunk-3QO5DIOC.js?v=a1bb6c62:19518
+flushPassiveEffects @ chunk-3QO5DIOC.js?v=a1bb6c62:19475
+performSyncWorkOnRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:18896
+flushSyncCallbacks @ chunk-3QO5DIOC.js?v=a1bb6c62:9135
+commitRootImpl @ chunk-3QO5DIOC.js?v=a1bb6c62:19460
+commitRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:19305
+finishConcurrentRender @ chunk-3QO5DIOC.js?v=a1bb6c62:18833
+performConcurrentWorkOnRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:18746
+workLoop @ chunk-3QO5DIOC.js?v=a1bb6c62:197
+flushWork @ chunk-3QO5DIOC.js?v=a1bb6c62:176
+performWorkUntilDeadline @ chunk-3QO5DIOC.js?v=a1bb6c62:384Comprende este error
+index.jsx:308 Error loading top products: Could not find a relationship between 'ventas' and 'armazon_id' in the schema cache
+overrideMethod @ hook.js:608
+loadAdditionalMetrics @ index.jsx:308
+await in loadAdditionalMetrics
+loadMetricsData @ index.jsx:116
+(anónimas) @ index.jsx:100
+commitHookEffectListMount @ chunk-3QO5DIOC.js?v=a1bb6c62:16936
+commitPassiveMountOnFiber @ chunk-3QO5DIOC.js?v=a1bb6c62:18184
+commitPassiveMountEffects_complete @ chunk-3QO5DIOC.js?v=a1bb6c62:18157
+commitPassiveMountEffects_begin @ chunk-3QO5DIOC.js?v=a1bb6c62:18147
+commitPassiveMountEffects @ chunk-3QO5DIOC.js?v=a1bb6c62:18137
+flushPassiveEffectsImpl @ chunk-3QO5DIOC.js?v=a1bb6c62:19518
+flushPassiveEffects @ chunk-3QO5DIOC.js?v=a1bb6c62:19475
+performSyncWorkOnRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:18896
+flushSyncCallbacks @ chunk-3QO5DIOC.js?v=a1bb6c62:9135
+commitRootImpl @ chunk-3QO5DIOC.js?v=a1bb6c62:19460
+commitRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:19305
+finishConcurrentRender @ chunk-3QO5DIOC.js?v=a1bb6c62:18833
+performConcurrentWorkOnRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:18746
+workLoop @ chunk-3QO5DIOC.js?v=a1bb6c62:197
+flushWork @ chunk-3QO5DIOC.js?v=a1bb6c62:176
+performWorkUntilDeadline @ chunk-3QO5DIOC.js?v=a1bb6c62:384Comprende este error
+index.jsx:311 👨‍💼 Cargando ventas por vendedor...
+index.jsx:325 Error in loadAdditionalMetrics: TypeError: salesService.getSalesByVendor is not a function
+    at loadAdditionalMetrics (index.jsx:312:89)
+    at async Promise.all (index 4)
+    at async loadMetricsData (index.jsx:111:7)
+overrideMethod @ hook.js:608
+loadAdditionalMetrics @ index.jsx:325
+await in loadAdditionalMetrics
+loadMetricsData @ index.jsx:116
+(anónimas) @ index.jsx:100
+commitHookEffectListMount @ chunk-3QO5DIOC.js?v=a1bb6c62:16936
+commitPassiveMountOnFiber @ chunk-3QO5DIOC.js?v=a1bb6c62:18184
+commitPassiveMountEffects_complete @ chunk-3QO5DIOC.js?v=a1bb6c62:18157
+commitPassiveMountEffects_begin @ chunk-3QO5DIOC.js?v=a1bb6c62:18147
+commitPassiveMountEffects @ chunk-3QO5DIOC.js?v=a1bb6c62:18137
+flushPassiveEffectsImpl @ chunk-3QO5DIOC.js?v=a1bb6c62:19518
+flushPassiveEffects @ chunk-3QO5DIOC.js?v=a1bb6c62:19475
+performSyncWorkOnRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:18896
+flushSyncCallbacks @ chunk-3QO5DIOC.js?v=a1bb6c62:9135
+commitRootImpl @ chunk-3QO5DIOC.js?v=a1bb6c62:19460
+commitRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:19305
+finishConcurrentRender @ chunk-3QO5DIOC.js?v=a1bb6c62:18833
+performConcurrentWorkOnRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:18746
+workLoop @ chunk-3QO5DIOC.js?v=a1bb6c62:197
+flushWork @ chunk-3QO5DIOC.js?v=a1bb6c62:176
+performWorkUntilDeadline @ chunk-3QO5DIOC.js?v=a1bb6c62:384Comprende este error
+TopCompaniesList.jsx:85 Uncaught TypeError: data?.slice is not a function
+    at TopCompaniesList (TopCompaniesList.jsx:85:20)
+    at renderWithHooks (chunk-3QO5DIOC.js?v=a1bb6c62:11568:26)
+    at updateFunctionComponent (chunk-3QO5DIOC.js?v=a1bb6c62:14602:28)
+    at beginWork (chunk-3QO5DIOC.js?v=a1bb6c62:15944:22)
+    at HTMLUnknownElement.callCallback2 (chunk-3QO5DIOC.js?v=a1bb6c62:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-3QO5DIOC.js?v=a1bb6c62:3699:24)
+    at invokeGuardedCallback (chunk-3QO5DIOC.js?v=a1bb6c62:3733:39)
+    at beginWork$1 (chunk-3QO5DIOC.js?v=a1bb6c62:19793:15)
+    at performUnitOfWork (chunk-3QO5DIOC.js?v=a1bb6c62:19226:20)
+    at workLoopSync (chunk-3QO5DIOC.js?v=a1bb6c62:19165:13)
+TopCompaniesList @ TopCompaniesList.jsx:85
+renderWithHooks @ chunk-3QO5DIOC.js?v=a1bb6c62:11568
+updateFunctionComponent @ chunk-3QO5DIOC.js?v=a1bb6c62:14602
+beginWork @ chunk-3QO5DIOC.js?v=a1bb6c62:15944
+callCallback2 @ chunk-3QO5DIOC.js?v=a1bb6c62:3674
+invokeGuardedCallbackDev @ chunk-3QO5DIOC.js?v=a1bb6c62:3699
+invokeGuardedCallback @ chunk-3QO5DIOC.js?v=a1bb6c62:3733
+beginWork$1 @ chunk-3QO5DIOC.js?v=a1bb6c62:19793
+performUnitOfWork @ chunk-3QO5DIOC.js?v=a1bb6c62:19226
+workLoopSync @ chunk-3QO5DIOC.js?v=a1bb6c62:19165
+renderRootSync @ chunk-3QO5DIOC.js?v=a1bb6c62:19144
+performSyncWorkOnRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:18902
+flushSyncCallbacks @ chunk-3QO5DIOC.js?v=a1bb6c62:9135
+(anónimas) @ chunk-3QO5DIOC.js?v=a1bb6c62:18655
+setTimeout
+systemSetTimeoutZero @ chunk-AXEFNHXP.js?v=a1bb6c62:103
+flush @ chunk-AXEFNHXP.js?v=a1bb6c62:613
+batch @ chunk-AXEFNHXP.js?v=a1bb6c62:631
+dispatch_fn @ chunk-AXEFNHXP.js?v=a1bb6c62:1263
+setData @ chunk-AXEFNHXP.js?v=a1bb6c62:934
+fetch @ chunk-AXEFNHXP.js?v=a1bb6c62:1156
+await in fetch
+executeFetch_fn @ chunk-AXEFNHXP.js?v=a1bb6c62:1650
+onSubscribe @ chunk-AXEFNHXP.js?v=a1bb6c62:1346
+subscribe @ chunk-AXEFNHXP.js?v=a1bb6c62:24
+(anónimas) @ chunk-AXEFNHXP.js?v=a1bb6c62:3320
+subscribeToStore @ chunk-3QO5DIOC.js?v=a1bb6c62:12004
+commitHookEffectListMount @ chunk-3QO5DIOC.js?v=a1bb6c62:16936
+commitPassiveMountOnFiber @ chunk-3QO5DIOC.js?v=a1bb6c62:18184
+commitPassiveMountEffects_complete @ chunk-3QO5DIOC.js?v=a1bb6c62:18157
+commitPassiveMountEffects_begin @ chunk-3QO5DIOC.js?v=a1bb6c62:18147
+commitPassiveMountEffects @ chunk-3QO5DIOC.js?v=a1bb6c62:18137
+flushPassiveEffectsImpl @ chunk-3QO5DIOC.js?v=a1bb6c62:19518
+flushPassiveEffects @ chunk-3QO5DIOC.js?v=a1bb6c62:19475
+performSyncWorkOnRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:18896
+flushSyncCallbacks @ chunk-3QO5DIOC.js?v=a1bb6c62:9135
+commitRootImpl @ chunk-3QO5DIOC.js?v=a1bb6c62:19460
+commitRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:19305
+finishConcurrentRender @ chunk-3QO5DIOC.js?v=a1bb6c62:18833
+performConcurrentWorkOnRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:18746
+workLoop @ chunk-3QO5DIOC.js?v=a1bb6c62:197
+flushWork @ chunk-3QO5DIOC.js?v=a1bb6c62:176
+performWorkUntilDeadline @ chunk-3QO5DIOC.js?v=a1bb6c62:384Comprende este error
+TopCompaniesList.jsx:85 Uncaught TypeError: data?.slice is not a function
+    at TopCompaniesList (TopCompaniesList.jsx:85:20)
+    at renderWithHooks (chunk-3QO5DIOC.js?v=a1bb6c62:11568:26)
+    at updateFunctionComponent (chunk-3QO5DIOC.js?v=a1bb6c62:14602:28)
+    at beginWork (chunk-3QO5DIOC.js?v=a1bb6c62:15944:22)
+    at HTMLUnknownElement.callCallback2 (chunk-3QO5DIOC.js?v=a1bb6c62:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-3QO5DIOC.js?v=a1bb6c62:3699:24)
+    at invokeGuardedCallback (chunk-3QO5DIOC.js?v=a1bb6c62:3733:39)
+    at beginWork$1 (chunk-3QO5DIOC.js?v=a1bb6c62:19793:15)
+    at performUnitOfWork (chunk-3QO5DIOC.js?v=a1bb6c62:19226:20)
+    at workLoopSync (chunk-3QO5DIOC.js?v=a1bb6c62:19165:13)
+TopCompaniesList @ TopCompaniesList.jsx:85
+renderWithHooks @ chunk-3QO5DIOC.js?v=a1bb6c62:11568
+updateFunctionComponent @ chunk-3QO5DIOC.js?v=a1bb6c62:14602
+beginWork @ chunk-3QO5DIOC.js?v=a1bb6c62:15944
+callCallback2 @ chunk-3QO5DIOC.js?v=a1bb6c62:3674
+invokeGuardedCallbackDev @ chunk-3QO5DIOC.js?v=a1bb6c62:3699
+invokeGuardedCallback @ chunk-3QO5DIOC.js?v=a1bb6c62:3733
+beginWork$1 @ chunk-3QO5DIOC.js?v=a1bb6c62:19793
+performUnitOfWork @ chunk-3QO5DIOC.js?v=a1bb6c62:19226
+workLoopSync @ chunk-3QO5DIOC.js?v=a1bb6c62:19165
+renderRootSync @ chunk-3QO5DIOC.js?v=a1bb6c62:19144
+recoverFromConcurrentError @ chunk-3QO5DIOC.js?v=a1bb6c62:18764
+performSyncWorkOnRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:18907
+flushSyncCallbacks @ chunk-3QO5DIOC.js?v=a1bb6c62:9135
+(anónimas) @ chunk-3QO5DIOC.js?v=a1bb6c62:18655
+setTimeout
+systemSetTimeoutZero @ chunk-AXEFNHXP.js?v=a1bb6c62:103
+flush @ chunk-AXEFNHXP.js?v=a1bb6c62:613
+batch @ chunk-AXEFNHXP.js?v=a1bb6c62:631
+dispatch_fn @ chunk-AXEFNHXP.js?v=a1bb6c62:1263
+setData @ chunk-AXEFNHXP.js?v=a1bb6c62:934
+fetch @ chunk-AXEFNHXP.js?v=a1bb6c62:1156
+await in fetch
+executeFetch_fn @ chunk-AXEFNHXP.js?v=a1bb6c62:1650
+onSubscribe @ chunk-AXEFNHXP.js?v=a1bb6c62:1346
+subscribe @ chunk-AXEFNHXP.js?v=a1bb6c62:24
+(anónimas) @ chunk-AXEFNHXP.js?v=a1bb6c62:3320
+subscribeToStore @ chunk-3QO5DIOC.js?v=a1bb6c62:12004
+commitHookEffectListMount @ chunk-3QO5DIOC.js?v=a1bb6c62:16936
+commitPassiveMountOnFiber @ chunk-3QO5DIOC.js?v=a1bb6c62:18184
+commitPassiveMountEffects_complete @ chunk-3QO5DIOC.js?v=a1bb6c62:18157
+commitPassiveMountEffects_begin @ chunk-3QO5DIOC.js?v=a1bb6c62:18147
+commitPassiveMountEffects @ chunk-3QO5DIOC.js?v=a1bb6c62:18137
+flushPassiveEffectsImpl @ chunk-3QO5DIOC.js?v=a1bb6c62:19518
+flushPassiveEffects @ chunk-3QO5DIOC.js?v=a1bb6c62:19475
+performSyncWorkOnRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:18896
+flushSyncCallbacks @ chunk-3QO5DIOC.js?v=a1bb6c62:9135
+commitRootImpl @ chunk-3QO5DIOC.js?v=a1bb6c62:19460
+commitRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:19305
+finishConcurrentRender @ chunk-3QO5DIOC.js?v=a1bb6c62:18833
+performConcurrentWorkOnRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:18746
+workLoop @ chunk-3QO5DIOC.js?v=a1bb6c62:197
+flushWork @ chunk-3QO5DIOC.js?v=a1bb6c62:176
+performWorkUntilDeadline @ chunk-3QO5DIOC.js?v=a1bb6c62:384Comprende este error
+hook.js:608 The above error occurred in the <TopCompaniesList> component:
+
+    at TopCompaniesList (http://localhost:4028/src/pages/metrics-management/components/TopCompaniesList.jsx?t=1761760001480:23:36)
+    at div
+    at main
+    at div
+    at MetricsManagement (http://localhost:4028/src/pages/metrics-management/index.jsx?t=1761760083845:45:20)
+    at ProtectedRoute (http://localhost:4028/src/components/ProtectedRoute.jsx?t=1761759755457:21:27)
+    at Routes (http://localhost:4028/node_modules/.vite/deps/react-router-dom.js?v=a1bb6c62:730:5)
+    at ErrorBoundary (http://localhost:4028/src/components/ErrorBoundary.jsx:8:5)
+    at Router (http://localhost:4028/node_modules/.vite/deps/react-router-dom.js?v=a1bb6c62:677:15)
+    at BrowserRouter (http://localhost:4028/node_modules/.vite/deps/react-router-dom.js?v=a1bb6c62:1250:5)
+    at Routes
+    at MetricsProvider (http://localhost:4028/src/contexts/MetricsContext.jsx:20:35)
+    at AuthProvider (http://localhost:4028/src/contexts/AuthContext.jsx?t=1761759755457:22:32)
+    at QueryClientProvider (http://localhost:4028/node_modules/.vite/deps/chunk-AXEFNHXP.js?v=a1bb6c62:3103:3)
+    at QueryProvider (http://localhost:4028/src/contexts/QueryProvider.jsx:63:26)
+    at _a (http://localhost:4028/node_modules/.vite/deps/react-helmet-async.js?v=a1bb6c62:550:5)
+    at App
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary.
+overrideMethod @ hook.js:608
+logCapturedError @ chunk-3QO5DIOC.js?v=a1bb6c62:14052
+callback @ chunk-3QO5DIOC.js?v=a1bb6c62:14098
+callCallback @ chunk-3QO5DIOC.js?v=a1bb6c62:11268
+commitUpdateQueue @ chunk-3QO5DIOC.js?v=a1bb6c62:11285
+commitLayoutEffectOnFiber @ chunk-3QO5DIOC.js?v=a1bb6c62:17097
+commitLayoutMountEffects_complete @ chunk-3QO5DIOC.js?v=a1bb6c62:18008
+commitLayoutEffects_begin @ chunk-3QO5DIOC.js?v=a1bb6c62:17997
+commitLayoutEffects @ chunk-3QO5DIOC.js?v=a1bb6c62:17948
+commitRootImpl @ chunk-3QO5DIOC.js?v=a1bb6c62:19381
+commitRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:19305
+performSyncWorkOnRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:18923
+flushSyncCallbacks @ chunk-3QO5DIOC.js?v=a1bb6c62:9135
+(anónimas) @ chunk-3QO5DIOC.js?v=a1bb6c62:18655
+setTimeout
+systemSetTimeoutZero @ chunk-AXEFNHXP.js?v=a1bb6c62:103
+flush @ chunk-AXEFNHXP.js?v=a1bb6c62:613
+batch @ chunk-AXEFNHXP.js?v=a1bb6c62:631
+dispatch_fn @ chunk-AXEFNHXP.js?v=a1bb6c62:1263
+setData @ chunk-AXEFNHXP.js?v=a1bb6c62:934
+fetch @ chunk-AXEFNHXP.js?v=a1bb6c62:1156
+await in fetch
+executeFetch_fn @ chunk-AXEFNHXP.js?v=a1bb6c62:1650
+onSubscribe @ chunk-AXEFNHXP.js?v=a1bb6c62:1346
+subscribe @ chunk-AXEFNHXP.js?v=a1bb6c62:24
+(anónimas) @ chunk-AXEFNHXP.js?v=a1bb6c62:3320
+subscribeToStore @ chunk-3QO5DIOC.js?v=a1bb6c62:12004
+commitHookEffectListMount @ chunk-3QO5DIOC.js?v=a1bb6c62:16936
+commitPassiveMountOnFiber @ chunk-3QO5DIOC.js?v=a1bb6c62:18184
+commitPassiveMountEffects_complete @ chunk-3QO5DIOC.js?v=a1bb6c62:18157
+commitPassiveMountEffects_begin @ chunk-3QO5DIOC.js?v=a1bb6c62:18147
+commitPassiveMountEffects @ chunk-3QO5DIOC.js?v=a1bb6c62:18137
+flushPassiveEffectsImpl @ chunk-3QO5DIOC.js?v=a1bb6c62:19518
+flushPassiveEffects @ chunk-3QO5DIOC.js?v=a1bb6c62:19475
+performSyncWorkOnRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:18896
+flushSyncCallbacks @ chunk-3QO5DIOC.js?v=a1bb6c62:9135
+commitRootImpl @ chunk-3QO5DIOC.js?v=a1bb6c62:19460
+commitRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:19305
+finishConcurrentRender @ chunk-3QO5DIOC.js?v=a1bb6c62:18833
+performConcurrentWorkOnRoot @ chunk-3QO5DIOC.js?v=a1bb6c62:18746
+workLoop @ chunk-3QO5DIOC.js?v=a1bb6c62:197
+flushWork @ chunk-3QO5DIOC.js?v=a1bb6c62:176
+performWorkUntilDeadline @ chunk-3QO5DIOC.js?v=a1bb6c62:384Comprende este error
+inventoryService.js:557 Datos de inventario obtenidos: 788 productos
+@supabase_supabase-js.js?v=a1bb6c62:4293  GET https://bgtlqwlgvedfyltptvbi.supabase.co/rest/v1/usuarios?select=id%2Cnombre%2Capellido&id=eq.5102fc4c-61d3-4714-894b-3bdbbf2ddf18 406 (Not Acceptable)
+(anónimas) @ @supabase_supabase-js.js?v=a1bb6c62:4293
+(anónimas) @ @supabase_supabase-js.js?v=a1bb6c62:4314
+fulfilled @ @supabase_supabase-js.js?v=a1bb6c62:4266
+Promise.then
+step @ @supabase_supabase-js.js?v=a1bb6c62:4279
+(anónimas) @ @supabase_supabase-js.js?v=a1bb6c62:4281
+__awaiter6 @ @supabase_supabase-js.js?v=a1bb6c62:4263
+(anónimas) @ @supabase_supabase-js.js?v=a1bb6c62:4304
+then @ @supabase_supabase-js.js?v=a1bb6c62:90Comprende este error
+inventoryService.js:586 Métricas calculadas: {totalProducts: 788, totalFrames: 1182, lowStock: 759, outOfStock: 3, totalValue: 1585978.96, …}
+inventoryService.js:485 Raw inventory data: (788) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, …]
+inventoryService.js:501 Inventory categorization: {inStock: 785, outOfStock: 3, total: 788}
+inventoryService.js:519 Chart data formatted: (2) [{…}, {…}]

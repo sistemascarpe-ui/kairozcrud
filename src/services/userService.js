@@ -80,10 +80,18 @@ export const userService = {
         .eq('id', id)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        // Si es un error de usuario no encontrado, no es realmente un error
+        if (error.code === 'PGRST116') {
+          console.debug('Usuario no encontrado:', id);
+          return { data: null, error: null, userNotFound: true };
+        }
+        throw error;
+      }
       
       return { data, error: null };
     } catch (error) {
+      console.debug('Error al obtener usuario:', error?.message);
       return { data: null, error: error?.message };
     }
   },

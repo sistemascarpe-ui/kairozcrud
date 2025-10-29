@@ -36,11 +36,22 @@ export const useUser = (id) => {
     enabled: !!id,
     staleTime: 15 * 60 * 1000, // 15 minutos
     gcTime: 30 * 60 * 1000, // 30 minutos
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    retry: (failureCount, error) => {
+      // No reintentar si es un error 406 o usuario no encontrado
+      if (error?.message?.includes('406') || error?.code === 'PGRST116') {
+        return false;
+      }
+      return failureCount < 1; // Solo 1 reintento para otros errores
+    },
+    retryDelay: 2000, // 2 segundos
     onError: (error) => {
-      logger.error('Error fetching user:', error);
-      toast.error('Error al cargar el usuario');
+      // Solo mostrar error si no es un usuario no encontrado
+      if (!error?.message?.includes('406') && error?.code !== 'PGRST116') {
+        logger.error('Error fetching user:', error);
+        toast.error('Error al cargar el usuario');
+      } else {
+        logger.debug('Usuario no encontrado:', id);
+      }
     },
   });
 };

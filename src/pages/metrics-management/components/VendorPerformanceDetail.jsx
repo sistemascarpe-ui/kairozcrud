@@ -7,11 +7,10 @@ import Select from '../../../components/ui/Select';
 import Input from '../../../components/ui/Input';
 import { salesService } from '../../../services/salesService';
 import { userService } from '../../../services/userService';
+import { useVendorPerformance } from '../../../hooks/useOptimizedSales';
 import toast from 'react-hot-toast';
 
 const VendorPerformanceDetail = () => {
-  const [loading, setLoading] = useState(true);
-  const [vendorData, setVendorData] = useState([]);
   const [users, setUsers] = useState([]);
   const [selectedVendor, setSelectedVendor] = useState('');
   const [expandedVendor, setExpandedVendor] = useState(null);
@@ -20,177 +19,28 @@ const VendorPerformanceDetail = () => {
   const [showDateFilter, setShowDateFilter] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState('');
 
-  useEffect(() => {
-    loadData();
-  }, [startDate, endDate]);
+  // Hook optimizado para rendimiento de vendedores
+  const { data: vendorPerformanceData, isLoading, error } = useVendorPerformance(startDate, endDate);
+  const vendorData = vendorPerformanceData?.data || [];
 
-  const loadData = async () => {
-    setLoading(true);
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const loadUsers = async () => {
     try {
       // Cargar usuarios
       const usersResult = await userService.getUsers();
       if (usersResult?.data) {
         setUsers(usersResult.data);
       }
-
-      // Cargar datos de rendimiento de vendedores
-      const performanceData = await loadVendorPerformance();
-      setVendorData(performanceData);
     } catch (error) {
-      toast.error('Error al cargar datos de rendimiento');
-      console.error('Error loading vendor performance:', error);
-    } finally {
-      setLoading(false);
+      toast.error('Error al cargar usuarios');
+      console.error('Error loading users:', error);
     }
   };
 
-  const loadVendorPerformance = async () => {
-    try {
-      // Obtener todas las ventas con vendedores
-      const { data: sales, error } = await salesService.getSalesWithVendors();
-      
-      if (error) {
-        console.error('Error loading sales:', error);
-        return [];
-      }
 
-      // Filtrar ventas por rango de fechas si está definido
-      let filteredSales = sales || [];
-      
-      if (startDate && endDate) {
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        
-        filteredSales = sales?.filter(sale => {
-          const saleDate = new Date(sale.created_at);
-          return saleDate >= start && saleDate <= end;
-        }) || [];
-        
-        console.log(`Filtrado por fechas: ${filteredSales.length} ventas entre ${start.toLocaleDateString()} y ${end.toLocaleDateString()}`);
-      }
-
-      // Procesar datos por vendedor
-      const vendorStats = {};
-      
-      filteredSales.forEach(sale => {
-        const vendedores = sale.venta_vendedores || [];
-        const isSharedSale = vendedores.length > 1;
-        const saleAmount = parseFloat(sale.total || 0);
-        const sharePerVendor = isSharedSale ? saleAmount / vendedores.length : saleAmount;
-
-        vendedores.forEach(vendorRelation => {
-          const vendorId = vendorRelation.vendedor_id;
-          const vendorName = vendorRelation.usuarios ? 
-            `${vendorRelation.usuarios.nombre} ${vendorRelation.usuarios.apellido || ''}`.trim() : 
-            'Usuario desconocido';
-
-          if (!vendorStats[vendorId]) {
-            vendorStats[vendorId] = {
-              id: vendorId,
-              name: vendorName,
-              individualSales: {
-                count: 0,
-                revenue: 0,
-                completed: 0,
-                pending: 0,
-                completedRevenue: 0,
-                pendingRevenue: 0
-              },
-              sharedSales: {
-                count: 0,
-                revenue: 0,
-                completed: 0,
-                pending: 0,
-                completedRevenue: 0,
-                pendingRevenue: 0,
-                totalParticipations: 0
-              },
-              totalSales: {
-                count: 0,
-                revenue: 0,
-                completed: 0,
-                pending: 0,
-                completedRevenue: 0,
-                pendingRevenue: 0
-              },
-              recentSales: []
-            };
-          }
-
-          const vendor = vendorStats[vendorId];
-          const isCompleted = sale.estado === 'completada';
-
-          // Agregar a ventas recientes (máximo 5)
-          if (vendor.recentSales.length < 5) {
-            vendor.recentSales.push({
-              id: sale.id,
-              folio: sale.folio,
-              cliente: sale.clientes?.nombre || 'Cliente desconocido',
-              total: saleAmount,
-              estado: sale.estado,
-              fecha: sale.created_at,
-              isShared: isSharedSale,
-              shareAmount: sharePerVendor,
-              otherVendors: isSharedSale ? 
-                vendedores
-                  .filter(v => v.vendedor_id !== vendorId)
-                  .map(v => v.usuarios ? `${v.usuarios.nombre} ${v.usuarios.apellido || ''}`.trim() : 'Usuario')
-                : []
-            });
-          }
-
-          if (isSharedSale) {
-            // Venta compartida
-            vendor.sharedSales.count++;
-            vendor.sharedSales.revenue += sharePerVendor;
-            vendor.sharedSales.totalParticipations++;
-            
-            if (isCompleted) {
-              vendor.sharedSales.completed++;
-              vendor.sharedSales.completedRevenue += sharePerVendor;
-            } else {
-              vendor.sharedSales.pending++;
-              vendor.sharedSales.pendingRevenue += sharePerVendor;
-            }
-          } else {
-            // Venta individual
-            vendor.individualSales.count++;
-            vendor.individualSales.revenue += saleAmount;
-            
-            if (isCompleted) {
-              vendor.individualSales.completed++;
-              vendor.individualSales.completedRevenue += saleAmount;
-            } else {
-              vendor.individualSales.pending++;
-              vendor.individualSales.pendingRevenue += saleAmount;
-            }
-          }
-
-          // Totales
-          vendor.totalSales.count++;
-          vendor.totalSales.revenue += sharePerVendor;
-          
-          if (isCompleted) {
-            vendor.totalSales.completed++;
-            vendor.totalSales.completedRevenue += sharePerVendor;
-          } else {
-            vendor.totalSales.pending++;
-            vendor.totalSales.pendingRevenue += sharePerVendor;
-          }
-        });
-      });
-
-      // Convertir a array y ordenar por ingresos totales
-      return Object.values(vendorStats)
-        .sort((a, b) => b.totalSales.revenue - a.totalSales.revenue);
-
-    } catch (error) {
-      console.error('Error processing vendor performance:', error);
-      return [];
-    }
-  };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('es-MX', {
@@ -310,7 +160,7 @@ const VendorPerformanceDetail = () => {
     ? vendorData.filter(vendor => vendor.id === selectedVendor)
     : vendorData;
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="animate-pulse">
@@ -320,6 +170,27 @@ const VendorPerformanceDetail = () => {
               <div key={i} className="h-16 bg-gray-200 rounded"></div>
             ))}
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="text-center py-8">
+          <div className="text-red-500 mb-2">
+            <TrendingUp className="h-12 w-12 mx-auto" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Error al cargar datos</h3>
+          <p className="text-gray-500 mb-4">No se pudieron cargar los datos de rendimiento de vendedores</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.location.reload()}
+          >
+            Reintentar
+          </Button>
         </div>
       </div>
     );
@@ -367,8 +238,8 @@ const VendorPerformanceDetail = () => {
             variant="outline"
             size="sm"
             iconName="RefreshCw"
-            onClick={loadData}
-            disabled={loading}
+            onClick={loadUsers}
+            disabled={isLoading}
           >
             Actualizar
           </Button>

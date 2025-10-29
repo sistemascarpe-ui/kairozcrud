@@ -14,6 +14,7 @@ import { salesService } from '../../services/salesService';
 import { userService } from '../../services/userService';
 import { useAuth } from '../../contexts/AuthContext';
 import { useMetrics } from '../../contexts/MetricsContext';
+import { useOptimizedSales, useSalesCount } from '../../hooks/useOptimizedSales';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 
@@ -60,28 +61,36 @@ const SalesManagement = () => {
     pendingRevenue: 0 
   });
 
+  // Paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [salesPerPage] = useState(20);
+
+  // Usar hooks optimizados
+  const { data: salesData, isLoading: salesLoading, error: salesError } = useOptimizedSales(currentPage, salesPerPage);
+  const { data: salesCountData } = useSalesCount();
+
   useEffect(() => { loadInitialData(); }, []);
   useEffect(() => { filterSales(); }, [sales, searchTerm, statusFilter, vendedorFilter, selectedDate, monthFilter]);
   useEffect(() => { calculateMonthStats(); }, [sales, selectedMonth, selectedYear]);
 
+  // Actualizar sales cuando lleguen los datos optimizados
+  useEffect(() => {
+    if (salesData?.data) {
+      setSales(salesData.data);
+    }
+  }, [salesData]);
+
+  // Actualizar loading basado en el estado de los hooks
+  useEffect(() => {
+    setLoading(salesLoading);
+  }, [salesLoading]);
+
   const loadInitialData = async () => {
-    setLoading(true);
     try {
-      console.log('🔄 Cargando datos iniciales...');
-      const [salesResult, vendorsResult] = await Promise.all([
-        salesService.getSalesNotes(),
-        userService.getUsers()
-      ]);
+      console.log('🔄 Cargando vendedores...');
+      const vendorsResult = await userService.getUsers();
       
-      console.log('📊 Resultado de ventas:', salesResult);
       console.log('👥 Resultado de vendedores:', vendorsResult);
-      
-      if (salesResult.data) {
-        console.log('✅ Datos de ventas cargados:', salesResult.data.length, 'notas');
-        setSales(salesResult.data);
-      } else {
-        console.log('❌ No se pudieron cargar las ventas:', salesResult.error);
-      }
       
       if (vendorsResult.data) {
         console.log('✅ Datos de vendedores cargados:', vendorsResult.data.length, 'vendedores');
@@ -92,8 +101,7 @@ const SalesManagement = () => {
     } catch (error) { 
       console.error('💥 Error en loadInitialData:', error);
       toast.error('Error inesperado al cargar los datos'); 
-    } 
-    finally { setLoading(false); }
+    }
   };
   
   const calculateMonthStats = () => {
@@ -451,9 +459,64 @@ const handleSaveSale = async (saleData) => {
           </div>
           
           <div className="mb-4">
-            <p className="text-sm text-gray-600">Mostrando {filteredSales.length} de {sales.length} notas de venta</p>
+            <p className="text-sm text-gray-600">
+              Mostrando {filteredSales.length} de {salesCountData?.count || sales.length} notas de venta
+              {salesCountData?.count && ` (Página ${currentPage} de ${Math.ceil(salesCountData.count / salesPerPage)})`}
+            </p>
           </div>
           <SalesTable sales={filteredSales} onEdit={handleEditSale} loading={loading} />
+          
+          {/* Controles de paginación */}
+          {salesCountData?.count > salesPerPage && (
+            <div className="mt-6 flex justify-center items-center space-x-4">
+              <Button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                variant="outline"
+                className="px-4 py-2"
+              >
+                Anterior
+              </Button>
+              
+              <div className="flex items-center space-x-2">
+                {Array.from({ length: Math.min(5, Math.ceil(salesCountData.count / salesPerPage)) }, (_, i) => {
+                  const totalPages = Math.ceil(salesCountData.count / salesPerPage);
+                  let pageNumber;
+                  
+                  if (totalPages <= 5) {
+                    pageNumber = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNumber = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNumber = totalPages - 4 + i;
+                  } else {
+                    pageNumber = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <Button
+                      key={pageNumber}
+                      onClick={() => setCurrentPage(pageNumber)}
+                      variant={currentPage === pageNumber ? "primary" : "outline"}
+                      className="px-3 py-2 min-w-[40px]"
+                    >
+                      {pageNumber}
+                    </Button>
+                  );
+                })}
+              </div>
+              
+              <Button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(salesCountData.count / salesPerPage)))}
+                disabled={currentPage === Math.ceil(salesCountData.count / salesPerPage)}
+                variant="outline"
+                className="px-4 py-2"
+              >
+                Siguiente
+              </Button>
+            </div>
+          )}
+          
           <NewSalesModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveSale} sale={selectedSale} loading={modalLoading}/>
         </div>
       </div>

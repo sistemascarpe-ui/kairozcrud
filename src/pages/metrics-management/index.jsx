@@ -9,6 +9,7 @@ import { customerService } from '../../services/customerService';
 import { abonosService } from '../../services/abonosService';
 import { useAuth } from '../../contexts/AuthContext';
 import { useMetrics } from '../../contexts/MetricsContext';
+import { useTopProducts } from '../../hooks/useOptimizedSales';
 import Header from '../../components/ui/Header';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -90,6 +91,9 @@ const MetricsManagement = () => {
   const [chartData, setChartData] = useState({
     inventoryStatus: []
   });
+
+  // Hook optimizado para productos más vendidos
+  const { data: topProductsData, isLoading: topProductsLoading, error: topProductsError } = useTopProducts(10, topProductsMonth);
 
   useEffect(() => {
     console.log('🔄 useEffect triggered - refreshTrigger:', refreshTrigger);
@@ -381,60 +385,7 @@ const MetricsManagement = () => {
     setSelectedDate(null);
   };
   
-  // Filtrar productos más vendidos por mes
-  const getFilteredTopProducts = () => {
-    if (!topProductsMonth || !allSalesData || allSalesData.length === 0) {
-      return additionalMetrics.topProducts;
-    }
-    
-    // Filtrar ventas por mes seleccionado, incluyendo completadas y pendientes
-    const filteredSales = allSalesData.filter(sale => {
-      if (sale.estado !== 'completada' && sale.estado !== 'pendiente') return false;
-      const saleDate = new Date(sale.fecha_venta || sale.created_at);
-      const saleYearMonth = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`;
-      return saleYearMonth === topProductsMonth;
-    });
-    
-    // Agrupar productos vendidos
-    const productStats = {};
-    filteredSales.forEach(sale => {
-      // Verificar que la venta tenga productos
-      if (!sale.productos || !Array.isArray(sale.productos) || sale.productos.length === 0) return;
-      
-      // Procesar cada producto de la venta
-      sale.productos.forEach(producto => {
-        // Solo procesar productos de tipo 'armazon'
-        if (producto.tipo !== 'armazon' || !producto.armazon) return;
-        
-        const armazon = producto.armazon;
-        const productId = armazon.id;
-        
-        if (!productStats[productId]) {
-          productStats[productId] = {
-            id: productId,
-            sku: armazon.sku || 'N/A',
-            brand: armazon.marca || 'Sin marca',
-            marca: armazon.marca || 'Sin marca',
-            color: armazon.color || 'N/A',
-            price: producto.precio_unitario || armazon.precio || 0,
-            precio: producto.precio_unitario || armazon.precio || 0,
-            totalSold: 0,
-            quantity: 0
-          };
-        }
-        
-        const cantidad = parseInt(producto.cantidad) || 1;
-        productStats[productId].totalSold += cantidad;
-        productStats[productId].quantity += cantidad;
-      });
-    });
-    
-    // Convertir a array y ordenar por cantidad vendida
-    const sortedProducts = Object.values(productStats)
-      .sort((a, b) => b.totalSold - a.totalSold);
-    
-    return sortedProducts;
-  };
+
 
   return (
     <>
@@ -717,13 +668,13 @@ const MetricsManagement = () => {
 
                     <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg border-2 border-white/30">
                       <span className="text-sm font-semibold text-white">
-                        {getFilteredTopProducts().length} productos
+                        {topProductsData?.data?.length || 0} productos
                       </span>
               </div>
                   </div>
                 </div>
               </div>
-              <TopProductsList products={getFilteredTopProducts()} />
+              <TopProductsList products={topProductsData?.data || []} />
             </div>
           </div>
 
