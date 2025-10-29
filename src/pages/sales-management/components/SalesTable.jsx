@@ -213,7 +213,12 @@ const formatDate = (dateString) => {
                   )}
                 </td>
                 
-                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">{formatCurrency(sale.total)}</td>
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
+                  {sale.requiere_factura ? 
+                    formatCurrency(sale.total + (sale.monto_iva || 0)) : 
+                    formatCurrency(sale.total)
+                  }
+                </td>
                 <td className="px-4 py-4 whitespace-nowrap">{getStatusBadge(sale.estado)}</td>
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                   {sale.vendedores && sale.vendedores.length > 0
