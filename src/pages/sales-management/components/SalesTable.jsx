@@ -6,7 +6,7 @@ const SalesTable = ({ sales = [], onEdit, loading = false }) => {
   const sortedSales = [...sales];
 
 const formatDate = (dateString) => {
-  if (!dateString) return 'N/A';
+  if (!dateString) return '---';
 
   const options = {
     year: 'numeric',
@@ -24,7 +24,7 @@ const formatDate = (dateString) => {
 
   // Función para extraer solo el número del folio
   const getFolioNumber = (folio) => {
-    if (!folio) return 'N/A';
+    if (!folio) return '---';
     
     // Si es un folio automático (formato: VYYYYMMDDNNNNNN), extraer solo el número
     const autoMatch = folio.match(/^V\d{8}(\d+)$/);
@@ -115,7 +115,7 @@ const formatDate = (dateString) => {
                       <div className="text-sm text-gray-500">{sale.cliente.telefono}</div>
                     </div>
                   ) : (
-                    <div className="text-sm text-gray-900">N/A</div>
+                    <div className="text-sm text-gray-900">---</div>
                   )}
                 </td>
 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -145,7 +145,7 @@ const formatDate = (dateString) => {
   )}
 </td>
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                  <div className="font-medium">{sale.tipo_mica?.nombre || 'N/A'}</div>
+                  <div className="font-medium">{sale.tipo_mica?.nombre || '---'}</div>
                   <div className="text-gray-500">{formatCurrency(sale.tipo_mica?.precio)}</div>
                 </td>
                 

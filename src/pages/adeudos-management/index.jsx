@@ -829,6 +829,9 @@ const AdeudosManagement = () => {
                               Producto
                             </th>
                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Tipo
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Cantidad
                             </th>
                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -840,22 +843,43 @@ const AdeudosManagement = () => {
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {selectedNote.productos.map((producto, index) => (
-                            <tr key={index}>
-                              <td className="px-4 py-3 text-sm text-gray-900">
-                                {producto.nombre || 'Producto sin nombre'}
-                              </td>
-                              <td className="px-4 py-3 text-sm text-gray-900">
-                                {producto.cantidad || 1}
-                              </td>
-                              <td className="px-4 py-3 text-sm text-gray-900">
-                                {formatCurrency(producto.precio || 0)}
-                              </td>
-                              <td className="px-4 py-3 text-sm font-semibold text-gray-900">
-                                {formatCurrency((producto.precio || 0) * (producto.cantidad || 1))}
-                              </td>
-                            </tr>
-                          ))}
+                          {selectedNote.productos.map((producto, index) => {
+                            // Determinar el nombre del producto basado en el tipo
+                            let nombreProducto = '';
+                            if (producto.tipo === 'armazon' && producto.armazon) {
+                              nombreProducto = `${producto.armazon.marca || '---'} - ${producto.armazon.sku || 'Sin SKU'}`;
+                            } else if (producto.tipo === 'mica') {
+                              nombreProducto = producto.descripcion_mica || 'Micas';
+                            } else {
+                              nombreProducto = 'Producto sin especificar';
+                            }
+
+                            return (
+                              <tr key={index}>
+                                <td className="px-4 py-3 text-sm text-gray-900">
+                                  {nombreProducto}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-600">
+                                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                    producto.tipo === 'armazon' 
+                                      ? 'bg-blue-100 text-blue-800' 
+                                      : 'bg-green-100 text-green-800'
+                                  }`}>
+                                    {producto.tipo === 'armazon' ? 'Armazón' : 'Micas'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-900">
+                                  {producto.cantidad || 1}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-900">
+                                  {formatCurrency(producto.precio_unitario || 0)}
+                                </td>
+                                <td className="px-4 py-3 text-sm font-semibold text-gray-900">
+                                  {formatCurrency(producto.subtotal || ((producto.precio_unitario || 0) * (producto.cantidad || 1)))}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>

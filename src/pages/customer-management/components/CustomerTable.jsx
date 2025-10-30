@@ -49,8 +49,8 @@ const CustomerTable = ({
     };
   }, [tableWidth]);
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString)?.toLocaleDateString('es-ES', {
+    if (!dateString) return '---';
+    return new Date(dateString).toLocaleDateString('es-ES', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
@@ -162,28 +162,25 @@ const CustomerTable = ({
                     </div>
                     <div className="ml-3">
                       <div className="text-sm font-medium text-foreground">
-                        {customer?.nombre || 'N/A'}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        ID: {customer?.id?.substring(0, 8)}...
+                        {customer?.nombre || '---'}
                       </div>
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">
-                  {customer?.telefono || 'N/A'}
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                  {customer?.telefono || '---'}
                 </td>
-                <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">
-                  {customer?.correo || 'N/A'}
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                  {customer?.correo || '---'}
                 </td>
-                <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">
-                  {customer?.empresa || 'N/A'}
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                  {customer?.empresa || '---'}
                 </td>
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">
                   {formatDate(customer?.created_at)}
                 </td>
-                <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground">
-                  {customer?.atendido_por || 'N/A'}
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                  {customer?.atendido_por || '---'}
                 </td>
               </tr>
             ))}
@@ -204,8 +201,7 @@ const CustomerTable = ({
                   </span>
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-foreground">{customer?.nombre || 'N/A'}</h3>
-                  <p className="text-xs text-muted-foreground">ID: {customer?.id?.substring(0, 8)}...</p>
+                  <h3 className="text-sm font-medium text-foreground">{customer?.nombre || '---'}</h3>
                 </div>
               </div>
             </div>
@@ -213,15 +209,15 @@ const CustomerTable = ({
             <div className="grid grid-cols-2 gap-3 text-xs mb-4">
               <div className="flex items-center">
                 <Icon name="Phone" size={14} className="text-muted-foreground mr-2" />
-                <span className="text-foreground">{customer?.telefono || 'N/A'}</span>
+                <span className="text-foreground">{customer?.telefono || '---'}</span>
               </div>
               <div className="flex items-center">
                 <Icon name="Mail" size={14} className="text-muted-foreground mr-2" />
-                <span className="text-foreground">{customer?.correo || 'N/A'}</span>
+                <span className="text-foreground">{customer?.correo || '---'}</span>
               </div>
               <div className="flex items-center">
                 <Icon name="Building" size={14} className="text-muted-foreground mr-2" />
-                <span className="text-foreground">{customer?.empresa || 'N/A'}</span>
+                <span className="text-foreground">{customer?.empresa || '---'}</span>
               </div>
               <div className="flex items-center">
                 <Icon name="Calendar" size={14} className="text-muted-foreground mr-2" />
@@ -229,7 +225,7 @@ const CustomerTable = ({
               </div>
               <div className="flex items-center col-span-2">
                 <Icon name="User" size={14} className="text-muted-foreground mr-2" />
-                <span className="text-foreground">Atendido por: {customer?.atendido_por || 'N/A'}</span>
+                <span className="text-foreground">Atendido por: {customer?.atendido_por || '---'}</span>
               </div>
             </div>
             

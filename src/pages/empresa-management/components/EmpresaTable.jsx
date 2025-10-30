@@ -10,8 +10,8 @@ const EmpresaTable = ({
   sortConfig
 }) => {
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString)?.toLocaleDateString('es-ES', {
+    if (!dateString) return '---';
+    return new Date(dateString).toLocaleDateString('es-ES', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
@@ -92,7 +92,7 @@ const EmpresaTable = ({
                     </div>
                     <div className="ml-3">
                       <div className="text-sm font-medium text-foreground">
-                        {empresa?.nombre || 'N/A'}
+                        {empresa?.nombre || '---'}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         ID: {empresa?.id?.substring(0, 8)}...
@@ -119,7 +119,7 @@ const EmpresaTable = ({
                   <Icon name="Building" size={20} className="text-primary" />
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-foreground">{empresa?.nombre || 'N/A'}</h3>
+                  <h3 className="text-sm font-medium text-foreground">{empresa?.nombre || '---'}</h3>
                   <p className="text-xs text-muted-foreground">Creado: {formatDate(empresa?.created_at)}</p>
                   <p className="text-xs text-muted-foreground">ID: {empresa?.id?.substring(0, 8)}...</p>
                 </div>

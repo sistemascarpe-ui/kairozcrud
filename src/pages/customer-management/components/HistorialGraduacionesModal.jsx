@@ -155,7 +155,7 @@ const HistorialGraduacionesModal = ({
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return '---';
     return new Date(dateString).toLocaleDateString('es-ES', {
       day: '2-digit',
       month: '2-digit',
@@ -357,19 +357,19 @@ const HistorialGraduacionesModal = ({
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
                     <div>
                       <span className="text-xs text-muted-foreground">OD (Ojo Derecho)</span>
-                      <p className="text-sm font-medium text-foreground">{graduacion.graduacion_od || 'N/A'}</p>
+                      <p className="text-sm font-medium text-foreground">{graduacion.graduacion_od || '---'}</p>
                     </div>
                     <div>
                       <span className="text-xs text-muted-foreground">OI (Ojo Izquierdo)</span>
-                      <p className="text-sm font-medium text-foreground">{graduacion.graduacion_oi || 'N/A'}</p>
+                      <p className="text-sm font-medium text-foreground">{graduacion.graduacion_oi || '---'}</p>
                     </div>
                     <div>
                       <span className="text-xs text-muted-foreground">ADD (Adición)</span>
-                      <p className="text-sm font-medium text-foreground">{graduacion.graduacion_add || 'N/A'}</p>
+                      <p className="text-sm font-medium text-foreground">{graduacion.graduacion_add || '---'}</p>
                     </div>
                     <div>
                       <span className="text-xs text-muted-foreground">DIP</span>
-                      <p className="text-sm font-medium text-foreground">{graduacion.dip || 'N/A'}</p>
+                      <p className="text-sm font-medium text-foreground">{graduacion.dip || '---'}</p>
                     </div>
                   </div>
                   
