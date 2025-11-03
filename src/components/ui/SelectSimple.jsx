@@ -57,8 +57,17 @@ const SelectSimple = ({
     }, [isOpen, onOpenChange]);
 
     // Función mejorada de búsqueda para SelectSimple
+    const removeAccents = (text) => {
+        return text?.normalize('NFD')?.replace(/[\u0300-\u036f]/g, '') || '';
+    };
+
+    const normalizeText = (text) => {
+        return removeAccents(text || '')?.toLowerCase()?.trim();
+    };
+
     const normalizeSearchTerm = (term) => {
-        return term?.toLowerCase()?.replace(/\s+/g, '')?.trim();
+        // Normalización más agresiva: sin acentos y sin espacios para coincidencias flexibles
+        return removeAccents(term || '')?.toLowerCase()?.replace(/\s+/g, '')?.trim();
     };
 
     const matchesSearchTerm = (searchTerm, option) => {
@@ -69,28 +78,32 @@ const SelectSimple = ({
         // Campos a buscar
         const searchFields = [
             option?.label,
-            option?.value?.toString()
+            option?.value?.toString(),
+            option?.description,
+            // Permitir campos adicionales como keywords o meta
+            ...(Array.isArray(option?.keywords) ? option.keywords : []),
+            ...(option?.meta && typeof option.meta === 'object' ? Object.values(option.meta) : [])
         ];
         
         return searchFields.some(field => {
             if (!field) return false;
             
-            const normalizedField = normalizeSearchTerm(field);
-            
-            // Búsqueda exacta sin espacios
-            if (normalizedField.includes(normalizedSearch)) {
+            const normalizedFieldAggressive = normalizeSearchTerm(field);
+
+            // Coincidencia agresiva (sin espacios ni acentos)
+            if (normalizedFieldAggressive.includes(normalizedSearch)) {
                 return true;
             }
-            
-            // Búsqueda con espacios originales
-            if (field.toLowerCase().includes(searchTerm.toLowerCase())) {
+
+            // Coincidencia relajada (manteniendo espacios pero sin acentos)
+            if (normalizeText(field).includes(normalizeText(searchTerm))) {
                 return true;
             }
-            
-            // Búsqueda por palabras individuales
-            const fieldWords = field.toLowerCase().split(/\s+/);
-            const searchWords = searchTerm.toLowerCase().split(/\s+/);
-            
+
+            // Búsqueda por palabras individuales, ambas normalizadas sin acentos
+            const fieldWords = normalizeText(field).split(/\s+/);
+            const searchWords = normalizeText(searchTerm).split(/\s+/);
+
             return searchWords.every(searchWord => 
                 fieldWords.some(fieldWord => fieldWord.includes(searchWord))
             );

@@ -499,7 +499,11 @@ const NewSalesModal = ({
   // Opciones para los selects
   const productOptions = inventory.map(p => ({ 
     value: p.id, 
-    label: `${p.marcas?.nombre || 'N/A'} - ${p.sku || 'Sin SKU'} - ${p.color || 'Sin color'} (Stock: ${p.stock})`
+    label: `${p.marcas?.nombre || 'Sin marca'} - ${p.descripciones?.nombre || p.sku || 'Sin modelo'} - ${p.color || 'Sin color'} (Stock: ${p.stock})`,
+    // Campos extra para mejorar búsqueda
+    description: p.marcas?.nombre || '',
+    keywords: [p.marcas?.nombre, p.sku, p.descripciones?.nombre, p.color].filter(Boolean),
+    meta: { marca: p.marcas?.nombre, sku: p.sku, modelo: p.descripciones?.nombre, color: p.color }
   }));
 
   const stateOptions = [
@@ -666,6 +670,7 @@ const NewSalesModal = ({
                             options={productOptions}
                             value={producto.armazon_id}
                             onChange={(value) => updateProducto(producto.id, 'armazon_id', value)}
+                            searchable
                             placeholder="Seleccionar armazón..."
                           />
                           {errors[`producto_${index}_armazon`] && (
