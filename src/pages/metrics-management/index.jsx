@@ -36,6 +36,10 @@ const MetricsManagement = () => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
+  const [periodLabel, setPeriodLabel] = useState(() => {
+    const now = new Date();
+    return now.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  });
   const [selectedDate, setSelectedDate] = useState(null);
   const [allSalesData, setAllSalesData] = useState([]);
   const [allCustomersData, setAllCustomersData] = useState([]);
@@ -88,6 +92,14 @@ const MetricsManagement = () => {
     monthlyTrends: []
   });
 
+  const [monthComparison, setMonthComparison] = useState({
+    prevMonthLabel: '',
+    prevSalesTotal: 0,
+    prevRevenueTotal: 0,
+    salesChangePct: 0,
+    revenueChangePct: 0
+  });
+
   const [chartData, setChartData] = useState({
     inventoryStatus: []
   });
@@ -122,9 +134,54 @@ const MetricsManagement = () => {
     }
   };
 
+  const getMonthRange = (ym) => {
+    if (!ym) return { start: null, end: null };
+    const [year, month] = ym.split('-').map(n => parseInt(n, 10));
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month, 0);
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  };
+
+  const getPrevMonthValue = (ym) => {
+    const [year, month] = ym.split('-').map(n => parseInt(n, 10));
+    const prevDate = new Date(year, month - 2, 1); // month-2 because Date expects 0-indexed
+    const prevYM = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+    return prevYM;
+  };
+
+  const loadComparisonForMonth = async (ym) => {
+    try {
+      const prevYM = getPrevMonthValue(ym);
+      const { start: pStart, end: pEnd } = getMonthRange(prevYM);
+      const { data: prevData } = await salesService.getSalesMetrics(pStart, pEnd);
+      const prevComputed = await computeSalesMetricsForPeriod(prevData || [], pStart, pEnd);
+      const prevSalesTotal = prevComputed.total || 0;
+      const prevRevenueTotal = prevComputed.revenue || 0;
+
+      // Totales actuales ya calculados con el mismo criterio (pagos del período)
+      const currSalesTotal = metricsData.sales.total || 0;
+      const currRevenueTotal = metricsData.sales.revenue || 0;
+
+      const salesChangePct = prevSalesTotal > 0 ? ((currSalesTotal - prevSalesTotal) / prevSalesTotal) * 100 : (currSalesTotal > 0 ? 100 : 0);
+      const revenueChangePct = prevRevenueTotal > 0 ? ((currRevenueTotal - prevRevenueTotal) / prevRevenueTotal) * 100 : (currRevenueTotal > 0 ? 100 : 0);
+
+      setMonthComparison({
+        prevMonthLabel: pStart?.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }) || '',
+        prevSalesTotal,
+        prevRevenueTotal,
+        salesChangePct,
+        revenueChangePct
+      });
+    } catch (e) {
+      console.error('Error loading comparison metrics:', e);
+    }
+  };
+
   const loadSalesMetrics = async () => {
     try {
       console.log('💰 Cargando métricas de ventas...');
+      // 1) Cargar dataset completo (para vistas 'all' y 'specific')
       const { data: sales, error } = await salesService.getSalesNotes();
       
       if (error) {
@@ -135,67 +192,75 @@ const MetricsManagement = () => {
       // Guardar todos los datos para filtrar después
       setAllSalesData(sales || []);
       
-      // Calcular métricas iniciales (sin filtro)
-      await calculateSalesMetrics(sales || []);
+      // 2) Calcular métricas iniciales usando el mes actual desde backend (evitar cargar todas)
+      const { start, end } = getMonthRange(selectedMonth);
+      const { data: monthData } = await salesService.getSalesMetrics(start, end);
+      const monthLabel = start?.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }) || '';
+      setPeriodLabel(monthLabel);
+      await calculateSalesMetrics(monthData || [], start, end);
+      await loadComparisonForMonth(selectedMonth);
     } catch (error) {
       console.error('Error in loadSalesMetrics:', error);
     }
   };
   
-  const calculateSalesMetrics = async (sales) => {
-      const totalSales = sales?.length || 0;
-      const completedSales = sales?.filter(sale => sale.estado === 'completada').length || 0;
-      const pendingSales = sales?.filter(sale => sale.estado === 'pendiente').length || 0;
-      
-      // Calcular ingresos reales (completadas + pagos de adeudos)
-      let completedRevenue = sales?.filter(sale => sale.estado === 'completada')
-        .reduce((sum, sale) => sum + (parseFloat(sale.total) || 0), 0) || 0;
-      
-      // Obtener pagos de adeudos para ventas pendientes y verificar si están completamente pagadas
-      let totalPagosAdeudos = 0;
-      let ventasCompletadasPorPagos = 0;
-      let ingresosVentasCompletadasPorPagos = 0;
-      const ventasPendientes = sales?.filter(sale => sale.estado === 'pendiente') || [];
-      
-      for (const venta of ventasPendientes) {
-        try {
-          const { data: abonos } = await abonosService.getAbonosByVentaId(venta.id);
-          if (abonos) {
-            const pagosVenta = abonos.reduce((sum, abono) => sum + (parseFloat(abono.monto) || 0), 0);
-            totalPagosAdeudos += pagosVenta;
-            
-            // Si la venta está completamente pagada, contarla como completada
-            if (pagosVenta >= parseFloat(venta.total)) {
-              ventasCompletadasPorPagos++;
-              ingresosVentasCompletadasPorPagos += parseFloat(venta.total);
-            }
-          }
-        } catch (error) {
-          console.error(`Error getting payments for sale ${venta.id}:`, error);
-        }
-      }
-      
-      // Ingresos totales = ventas completadas + pagos de adeudos + ventas completadas por pagos
-      const totalRevenue = completedRevenue + totalPagosAdeudos;
-      
-      // Calcular ventas pendientes reales (solo las que no están completamente pagadas)
-      const totalVentasPendientes = ventasPendientes.reduce((sum, sale) => sum + (parseFloat(sale.total) || 0), 0);
-      const pendingRevenue = totalVentasPendientes - totalPagosAdeudos;
-      
-      const averageTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
+  // Computa métricas de ventas para un período (si se proporcionan fechas)
+  const computeSalesMetricsForPeriod = async (sales, periodStart = null, periodEnd = null) => {
+    const totalSales = sales?.length || 0;
+    const completedSales = sales?.filter(sale => sale.estado === 'completada').length || 0;
+    const pendingSales = sales?.filter(sale => sale.estado === 'pendiente').length || 0;
 
-      setMetricsData(prev => ({
-        ...prev,
-        sales: {
-          total: totalSales,
-          completed: completedSales + ventasCompletadasPorPagos, // Incluir ventas completadas por pagos
-          pending: pendingSales - ventasCompletadasPorPagos, // Excluir ventas completadas por pagos
-          revenue: totalRevenue,
-          completedRevenue: completedRevenue + ingresosVentasCompletadasPorPagos, // Incluir ingresos de ventas completadas por pagos
-          pendingRevenue,
-          averageTicket
+    let completedRevenue = sales?.filter(sale => sale.estado === 'completada')
+      .reduce((sum, sale) => sum + (parseFloat(sale.total) || 0), 0) || 0;
+
+    let totalPagosAdeudos = 0;
+    let ventasCompletadasPorPagos = 0;
+    let ingresosVentasCompletadasPorPagos = 0;
+    const ventasPendientes = sales?.filter(sale => sale.estado === 'pendiente') || [];
+
+    for (const venta of ventasPendientes) {
+      try {
+        let abonosResp;
+        if (periodStart && periodEnd) {
+          abonosResp = await abonosService.getAbonosByVentaIdEnRango(venta.id, periodStart, periodEnd);
+        } else {
+          abonosResp = await abonosService.getAbonosByVentaId(venta.id);
         }
-      }));
+        const abonos = abonosResp?.data || [];
+        const pagosVenta = abonos.reduce((sum, abono) => sum + (parseFloat(abono.monto) || 0), 0);
+        totalPagosAdeudos += pagosVenta;
+
+        if (pagosVenta >= parseFloat(venta.total)) {
+          ventasCompletadasPorPagos++;
+          ingresosVentasCompletadasPorPagos += parseFloat(venta.total);
+        }
+      } catch (error) {
+        console.error(`Error getting payments for sale ${venta.id}:`, error);
+      }
+    }
+
+    const totalRevenue = completedRevenue + totalPagosAdeudos;
+    const totalVentasPendientes = ventasPendientes.reduce((sum, sale) => sum + (parseFloat(sale.total) || 0), 0);
+    const pendingRevenue = Math.max(0, totalVentasPendientes - totalPagosAdeudos);
+    const averageTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
+
+    return {
+      total: totalSales,
+      completed: completedSales + ventasCompletadasPorPagos,
+      pending: Math.max(0, pendingSales - ventasCompletadasPorPagos),
+      revenue: totalRevenue,
+      completedRevenue: completedRevenue + ingresosVentasCompletadasPorPagos,
+      pendingRevenue,
+      averageTicket
+    };
+  };
+
+  const calculateSalesMetrics = async (sales, periodStart = null, periodEnd = null) => {
+    const computed = await computeSalesMetricsForPeriod(sales, periodStart, periodEnd);
+    setMetricsData(prev => ({
+      ...prev,
+      sales: computed
+    }));
   };
 
   const loadInventoryMetrics = async () => {
@@ -326,17 +391,18 @@ const MetricsManagement = () => {
     }
   };
 
-  const filterMetrics = () => {
+  const filterMetrics = async () => {
     let filteredSales = [...allSalesData];
     let filteredCustomers = [...allCustomersData];
     
     if (dateFilter === 'month' && selectedMonth) {
-      // Filtrar por mes
-      filteredSales = allSalesData.filter(sale => {
-        const saleDate = new Date(sale.created_at);
-        const saleYearMonth = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`;
-        return saleYearMonth === selectedMonth;
-      });
+      // Obtener datos del mes desde backend (aplicar gte/lte con ISO)
+      const { start, end } = getMonthRange(selectedMonth);
+      const { data: monthData } = await salesService.getSalesMetrics(start, end);
+      filteredSales = monthData || [];
+      const monthLabel = start?.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }) || '';
+      setPeriodLabel(monthLabel);
+      await loadComparisonForMonth(selectedMonth);
       
       filteredCustomers = allCustomersData.filter(customer => {
         const customerDate = new Date(customer.created_at);
@@ -348,20 +414,31 @@ const MetricsManagement = () => {
       const targetDate = selectedDate.toISOString().split('T')[0];
       
       filteredSales = allSalesData.filter(sale => {
-        const saleDate = new Date(sale.created_at);
+        const saleDateUTC = new Date(sale.created_at);
+        const saleDate = new Date(saleDateUTC.toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
         const saleDateStr = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}-${String(saleDate.getDate()).padStart(2, '0')}`;
         return saleDateStr === targetDate;
       });
       
       filteredCustomers = allCustomersData.filter(customer => {
-        const customerDate = new Date(customer.created_at);
+        const customerDateUTC = new Date(customer.created_at);
+        const customerDate = new Date(customerDateUTC.toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
         const customerDateStr = `${customerDate.getFullYear()}-${String(customerDate.getMonth() + 1).padStart(2, '0')}-${String(customerDate.getDate()).padStart(2, '0')}`;
         return customerDateStr === targetDate;
       });
+      const specificLabel = selectedDate?.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }) || '';
+      setPeriodLabel(specificLabel);
+    } else {
+      setPeriodLabel('Todas las fechas');
     }
     
-    // Recalcular métricas con datos filtrados
-    calculateSalesMetrics(filteredSales);
+    // Recalcular métricas con datos filtrados (limitando pagos al período cuando aplique)
+    if (dateFilter === 'month' && selectedMonth) {
+      const { start, end } = getMonthRange(selectedMonth);
+      await calculateSalesMetrics(filteredSales, start, end);
+    } else {
+      await calculateSalesMetrics(filteredSales);
+    }
     calculateCustomerMetrics(filteredCustomers);
   };
   
@@ -384,6 +461,146 @@ const MetricsManagement = () => {
     setSelectedMonth('');
     setSelectedDate(null);
   };
+
+  // ===== Pruebas lógicas con datos de muestra (solo en desarrollo) =====
+  const computeSalesMetricsWithProvidedPayments = (sales, paymentsByVentaId, periodStart = null, periodEnd = null) => {
+    const totalSales = sales?.length || 0;
+    const completedSales = sales?.filter(sale => sale.estado === 'completada').length || 0;
+    const pendingSales = sales?.filter(sale => sale.estado === 'pendiente').length || 0;
+
+    let completedRevenueBase = sales?.filter(sale => sale.estado === 'completada')
+      .reduce((sum, sale) => sum + (parseFloat(sale.total) || 0), 0) || 0;
+
+    let totalPagosAdeudos = 0;
+    let ventasCompletadasPorPagos = 0;
+    let ingresosVentasCompletadasPorPagos = 0;
+    const ventasPendientes = sales?.filter(sale => sale.estado === 'pendiente') || [];
+
+    const inRange = (fecha) => {
+      if (!periodStart || !periodEnd) return true;
+      const d = fecha instanceof Date ? fecha : new Date(fecha);
+      return d >= periodStart && d <= periodEnd;
+    };
+
+    for (const venta of ventasPendientes) {
+      const pagos = paymentsByVentaId[venta.id] || [];
+      const pagosEnPeriodo = pagos.filter(p => inRange(p.fecha_abono));
+      const sumPagos = pagosEnPeriodo.reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
+      totalPagosAdeudos += sumPagos;
+
+      if (sumPagos >= parseFloat(venta.total)) {
+        ventasCompletadasPorPagos++;
+        ingresosVentasCompletadasPorPagos += parseFloat(venta.total);
+      }
+    }
+
+    const revenue = completedRevenueBase + totalPagosAdeudos;
+    const totalPendientes = ventasPendientes.reduce((sum, sale) => sum + (parseFloat(sale.total) || 0), 0);
+    const pendingRevenue = Math.max(0, totalPendientes - totalPagosAdeudos);
+    const averageTicket = totalSales > 0 ? revenue / totalSales : 0;
+
+    return {
+      total: totalSales,
+      completed: completedSales + ventasCompletadasPorPagos,
+      pending: Math.max(0, pendingSales - ventasCompletadasPorPagos),
+      revenue,
+      completedRevenue: completedRevenueBase + ingresosVentasCompletadasPorPagos,
+      pendingRevenue,
+      averageTicket
+    };
+  };
+
+  const runMetricsChangeTests = () => {
+    // Construir datos de muestra: mes actual y mes previo
+    const now = new Date();
+    const currentStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    currentEnd.setHours(23, 59, 59, 999);
+
+    const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+    prevEnd.setHours(23, 59, 59, 999);
+
+    // Ventas del mes actual
+    const ventasActual = [
+      { id: 1, estado: 'completada', total: 1000, created_at: currentStart },
+      { id: 2, estado: 'pendiente', total: 800, created_at: currentStart },
+      { id: 3, estado: 'pendiente', total: 500, created_at: currentStart }
+    ];
+
+    // Pagos del mes actual
+    const pagosActual = {
+      2: [ { monto: 300, fecha_abono: new Date(currentStart.getTime() + 3*86400000) } ],
+      3: [ { monto: 500, fecha_abono: new Date(currentStart.getTime() + 5*86400000) } ]
+    };
+
+    // Ventas del mes previo
+    const ventasPrevio = [
+      { id: 10, estado: 'completada', total: 900, created_at: prevStart },
+      { id: 11, estado: 'pendiente', total: 600, created_at: prevStart }
+    ];
+
+    // Pagos del mes previo
+    const pagosPrevio = {
+      11: [ { monto: 200, fecha_abono: new Date(prevStart.getTime() + 8*86400000) } ]
+    };
+
+    const resActual = computeSalesMetricsWithProvidedPayments(ventasActual, pagosActual, currentStart, currentEnd);
+    const resPrevio = computeSalesMetricsWithProvidedPayments(ventasPrevio, pagosPrevio, prevStart, prevEnd);
+
+    const expectedActual = {
+      total: 3,
+      completed: 2,
+      pending: 1,
+      revenue: 1800,
+      completedRevenue: 1500,
+      pendingRevenue: 500,
+      averageTicket: 600
+    };
+
+    const expectedPrevio = {
+      total: 2,
+      completed: 1,
+      pending: 1,
+      revenue: 1100,
+      completedRevenue: 900,
+      pendingRevenue: 400,
+      averageTicket: 550
+    };
+
+    const salesChangePct = expectedPrevio.total > 0 ? ((expectedActual.total - expectedPrevio.total) / expectedPrevio.total) * 100 : 0;
+    const revenueChangePct = expectedPrevio.revenue > 0 ? ((expectedActual.revenue - expectedPrevio.revenue) / expectedPrevio.revenue) * 100 : 0;
+
+    const obtainedSalesChangePct = resPrevio.total > 0 ? ((resActual.total - resPrevio.total) / resPrevio.total) * 100 : 0;
+    const obtainedRevenueChangePct = resPrevio.revenue > 0 ? ((resActual.revenue - resPrevio.revenue) / resPrevio.revenue) * 100 : 0;
+
+    console.group('[Pruebas métricas: cambio en ventas e ingresos]');
+    console.table({
+      'Esperado (Actual)': expectedActual,
+      'Obtenido (Actual)': resActual,
+      'Esperado (Previo)': expectedPrevio,
+      'Obtenido (Previo)': resPrevio
+    });
+    console.table({
+      'Cambio ventas esperado %': Number(salesChangePct.toFixed(1)),
+      'Cambio ventas obtenido %': Number(obtainedSalesChangePct.toFixed(1)),
+      'Cambio ingresos esperado %': Number(revenueChangePct.toFixed(1)),
+      'Cambio ingresos obtenido %': Number(obtainedRevenueChangePct.toFixed(1))
+    });
+    console.groupEnd();
+  };
+
+  useEffect(() => {
+    // Ejecutar pruebas solo en modo desarrollo
+    try {
+      const mode = import.meta?.env?.MODE;
+      if (mode && mode !== 'production') {
+        runMetricsChangeTests();
+      }
+    } catch (e) {
+      // Ignorar en caso de entornos sin import.meta
+    }
+  }, []);
   
 
 
@@ -467,7 +684,28 @@ const MetricsManagement = () => {
 
           {/* Métricas Filtradas: Ventas, Ingresos y Clientes */}
           <div className="bg-gradient-to-br from-blue-50 to-white rounded-xl shadow-lg border border-blue-100 p-6 mb-8">
-            <h2 className="text-xl font-bold text-gray-800 mb-6">📊 Estadísticas de Negocio</h2>
+            <h2 className="text-xl font-bold text-gray-800 mb-1">📊 Estadísticas de ventas — {periodLabel}</h2>
+            <p className="text-sm text-gray-500 mb-6">Vista filtrada por período seleccionado</p>
+
+            {/* Comparativa vs mes anterior */}
+            {dateFilter === 'month' && selectedMonth && (
+              <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-4 mb-6">
+                <div className="flex items-center gap-2 text-indigo-700 font-medium mb-2">
+                  <TrendingUp className="w-4 h-4" />
+                  Comparativa vs {monthComparison.prevMonthLabel}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Cambio en ventas</span>
+                    <span className={`font-semibold ${monthComparison.salesChangePct >= 0 ? 'text-green-600' : 'text-red-600'}`}>{monthComparison.salesChangePct.toFixed(1)}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Cambio en ingresos</span>
+                    <span className={`font-semibold ${monthComparison.revenueChangePct >= 0 ? 'text-green-600' : 'text-red-600'}`}>{monthComparison.revenueChangePct.toFixed(1)}%</span>
+                  </div>
+                </div>
+              </div>
+            )}
             
             {/* Métricas principales filtradas */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">

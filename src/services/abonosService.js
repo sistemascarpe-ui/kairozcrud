@@ -23,6 +23,34 @@ export const abonosService = {
     }
   },
 
+  // Obtener abonos de una venta filtrados por rango de fechas (inclusive)
+  async getAbonosByVentaIdEnRango(ventaId, fechaInicio, fechaFin) {
+    try {
+      // Convertir fechas a ISO string para consultas correctas en Supabase
+      const startISO = fechaInicio instanceof Date ? fechaInicio.toISOString() : fechaInicio;
+      const endISO = fechaFin instanceof Date ? fechaFin.toISOString() : fechaFin;
+
+      const { data, error } = await supabase
+        .from('abonos')
+        .select(`
+          *,
+          usuarios:creado_por_id (id, nombre, apellido)
+        `)
+        .eq('venta_id', ventaId)
+        .gte('fecha_abono', startISO)
+        .lte('fecha_abono', endISO)
+        .order('fecha_abono', { ascending: true });
+
+      if (error) {
+        return { data: null, error: error.message };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error?.message };
+    }
+  },
+
   // Crear un nuevo abono
   async createAbono(abonoData) {
     try {

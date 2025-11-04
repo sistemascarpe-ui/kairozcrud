@@ -863,10 +863,12 @@ export const salesService = {
         `);
 
       if (startDate) {
-        query = query.gte('created_at', startDate);
+        const startISO = typeof startDate === 'string' ? startDate : new Date(startDate).toISOString();
+        query = query.gte('created_at', startISO);
       }
       if (endDate) {
-        query = query.lte('created_at', endDate);
+        const endISO = typeof endDate === 'string' ? endDate : new Date(endDate).toISOString();
+        query = query.lte('created_at', endISO);
       }
 
       const { data, error } = await query;
@@ -922,7 +924,7 @@ export const salesService = {
   },
 
   // OPTIMIZED: Get vendor performance without heavy joins
-  async getVendorPerformance(startDate = null, endDate = null) {
+  async getVendorPerformance(startDate = null, endDate = null, page = 1, pageSize = 100) {
     try {
       let query = supabase
         .from('ventas')
@@ -941,11 +943,21 @@ export const salesService = {
         `);
 
       if (startDate) {
-        query = query.gte('created_at', startDate);
+        const startISO = typeof startDate === 'string' 
+          ? startDate 
+          : new Date(startDate).toISOString();
+        query = query.gte('created_at', startISO);
       }
       if (endDate) {
-        query = query.lte('created_at', endDate);
+        const endISO = typeof endDate === 'string' 
+          ? endDate 
+          : new Date(endDate).toISOString();
+        query = query.lte('created_at', endISO);
       }
+
+      // Paginación por ventas para grandes volúmenes
+      const offset = Math.max(0, (parseInt(page, 10) - 1) * parseInt(pageSize, 10));
+      query = query.order('created_at', { ascending: false }).range(offset, offset + parseInt(pageSize, 10) - 1);
 
       const { data: salesData, error } = await query;
       

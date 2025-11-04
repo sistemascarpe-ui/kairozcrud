@@ -54,10 +54,10 @@ export const useTopBrands = (limit = 10) => {
 };
 
 // Hook optimizado para rendimiento de vendedores
-export const useVendorPerformance = (startDate = null, endDate = null) => {
+export const useVendorPerformance = (startDate = null, endDate = null, page = 1, pageSize = 100) => {
   return useQuery({
-    queryKey: ['vendor-performance', startDate, endDate],
-    queryFn: () => salesService.getVendorPerformance(startDate, endDate),
+    queryKey: ['vendor-performance', startDate, endDate, page, pageSize],
+    queryFn: () => salesService.getVendorPerformance(startDate, endDate, page, pageSize),
     staleTime: 10 * 60 * 1000, // 10 minutos
     gcTime: 20 * 60 * 1000, // 20 minutos (updated from cacheTime)
     retry: 1, // Limit retries

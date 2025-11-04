@@ -14,13 +14,26 @@ const VendorPerformanceDetail = () => {
   const [users, setUsers] = useState([]);
   const [selectedVendor, setSelectedVendor] = useState('');
   const [expandedVendor, setExpandedVendor] = useState(null);
-  const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(null);
+  const [startDate, setStartDate] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const [endDate, setEndDate] = useState(() => {
+    const now = new Date();
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    end.setHours(23, 59, 59, 999);
+    return end;
+  });
   const [showDateFilter, setShowDateFilter] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
 
   // Hook optimizado para rendimiento de vendedores
-  const { data: vendorPerformanceData, isLoading, error } = useVendorPerformance(startDate, endDate);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const { data: vendorPerformanceData, isLoading, error } = useVendorPerformance(startDate, endDate, currentPage, pageSize);
   const vendorData = vendorPerformanceData?.data || [];
 
   useEffect(() => {
@@ -144,6 +157,12 @@ const VendorPerformanceDetail = () => {
     setEndDate(end);
   };
 
+  const isDefaultCurrentMonth = () => {
+    const now = new Date();
+    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    return selectedMonth === ym;
+  };
+
   // Componente personalizado para el input del DatePicker
   const CustomDateInput = React.forwardRef(({ value, onClick, placeholder }, ref) => (
     <Input
@@ -214,9 +233,9 @@ const VendorPerformanceDetail = () => {
                   Análisis de ventas individuales y compartidas
                 </p>
                 {selectedMonth && (
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${isDefaultCurrentMonth() ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
                     <Calendar className="h-3 w-3 mr-1" />
-                    Filtrado por mes
+                    {isDefaultCurrentMonth() ? 'Vista predeterminada: Mes actual' : 'Filtrado por mes'}
                   </span>
                 )}
                 {(startDate || endDate) && !selectedMonth && (
@@ -232,6 +251,33 @@ const VendorPerformanceDetail = () => {
                   </span>
                 )}
               </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <label className="text-xs text-gray-600">Página</label>
+              <button
+                className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 text-sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                Anterior
+              </button>
+              <span className="text-sm text-gray-700">{currentPage}</span>
+              <button
+                className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 text-sm"
+                onClick={() => setCurrentPage(p => p + 1)}
+                disabled={Array.isArray(vendorPerformanceData) && vendorPerformanceData.length < pageSize}
+              >
+                Siguiente
+              </button>
+              <select
+                value={pageSize}
+                onChange={(e) => setPageSize(parseInt(e.target.value, 10))}
+                className="px-2 py-1 bg-gray-50 border-0 text-gray-800 rounded"
+              >
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
             </div>
           </div>
           <Button
