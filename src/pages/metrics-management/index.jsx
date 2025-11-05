@@ -67,7 +67,8 @@ const MetricsManagement = () => {
       lowStock: 0,
       outOfStock: 0,
       totalValue: 0,
-      lowStockProducts: []
+      lowStockProducts: [],
+      outOfStockProducts: []
     },
     customers: {
       total: 0,
@@ -292,7 +293,8 @@ const MetricsManagement = () => {
           lowStock: inventory?.lowStock || 0,
           outOfStock: inventory?.outOfStock || 0,
           totalValue: inventory?.totalValue || 0,
-          lowStockProducts: inventory?.lowStockProducts || []
+          lowStockProducts: inventory?.lowStockProducts || [],
+          outOfStockProducts: inventory?.outOfStockProducts || []
         }
       }));
     } catch (error) {
@@ -819,9 +821,9 @@ const MetricsManagement = () => {
                   <h3 className="text-lg font-semibold text-gray-900">Stock Agotado</h3>
                 </div>
                 <div className="max-h-[240px] overflow-y-auto">
-                  {metricsData.inventory.lowStockProducts.length > 0 ? (
+                  {metricsData.inventory.outOfStockProducts.length > 0 ? (
                     <div className="space-y-3">
-                      {metricsData.inventory.lowStockProducts.map((product, index) => (
+                      {metricsData.inventory.outOfStockProducts.map((product, index) => (
                         <OutOfStockAlert key={product.id || index} product={product} />
                       ))}
                     </div>

@@ -2,12 +2,12 @@ import { useQuery } from '@tanstack/react-query';
 import { inventoryService } from '../services/inventoryService';
 
 // Hook optimizado para obtener resumen de productos con paginación
-export const useOptimizedProducts = (page = 1, limit = 50) => {
+export const useOptimizedProducts = (page = 1, limit = 50, filters = {}, sort = { key: 'created_at', direction: 'desc' }) => {
   const offset = (page - 1) * limit;
   
   return useQuery({
-    queryKey: ['products-summary', page, limit],
-    queryFn: () => inventoryService.getProductsSummary(limit, offset),
+    queryKey: ['products-summary', page, limit, filters, sort],
+    queryFn: () => inventoryService.getProductsSummary(limit, offset, filters, sort),
     staleTime: 10 * 60 * 1000, // 10 minutos
     gcTime: 20 * 60 * 1000, // 20 minutos (updated from cacheTime)
     keepPreviousData: true,
@@ -17,10 +17,10 @@ export const useOptimizedProducts = (page = 1, limit = 50) => {
 };
 
 // Hook para obtener el conteo total de productos
-export const useProductsCount = () => {
+export const useProductsCount = (filters = {}) => {
   return useQuery({
-    queryKey: ['products-count'],
-    queryFn: () => inventoryService.getProductsCount(),
+    queryKey: ['products-count', filters],
+    queryFn: () => inventoryService.getProductsCount(filters),
     staleTime: 15 * 60 * 1000, // 15 minutos
     gcTime: 30 * 60 * 1000, // 30 minutos (updated from cacheTime)
     retry: 1, // Limit retries

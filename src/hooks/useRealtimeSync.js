@@ -21,11 +21,13 @@ export const useRealtimeSync = (tableName, onUpdate, onInsert, onDelete) => {
             (payload) => {
               console.log('Cambio detectado en', tableName, ':', payload);
               
-              // Mostrar notificación de cambio
-              toast.success(`Cambios detectados en ${tableName}`, {
-                duration: 3000,
-                position: 'top-right'
-              });
+              // Mostrar notificación genérica solo si no hay callbacks específicos
+              if (!onInsert && !onUpdate && !onDelete) {
+                toast.success(`Cambios detectados en ${tableName}`, {
+                  duration: 3000,
+                  position: 'top-right'
+                });
+              }
 
               // Ejecutar callbacks según el tipo de evento
               switch (payload.eventType) {

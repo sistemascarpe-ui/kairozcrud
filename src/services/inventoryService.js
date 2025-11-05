@@ -2,9 +2,9 @@ import { supabase } from '../lib/supabase';
 
 export const inventoryService = {
   // OPTIMIZED: Get products summary (lightweight version for tables)
-  async getProductsSummary(limit = 50, offset = 0) {
+  async getProductsSummary(limit = 50, offset = 0, filters = {}, sort = { key: 'created_at', direction: 'desc' }) {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('armazones')
         .select(`
           id,
@@ -13,12 +13,44 @@ export const inventoryService = {
           stock,
           precio,
           created_at,
+          updated_at,
+          editado_manualmente,
+          marca_id,
+          grupo_id,
+          descripcion_id,
+          sub_marca_id,
+          creado_por_id,
           marcas(id, nombre),
-          grupos(id, nombre)
+          grupos(id, nombre),
+          sub_marcas(id, nombre),
+          descripciones(id, nombre),
+          usuarios(id, nombre, apellido)
         `)
-        .order('created_at', { ascending: false })
+        .order(sort?.key || 'created_at', { ascending: (sort?.direction === 'asc') })
         .range(offset, offset + limit - 1);
-      
+
+      const {
+        brandId,
+        groupId,
+        descriptionId,
+        subBrandId,
+        stockStatus,
+        searchTerm,
+      } = filters || {};
+
+      if (brandId) query = query.eq('marca_id', brandId);
+      if (groupId) query = query.eq('grupo_id', groupId);
+      if (descriptionId) query = query.eq('descripcion_id', descriptionId);
+      if (subBrandId) query = query.eq('sub_marca_id', subBrandId);
+      if (stockStatus === 'in-stock') query = query.gt('stock', 0);
+      if (stockStatus === 'out-of-stock') query = query.eq('stock', 0);
+      if (searchTerm && typeof searchTerm === 'string') {
+        const term = `%${searchTerm}%`;
+        query = query.or(`sku.ilike.${term},color.ilike.${term},marcas.nombre.ilike.${term},grupos.nombre.ilike.${term},descripciones.nombre.ilike.${term}`);
+      }
+
+      const { data, error } = await query;
+
       if (error) throw error;
       
       return { data, error: null };
@@ -28,12 +60,34 @@ export const inventoryService = {
   },
 
   // OPTIMIZED: Get products count for pagination
-  async getProductsCount() {
+  async getProductsCount(filters = {}) {
     try {
-      const { count, error } = await supabase
+      let query = supabase
         .from('armazones')
-        .select('id', { count: 'exact' })
+        .select('id, marcas(nombre), grupos(nombre), descripciones(nombre)', { count: 'exact' })
         .limit(1);
+
+      const {
+        brandId,
+        groupId,
+        descriptionId,
+        subBrandId,
+        stockStatus,
+        searchTerm,
+      } = filters || {};
+
+      if (brandId) query = query.eq('marca_id', brandId);
+      if (groupId) query = query.eq('grupo_id', groupId);
+      if (descriptionId) query = query.eq('descripcion_id', descriptionId);
+      if (subBrandId) query = query.eq('sub_marca_id', subBrandId);
+      if (stockStatus === 'in-stock') query = query.gt('stock', 0);
+      if (stockStatus === 'out-of-stock') query = query.eq('stock', 0);
+      if (searchTerm && typeof searchTerm === 'string') {
+        const term = `%${searchTerm}%`;
+        query = query.or(`sku.ilike.${term},color.ilike.${term},marcas.nombre.ilike.${term},grupos.nombre.ilike.${term},descripciones.nombre.ilike.${term}`);
+      }
+
+      const { count, error } = await query;
       
       if (error) throw error;
       return { count, error: null };
@@ -382,14 +436,23 @@ export const inventoryService = {
   // Get inventory history
   async getInventoryHistory(armazonId = null, limit = 50) {
     try {
-      let query = supabase?.from('historial_inventario')?.select(`
-          *,
+      let query = supabase
+        .from('historial_inventario')
+        .select(`
+          id,
+          armazon_id,
+          usuario_id,
+          cantidad_cambio,
+          tipo_movimiento,
+          created_at,
           armazones(sku, color),
-          usuarios(nombre, apellido)
-        `)?.order('created_at', { ascending: false })?.limit(limit)
+          usuarios(id, nombre, apellido)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(limit)
       
       if (armazonId) {
-        query = query?.eq('armazon_id', armazonId)
+        query = query.eq('armazon_id', armazonId)
       }
       
       const { data, error } = await query
@@ -586,7 +649,22 @@ export const inventoryService = {
     if (!id) return null;
     const { data, error } = await supabase
         .from('armazones')
-        .select('*, marcas(nombre), descripciones(nombre)')
+        .select(`
+          id,
+          sku,
+          color,
+          stock,
+          precio,
+          marca_id,
+          grupo_id,
+          descripcion_id,
+          sub_marca_id,
+          creado_por_id,
+          marcas(id, nombre),
+          grupos(id, nombre),
+          sub_marcas(id, nombre),
+          descripciones(id, nombre)
+        `)
         .eq('id', id)
         .single();
     if (error) return null;
@@ -620,8 +698,9 @@ export const inventoryService = {
         return sum + (stock * price);
       }, 0) || 0;
       
-      // Obtener productos con stock bajo para alertas
-      const { data: lowStockProducts, error: lowStockError } = await this.getOutOfStockProducts();
+      // Obtener listas de productos con bajo stock y sin stock
+      const { data: outOfStockProducts } = await this.getOutOfStockProducts();
+      const { data: lowStockProducts } = await this.getLowStockProducts(2);
       
       const metrics = {
         totalProducts,
@@ -629,6 +708,7 @@ export const inventoryService = {
         lowStock,
         outOfStock,
         totalValue,
+        outOfStockProducts: outOfStockProducts || [],
         lowStockProducts: lowStockProducts || []
       };
       

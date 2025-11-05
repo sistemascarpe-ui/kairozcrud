@@ -12,6 +12,7 @@ import { inventoryService } from '../../services/inventoryService';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRealtimeSync } from '../../hooks/useRealtimeSync';
 import { useImprovedPDFReport } from '../../hooks/useImprovedPDFReport.js';
+import { useOptimizedProducts, useProductsCount } from '../../hooks/useOptimizedInventory';
 
 const InventoryManagement = () => {
   const { user, userProfile } = useAuth();
@@ -40,24 +41,43 @@ const InventoryManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(50); // 50 productos por página
 
+  // Datos optimizados con paginación desde el servidor
+  // Construir filtros para el servidor
+  const serverFilters = useMemo(() => ({
+    brandId: selectedBrand || undefined,
+    groupId: selectedGroup || undefined,
+    descriptionId: selectedDescription || undefined,
+    subBrandId: selectedSubBrand || undefined,
+    stockStatus: selectedStockStatus || undefined,
+    searchTerm: searchTerm || undefined,
+  }), [selectedBrand, selectedGroup, selectedDescription, selectedSubBrand, selectedStockStatus, searchTerm]);
+
+  // Mapear claves de la UI a columnas reales de la BD
+  const serverSort = useMemo(() => {
+    const keyMap = {
+      price: 'precio',
+      stock: 'stock',
+      sku: 'sku',
+      created_at: 'created_at'
+    };
+    const mappedKey = keyMap[sortConfig?.key] || 'created_at';
+    return { key: mappedKey, direction: sortConfig?.direction || 'desc' };
+  }, [sortConfig]);
+
+  const { data: productsSummary, isLoading: productsLoading, error: productsError, refetch: refetchSummary } = useOptimizedProducts(currentPage, itemsPerPage, serverFilters, serverSort);
+  const { data: productsCountData, refetch: refetchCount } = useProductsCount(serverFilters);
+
   // Load initial data
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       try {
-        const [productsResult, brandsResult, groupsResult, descriptionsResult, subBrandsResult] = await Promise.all([
-          inventoryService?.getProducts(),
+        const [brandsResult, groupsResult, descriptionsResult, subBrandsResult] = await Promise.all([
           inventoryService?.getBrands(),
           inventoryService?.getGroups(),
           inventoryService?.getDescriptions(),
           inventoryService?.getSubBrands()
         ]);
-
-        if (productsResult?.error) {
-          setError(`Error loading products: ${productsResult?.error}`);
-        } else {
-          setProducts(productsResult?.data || []);
-        }
 
         if (!brandsResult?.error) {
           setBrands(brandsResult?.data || []);
@@ -85,27 +105,30 @@ const InventoryManagement = () => {
   }, []);
 
   // Sincronización en tiempo real para cambios en armazones
-  // TEMPORALMENTE DESACTIVADO PARA DEBUGGING
-  /*
   useRealtimeSync(
     'armazones',
     // onUpdate - cuando se actualiza un armazón
-    (newProduct, oldProduct) => {
-      console.log('Armazón actualizado:', newProduct);
-      setProducts(prev => prev.map(p => p.id === newProduct.id ? newProduct : p));
+    (newProduct) => {
+      refetchSummary();
+      refetchCount();
+      const sku = newProduct?.sku ? ` (${newProduct.sku})` : '';
+      toast.success(`Producto actualizado${sku}`);
     },
     // onInsert - cuando se crea un nuevo armazón
     (newProduct) => {
-      console.log('Nuevo armazón creado:', newProduct);
-      setProducts(prev => [newProduct, ...prev]);
+      refetchSummary();
+      refetchCount();
+      const sku = newProduct?.sku ? ` (${newProduct.sku})` : '';
+      toast.success(`Producto creado${sku}`);
     },
     // onDelete - cuando se elimina un armazón
     (deletedProduct) => {
-      console.log('Armazón eliminado:', deletedProduct);
-      setProducts(prev => prev.filter(p => p.id !== deletedProduct.id));
+      refetchSummary();
+      refetchCount();
+      const sku = deletedProduct?.sku ? ` (${deletedProduct.sku})` : '';
+      toast(`Producto eliminado${sku}`);
     }
   );
-  */
 
   // Transform products for display
   const transformedProducts = useMemo(() => {
@@ -204,17 +227,18 @@ const InventoryManagement = () => {
 
   // Filter and sort products
   const filteredAndSortedProducts = useMemo(() => {
-    let filtered = transformedProducts?.filter(product => {
+    const anyFilterActive = !!(searchTerm || selectedBrand || selectedGroup || selectedDescription || selectedSubBrand || selectedStockStatus);
+    let base = transformedProducts || [];
+
+    // Si ya filtramos en servidor, no volver a filtrar en cliente
+    let filtered = anyFilterActive ? base : base.filter(product => {
       const matchesSearch = matchesSearchTerm(searchTerm, product);
 
-      // Find the original product to get the relationship IDs
       const originalProduct = products?.find(p => p?.id === product?.id);
-      
       const matchesBrand = !selectedBrand || originalProduct?.marca_id?.toString() === selectedBrand?.toString();
       const matchesGroup = !selectedGroup || originalProduct?.grupo_id?.toString() === selectedGroup?.toString();
       const matchesDescription = !selectedDescription || originalProduct?.descripcion_id?.toString() === selectedDescription?.toString();
       const matchesSubBrand = !selectedSubBrand || originalProduct?.sub_marca_id?.toString() === selectedSubBrand?.toString();
-      
       const matchesStockStatus = !selectedStockStatus || 
         (selectedStockStatus === 'in-stock' && product?.stock > 0) ||
         (selectedStockStatus === 'out-of-stock' && product?.stock === 0);
@@ -222,7 +246,7 @@ const InventoryManagement = () => {
       return matchesSearch && matchesBrand && matchesGroup && matchesDescription && matchesSubBrand && matchesStockStatus;
     });
 
-    // Sort products
+    // Ordenar en cliente para consistencia visual (ya ordenado en servidor)
     filtered?.sort((a, b) => {
       const aValue = a?.[sortConfig?.key];
       const bValue = b?.[sortConfig?.key];
@@ -243,18 +267,18 @@ const InventoryManagement = () => {
     });
 
     return filtered;
-  }, [transformedProducts, searchTerm, selectedBrand, selectedGroup, selectedDescription, selectedSubBrand, selectedStockStatus, sortConfig]);
+  }, [transformedProducts, products, searchTerm, selectedBrand, selectedGroup, selectedDescription, selectedSubBrand, selectedStockStatus, sortConfig]);
 
   // Paginated products
   const paginatedProducts = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filteredAndSortedProducts?.slice(startIndex, endIndex) || [];
+    // Ya estamos recibiendo una página desde el servidor; no volver a paginar en cliente
+    return filteredAndSortedProducts || [];
   }, [filteredAndSortedProducts, currentPage, itemsPerPage]);
 
   // Pagination info
-  const totalPages = Math.ceil((filteredAndSortedProducts?.length || 0) / itemsPerPage);
-  const totalProducts = filteredAndSortedProducts?.length || 0;
+  const isAnyFilterActive = !!(searchTerm || selectedBrand || selectedGroup || selectedDescription || selectedSubBrand || selectedStockStatus);
+  const totalProducts = productsCountData?.count ?? (filteredAndSortedProducts?.length || 0);
+  const totalPages = Math.ceil((totalProducts || 0) / itemsPerPage);
   
   // Calculate total units (sum of all stock)
   const totalUnits = useMemo(() => {
@@ -273,6 +297,14 @@ const InventoryManagement = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, selectedBrand, selectedGroup, selectedDescription, selectedSubBrand, selectedStockStatus]);
+
+  // Vincular datos del resumen paginado a estado local
+  useEffect(() => {
+    if (productsError) {
+      setError(`Error loading products: ${productsError}`);
+    }
+    setProducts(productsSummary?.data || []);
+  }, [productsSummary, productsError]);
 
   const handleAddProduct = () => {
     setModalMode('create');
@@ -548,7 +580,7 @@ const InventoryManagement = () => {
             <div className="bg-card rounded-lg border border-border p-4 shadow-soft">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="text-sm text-muted-foreground">
-                  Mostrando {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalProducts)} de {totalProducts} productos
+                  Mostrando {((currentPage - 1) * itemsPerPage) + 1} - {((currentPage - 1) * itemsPerPage) + (paginatedProducts?.length || 0)} de {totalProducts} productos
                 </div>
                 
                 <div className="flex items-center space-x-2">
