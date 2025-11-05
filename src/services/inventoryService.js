@@ -64,7 +64,7 @@ export const inventoryService = {
     try {
       let query = supabase
         .from('armazones')
-        .select('id, marcas(nombre), grupos(nombre), descripciones(nombre)', { count: 'exact' })
+        .select('id', { count: 'exact' })
         .limit(1);
 
       const {
