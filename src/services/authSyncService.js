@@ -3,7 +3,12 @@ import { logger } from '../utils/logger';
 
 // Cache para evitar llamadas repetitivas
 const userCache = new Map();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+// Duración de caché configurable vía entorno; default a 15 minutos
+const CACHE_DURATION = (() => {
+  const raw = import.meta?.env?.VITE_AUTH_CACHE_DURATION_MS;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : (15 * 60 * 1000);
+})();
 
 export const authSyncService = {
   // Sincronizar usuario de Supabase Auth con la tabla usuarios

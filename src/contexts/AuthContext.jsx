@@ -11,6 +11,9 @@ export const AuthProvider = ({ children }) => {
   const [profileLoading, setProfileLoading] = useState(false)
   const [sessionTimeout, setSessionTimeout] = useState(null)
 
+  // Flag para minimizar eventos de carga de perfil
+  const AUTH_EVENTS_MINIMAL = import.meta?.env?.VITE_AUTH_EVENTS_MINIMAL === 'true'
+
   // Separate async operations object to avoid auth callback issues
   const profileOperations = {
     async load(userId) {
@@ -78,7 +81,13 @@ export const AuthProvider = ({ children }) => {
       setLoading(false)
       
       if (session?.user) {
-        profileOperations?.load(session?.user?.id) // Fire-and-forget
+        const shouldLoadProfile = !AUTH_EVENTS_MINIMAL
+          ? true
+          : (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event == null)
+
+        if (shouldLoadProfile) {
+          profileOperations?.load(session?.user?.id) // Fire-and-forget
+        }
         // Verificar si recordarme está activo
         const rememberMe = localStorage.getItem('kairoz_remember_me') === 'true';
         resetSessionTimeout(rememberMe); // Reiniciar timeout al hacer login
