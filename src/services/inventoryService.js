@@ -123,13 +123,26 @@ export const inventoryService = {
   // Get product by ID
   async getProduct(id) {
     try {
-      const { data, error } = await supabase?.from('armazones')?.select(`
-          *,
-          marcas(nombre),
-          grupos(nombre),
-          sub_marcas(nombre),
-          descripciones(*)
-        `)?.eq('id', id)?.single()
+      const { data, error } = await supabase
+        .from('armazones')
+        .select(`
+          id,
+          sku,
+          color,
+          stock,
+          precio,
+          marca_id,
+          grupo_id,
+          descripcion_id,
+          sub_marca_id,
+          creado_por_id,
+          marcas(id, nombre),
+          grupos(id, nombre),
+          sub_marcas(id, nombre),
+          descripciones(id, nombre)
+        `)
+        .eq('id', id)
+        .single()
       
       if (error) {
         throw error
@@ -353,7 +366,10 @@ export const inventoryService = {
   // Get descriptions
   async getDescriptions() {
     try {
-      const { data, error } = await supabase?.from('descripciones')?.select('*')?.order('nombre', { ascending: true })
+      const { data, error } = await supabase
+        .from('descripciones')
+        .select('id, nombre')
+        .order('nombre', { ascending: true })
       
       if (error) throw error
       
@@ -389,11 +405,19 @@ export const inventoryService = {
   // Get products with low stock
   async getLowStockProducts(threshold = 2) {
     try {
-      const { data, error } = await supabase?.from('armazones')?.select(`
-          *,
-          marcas(nombre),
-          grupos(nombre)
-        `)?.lte('stock', threshold)?.order('stock', { ascending: true })
+      const { data, error } = await supabase
+        .from('armazones')
+        .select(`
+          id,
+          sku,
+          color,
+          stock,
+          precio,
+          marcas(id, nombre),
+          grupos(id, nombre)
+        `)
+        .lte('stock', threshold)
+        .order('stock', { ascending: true })
       
       if (error) throw error
       
@@ -409,11 +433,15 @@ export const inventoryService = {
       const { data, error } = await supabase
         .from('armazones')
         .select(`
-          *,
-          marcas(nombre),
-          grupos(nombre)
+          id,
+          sku,
+          color,
+          stock,
+          precio,
+          marcas(id, nombre),
+          grupos(id, nombre)
         `)
-        .eq('stock', 0) // La diferencia clave: busca stock igual a 0
+        .eq('stock', 0)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
