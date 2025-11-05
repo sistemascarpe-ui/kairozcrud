@@ -32,6 +32,7 @@ vi.mock('../../lib/supabase', () => {
 
 import { salesService } from '../salesService';
 import { campaignService } from '../campaignService';
+import { inventoryService } from '../inventoryService';
 
 beforeEach(() => {
   capturedCalls = [];
@@ -60,6 +61,18 @@ describe('Count queries avoid HEAD aborts', () => {
     const call = capturedCalls.find(c => c.table === 'campana_miembros');
     expect(call).toBeDefined();
     expect(call.cols).toBe('usuario_id');
+    expect(call.options).toMatchObject({ count: 'exact' });
+    expect(call.options.head).toBeUndefined();
+  });
+
+  it('inventoryService.getProductsCount uses GET count without head:true', async () => {
+    const { count, error } = await inventoryService.getProductsCount();
+    expect(error).toBeNull();
+    expect(count).toBe(123);
+
+    const call = capturedCalls.find(c => c.table === 'armazones');
+    expect(call).toBeDefined();
+    expect(call.cols).toBe('id');
     expect(call.options).toMatchObject({ count: 'exact' });
     expect(call.options.head).toBeUndefined();
   });

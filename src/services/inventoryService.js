@@ -12,7 +12,6 @@ export const inventoryService = {
           color,
           stock,
           precio,
-          estado,
           created_at,
           marcas(id, nombre),
           grupos(id, nombre)
@@ -33,7 +32,8 @@ export const inventoryService = {
     try {
       const { count, error } = await supabase
         .from('armazones')
-        .select('id', { count: 'exact', head: true });
+        .select('id', { count: 'exact' })
+        .limit(1);
       
       if (error) throw error;
       return { count, error: null };
@@ -45,14 +45,29 @@ export const inventoryService = {
   // Get all products with relationships
   async getProducts() {
     try {
-      const { data, error } = await supabase?.from('armazones')?.select(`
-          *,
+      const { data, error } = await supabase
+        .from('armazones')
+        .select(`
+          id,
+          sku,
+          color,
+          stock,
+          precio,
+          created_at,
+          updated_at,
+          editado_manualmente,
+          marca_id,
+          grupo_id,
+          descripcion_id,
+          sub_marca_id,
+          creado_por_id,
           marcas(id, nombre),
           grupos(id, nombre),
           sub_marcas(id, nombre),
           descripciones(id, nombre),
           usuarios(id, nombre, apellido)
-        `)?.order('created_at', { ascending: false })
+        `)
+        .order('created_at', { ascending: false })
       
       if (error) {
         throw error
