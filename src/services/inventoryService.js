@@ -308,7 +308,10 @@ export const inventoryService = {
   // Get brands
   async getBrands() {
     try {
-      const { data, error } = await supabase?.from('marcas')?.select('*')?.order('nombre', { ascending: true })
+      const { data, error } = await supabase
+        .from('marcas')
+        .select('id, nombre')
+        .order('nombre', { ascending: true })
       
       if (error) throw error
       
@@ -334,7 +337,10 @@ export const inventoryService = {
   // Get sub-brands
   async getSubBrands() {
     try {
-      const { data, error } = await supabase?.from('sub_marcas')?.select('*')?.order('nombre', { ascending: true })
+      const { data, error } = await supabase
+        .from('sub_marcas')
+        .select('id, nombre')
+        .order('nombre', { ascending: true })
       
       if (error) throw error
       

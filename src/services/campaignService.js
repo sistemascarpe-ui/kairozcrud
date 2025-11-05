@@ -7,7 +7,16 @@ export const campaignService = {
       const { data, error } = await supabase
         .from('campanas')
         .select(`
-          *,
+          id,
+          nombre,
+          empresa,
+          fecha_inicio,
+          fecha_fin,
+          estado,
+          ubicacion,
+          observaciones,
+          creado_por_id,
+          created_at,
           creado_por:usuarios!creado_por_id(id, nombre, apellido)
         `)
         .order('created_at', { ascending: false });
@@ -26,7 +35,16 @@ export const campaignService = {
       const { data, error } = await supabase
         .from('campanas')
         .select(`
-          *,
+          id,
+          nombre,
+          empresa,
+          fecha_inicio,
+          fecha_fin,
+          estado,
+          ubicacion,
+          observaciones,
+          creado_por_id,
+          created_at,
           creado_por:usuarios!creado_por_id(id, nombre, apellido)
         `)
         .eq('id', id)
@@ -93,15 +111,20 @@ export const campaignService = {
       const { data, error } = await supabase
         .from('campana_productos')
         .select(`
-          *,
+          id,
+          campana_id,
+          armazon_id,
+          cantidad_enviada,
+          cantidad_devuelta,
+          estado,
+          fecha_envio,
+          observaciones,
+          creado_por_id,
+          created_at,
           armazones(
             id, sku, color, stock, precio,
-            marcas(id, nombre),
-            grupos(id, nombre),
-            sub_marcas(id, nombre),
-            descripciones(id, nombre)
-          ),
-          usuarios(id, nombre, apellido)
+            marcas(id, nombre)
+          )
         `)
         .eq('campana_id', campaignId)
         .order('created_at', { ascending: false });
@@ -155,7 +178,7 @@ export const campaignService = {
     try {
       const { data, error } = await supabase
         .from('stock_armazones')
-        .select('*')
+        .select('id, armazon_id, stock_disponible, stock_en_campanas')
         .eq('id', productId)
         .single();
 

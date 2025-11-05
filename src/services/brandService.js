@@ -3,7 +3,10 @@ import { supabase } from '../lib/supabase';
 export const brandService = {
   async getBrands() {
     try {
-      const { data, error } = await supabase.from('marcas').select('*').order('nombre', { ascending: true });
+      const { data, error } = await supabase
+        .from('marcas')
+        .select('id, nombre')
+        .order('nombre', { ascending: true });
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
@@ -13,7 +16,11 @@ export const brandService = {
 
   async createBrand(brandData) {
     try {
-      const { data, error } = await supabase.from('marcas').insert([brandData]).select().single();
+      const { data, error } = await supabase
+        .from('marcas')
+        .insert([brandData])
+        .select('id, nombre')
+        .single();
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
@@ -23,7 +30,12 @@ export const brandService = {
 
   async updateBrand(id, updates) {
     try {
-      const { data, error } = await supabase.from('marcas').update(updates).eq('id', id).select().single();
+      const { data, error } = await supabase
+        .from('marcas')
+        .update(updates)
+        .eq('id', id)
+        .select('id, nombre')
+        .single();
       if (error) throw error;
       return { data, error: null };
     } catch (error) {

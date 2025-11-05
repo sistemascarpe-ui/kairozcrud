@@ -4,7 +4,10 @@ export const empresaService = {
   // Get all empresas
   async getEmpresas() {
     try {
-      const { data, error } = await supabase?.from('empresas')?.select('*')?.order('nombre', { ascending: true });
+      const { data, error } = await supabase
+        .from('empresas')
+        .select('id, nombre, created_at')
+        .order('nombre', { ascending: true });
       
       if (error) throw error;
       
@@ -17,7 +20,11 @@ export const empresaService = {
   // Get empresa by ID
   async getEmpresa(id) {
     try {
-      const { data, error } = await supabase?.from('empresas')?.select('*')?.eq('id', id)?.single();
+      const { data, error } = await supabase
+        .from('empresas')
+        .select('id, nombre, created_at')
+        .eq('id', id)
+        .single();
       
       if (error) throw error;
       
@@ -30,7 +37,11 @@ export const empresaService = {
   // Create new empresa
   async createEmpresa(empresaData) {
     try {
-      const { data, error } = await supabase?.from('empresas')?.insert([empresaData])?.select()?.single();
+      const { data, error } = await supabase
+        .from('empresas')
+        .insert([empresaData])
+        .select('id, nombre, created_at')
+        .single();
       
       if (error) throw error;
       
@@ -43,7 +54,12 @@ export const empresaService = {
   // Update empresa
   async updateEmpresa(id, updates) {
     try {
-      const { data, error } = await supabase?.from('empresas')?.update(updates)?.eq('id', id)?.select()?.single();
+      const { data, error } = await supabase
+        .from('empresas')
+        .update(updates)
+        .eq('id', id)
+        .select('id, nombre, created_at')
+        .single();
       
       if (error) throw error;
       
