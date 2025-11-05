@@ -45,12 +45,10 @@ export const campaignService = {
     try {
       const { data, error } = await supabase
         .from('campanas')
-        .insert([campaignData])
-        .select()
-        .single();
+        .insert([campaignData], { returning: 'minimal' });
 
       if (error) throw error;
-      return { data, error: null };
+      return { data: null, error: null };
     } catch (error) {
       console.error('Error creando campaña:', error);
       return { data: null, error: error.message };
@@ -60,15 +58,13 @@ export const campaignService = {
   // Actualizar campaña
   async updateCampaign(id, updates) {
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('campanas')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+        .update(updates, { returning: 'minimal' })
+        .eq('id', id);
 
       if (error) throw error;
-      return { data, error: null };
+      return { data: null, error: null };
     } catch (error) {
       console.error('Error actualizando campaña:', error);
       return { data: null, error: error.message };
@@ -194,10 +190,14 @@ export const campaignService = {
       const { data, error } = await supabase
         .from('campana_miembros')
         .select(`
-          *,
+          id,
+          campana_id,
+          usuario_id,
+          asignado_por_id,
+          rol,
+          created_at,
           usuario:usuarios!usuario_id(id, nombre, apellido),
-          asignado_por:usuarios!asignado_por_id(id, nombre, apellido),
-          campana:campanas!campana_id(id, nombre)
+          asignado_por:usuarios!asignado_por_id(id, nombre, apellido)
         `)
         .eq('campana_id', campaignId)
         .order('created_at', { ascending: false });
@@ -249,8 +249,9 @@ export const campaignService = {
     try {
       const { count, error } = await supabase
         .from('campana_miembros')
-        .select('*', { count: 'exact', head: true })
-        .eq('campana_id', campaignId);
+        .select('usuario_id', { count: 'exact' })
+        .eq('campana_id', campaignId)
+        .limit(1);
 
       if (error) throw error;
       return { count, error: null };

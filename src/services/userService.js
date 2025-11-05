@@ -12,9 +12,11 @@ export const userService = {
       
       while (retries > 0) {
         try {
+          const minimal = import.meta?.env?.VITE_POSTGREST_MINIMAL_SELECTS === 'true';
+          const selectColumns = minimal ? 'id, nombre, apellido' : '*';
           const { data, error } = await supabase
             .from('usuarios')
-            .select('*')
+            .select(selectColumns)
             .order('nombre', { ascending: true });
           
           if (error) {
@@ -148,7 +150,9 @@ export const userService = {
   },
   async getUsersByIds(ids) {
     if (!ids || ids.length === 0) return [];
-    const { data, error } = await supabase.from('usuarios').select('*').in('id', ids);
+    const minimal = import.meta?.env?.VITE_POSTGREST_MINIMAL_SELECTS === 'true';
+    const selectColumns = minimal ? 'id, nombre, apellido' : '*';
+    const { data, error } = await supabase.from('usuarios').select(selectColumns).in('id', ids);
     if (error) return [];
     return data;
   }

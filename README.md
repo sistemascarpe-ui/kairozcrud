@@ -138,6 +138,15 @@ La aplicación estará disponible en `http://localhost:5173`
 - `npm run build` - Construye la aplicación para producción
 - `npm run serve` - Sirve la build de producción localmente
 
+## 🛠️ Optimización de Requests y Conteos
+
+- Se eliminaron peticiones `HEAD` en consultas de conteo (`ventas`, `campana_miembros`) para evitar `net::ERR_ABORTED` por cancelaciones en el navegador.
+- Ahora los conteos usan `GET` con `select('id' | 'usuario_id', { count: 'exact' })` y `limit(1)` para minimizar payload sin afectar funcionalidad.
+- Beneficios:
+  - Menos ruido de errores en consola del navegador.
+  - Menor probabilidad de abortos en navegación/cambios rápidos de estado.
+  - Mismo comportamiento de conteo y paginación en UI.
+
 ## 📁 Estructura del Proyecto
 
 ```

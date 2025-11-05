@@ -4,10 +4,16 @@ export const customerService = {
   // Get all customers
   async getCustomers() {
     try {
-      const { data, error } = await supabase?.from('clientes')?.select(`
-          *,
-          usuarios(nombre, apellido), empresas(id, nombre)
-        `)?.order('created_at', { ascending: false })
+      const minimal = import.meta?.env?.VITE_POSTGREST_MINIMAL_SELECTS === 'true'
+      const selectColumns = minimal
+        ? `id, nombre, telefono, correo, empresa_id, creado_por_id, created_at,
+            usuarios(nombre, apellido), empresas(id, nombre)`
+        : `*, usuarios(nombre, apellido), empresas(id, nombre)`
+
+      const { data, error } = await supabase
+        .from('clientes')
+        .select(selectColumns)
+        .order('created_at', { ascending: false })
       
       if (error) throw error
       
@@ -20,10 +26,16 @@ export const customerService = {
   // Get customer by ID
   async getCustomer(id) {
     try {
-      const { data, error } = await supabase?.from('clientes')?.select(`
-          *,
-          usuarios(nombre, apellido), empresas(id, nombre)
-        `)?.eq('id', id)?.single()
+      const minimal = import.meta?.env?.VITE_POSTGREST_MINIMAL_SELECTS === 'true'
+      const selectColumns = minimal
+        ? `id, nombre, telefono, correo, empresa_id, creado_por_id, created_at,
+            usuarios(nombre, apellido), empresas(id, nombre)`
+        : `*, usuarios(nombre, apellido), empresas(id, nombre)`
+      const { data, error } = await supabase
+        .from('clientes')
+        .select(selectColumns)
+        .eq('id', id)
+        .single()
       
       if (error) throw error
       
@@ -36,7 +48,9 @@ export const customerService = {
   // Create new customer
   async createCustomer(customerData) {
     try {
-      const { data, error } = await supabase?.from('clientes')?.insert([customerData])?.select()?.single()
+      const { data, error } = await supabase
+        .from('clientes')
+        .insert([customerData], { returning: 'minimal' })
       
       if (error) throw error
       
@@ -49,10 +63,9 @@ export const customerService = {
   // Create multiple customers
   async createMultipleCustomers(customersData) {
     try {
-      const { data, error } = await supabase?.from('clientes')?.insert(customersData)?.select(`
-          *,
-          usuarios(nombre, apellido), empresas(id, nombre)
-        `)
+      const { data, error } = await supabase
+        .from('clientes')
+        .insert(customersData, { returning: 'minimal' })
       
       if (error) throw error
       
@@ -65,10 +78,10 @@ export const customerService = {
   // Update customer
   async updateCustomer(id, updates) {
     try {
-      const { data, error } = await supabase?.from('clientes')?.update(updates)?.eq('id', id)?.select(`
-          *,
-          usuarios(nombre, apellido), empresas(id, nombre)
-        `)?.single()
+      const { data, error } = await supabase
+        .from('clientes')
+        .update(updates, { returning: 'minimal' })
+        .eq('id', id)
       
       if (error) throw error
       
@@ -100,11 +113,17 @@ export const customerService = {
   // Get customer sales history
   async getCustomerSales(customerId) {
     try {
-      const { data, error } = await supabase?.from('notas_venta')?.select(`
-          *,
-          detalle_venta(*),
-          usuarios(nombre, apellido), empresas(id, nombre)
-        `)?.eq('cliente_id', customerId)?.order('created_at', { ascending: false })
+      const minimal = import.meta?.env?.VITE_POSTGREST_MINIMAL_SELECTS === 'true'
+      const selectColumns = minimal
+        ? `id, cliente_id, created_at,
+            detalle_venta(id, cantidad, precio_unitario, subtotal),
+            usuarios(nombre, apellido), empresas(id, nombre)`
+        : `*, detalle_venta(*), usuarios(nombre, apellido), empresas(id, nombre)`
+      const { data, error } = await supabase
+        .from('notas_venta')
+        .select(selectColumns)
+        .eq('cliente_id', customerId)
+        .order('created_at', { ascending: false })
       
       if (error) throw error
       
@@ -117,10 +136,16 @@ export const customerService = {
   // Search customers
   async searchCustomers(searchTerm) {
     try {
-      const { data, error } = await supabase?.from('clientes')?.select(`
-          *,
-          usuarios(nombre, apellido), empresas(id, nombre)
-        `)?.or(`nombre.ilike.%${searchTerm}%,telefono.ilike.%${searchTerm}%,correo.ilike.%${searchTerm}%,empresa.ilike.%${searchTerm}%`)?.order('created_at', { ascending: false })
+      const minimal = import.meta?.env?.VITE_POSTGREST_MINIMAL_SELECTS === 'true'
+      const selectColumns = minimal
+        ? `id, nombre, telefono, correo, empresa_id, creado_por_id, created_at,
+            usuarios(nombre, apellido), empresas(id, nombre)`
+        : `*, usuarios(nombre, apellido), empresas(id, nombre)`
+      const { data, error } = await supabase
+        .from('clientes')
+        .select(selectColumns)
+        .or(`nombre.ilike.%${searchTerm}%,telefono.ilike.%${searchTerm}%,correo.ilike.%${searchTerm}%`)
+        .order('created_at', { ascending: false })
       
       if (error) throw error
       

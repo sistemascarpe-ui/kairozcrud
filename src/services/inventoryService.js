@@ -33,7 +33,7 @@ export const inventoryService = {
     try {
       const { count, error } = await supabase
         .from('armazones')
-        .select('*', { count: 'exact', head: true });
+        .select('id', { count: 'exact', head: true });
       
       if (error) throw error;
       return { count, error: null };

@@ -49,7 +49,8 @@ export const salesService = {
     try {
       const { count, error } = await supabase
         .from('ventas')
-        .select('*', { count: 'exact', head: true });
+        .select('id', { count: 'exact' })
+        .limit(1);
       
       if (error) throw error;
       return { count, error: null };
@@ -83,17 +84,28 @@ export const salesService = {
 
   async getSalesNotes(limit = null, offset = null) {
     try {
-      let query = supabase
-        .from('ventas')
-        .select(`
-          *,
-          venta_clientes ( 
+      const selectColumns = `
+          id,
+          folio,
+          total,
+          subtotal,
+          descuento_monto,
+          estado,
+          fecha_venta,
+          observaciones,
+          created_at,
+          updated_at,
+          requiere_factura,
+          monto_iva,
+          rfc,
+          razon_social,
+          venta_clientes (
             cliente_id,
             clientes:cliente_id (id, nombre, telefono, correo, empresa_id, empresas:empresa_id(id, nombre))
           ),
-          venta_vendedores ( 
+          venta_vendedores (
             vendedor_id,
-            usuarios:vendedor_id (id, nombre, apellido) 
+            usuarios:vendedor_id (id, nombre, apellido)
           ),
           venta_productos (
             id,
@@ -107,7 +119,11 @@ export const salesService = {
             armazones (id, sku, color, precio, marcas(nombre), descripciones(nombre))
           ),
           abonos (id, monto, fecha_abono)
-        `)
+        `;
+
+      let query = supabase
+        .from('ventas')
+        .select(selectColumns)
         .order('created_at', { ascending: false });
 
       // Add pagination if parameters are provided
@@ -256,10 +272,21 @@ export const salesService = {
 
   async getSalesNote(id) {
     try {
-      const { data, error } = await supabase
-        .from('ventas')
-        .select(`
-          *,
+      const selectColumns = `
+          id,
+          folio,
+          total,
+          subtotal,
+          descuento_monto,
+          estado,
+          fecha_venta,
+          observaciones,
+          created_at,
+          updated_at,
+          requiere_factura,
+          monto_iva,
+          rfc,
+          razon_social,
           venta_clientes ( 
             cliente_id,
             clientes:cliente_id (id, nombre, telefono, correo, empresa_id, empresas:empresa_id(id, nombre))
@@ -275,11 +302,16 @@ export const salesService = {
             descripcion_mica,
             cantidad,
             precio_unitario,
+            descuento_monto,
             subtotal,
             armazones (id, sku, color, precio, marcas(nombre), descripciones(nombre))
           ),
           abonos (id, monto, fecha_abono)
-        `)
+        `;
+
+      const { data, error } = await supabase
+        .from('ventas')
+        .select(selectColumns)
         .eq('id', id)
         .single();
       
@@ -545,7 +577,7 @@ export const salesService = {
     try {
       const { error } = await supabase
         .from('ventas')
-        .update(updates)
+        .update(updates, { returning: 'minimal' })
         .eq('id', id);
       
       if (error) throw error;
