@@ -196,6 +196,61 @@ export const inventoryService = {
     }
   },
 
+  // Aggregates by brand: types count and total units (respecting filters)
+  async getBrandCounts(filters = {}) {
+    try {
+      let query = supabase
+        .from('armazones')
+        .select(`
+          id,
+          stock,
+          marca_id,
+          marcas(nombre)
+        `);
+
+      const {
+        brandId,
+        groupId,
+        descriptionId,
+        subBrandId,
+        stockStatus,
+        searchTerm,
+      } = filters || {};
+
+      if (brandId) query = query.eq('marca_id', brandId);
+      if (groupId) query = query.eq('grupo_id', groupId);
+      if (descriptionId) query = query.eq('descripcion_id', descriptionId);
+      if (subBrandId) query = query.eq('sub_marca_id', subBrandId);
+      if (stockStatus === 'in-stock') query = query.gt('stock', 0);
+      if (stockStatus === 'out-of-stock') query = query.eq('stock', 0);
+      if (searchTerm && typeof searchTerm === 'string') {
+        const term = `%${searchTerm}%`;
+        query = query.or(`marcas.nombre.ilike.${term}`);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const map = new Map();
+      (data || []).forEach(item => {
+        const brandName = item?.marcas?.nombre || (Array.isArray(item?.marcas) ? item?.marcas[0]?.nombre : null) || 'Sin marca';
+        const stock = parseInt(item?.stock) || 0;
+        if (!map.has(brandName)) {
+          map.set(brandName, { brand: brandName, types: 0, totalUnits: 0 });
+        }
+        const agg = map.get(brandName);
+        agg.types += 1; // tipos = registros de armazones
+        agg.totalUnits += stock; // total = suma de stock por marca
+      });
+
+      // Ordenar por marca ascendente
+      const aggregates = Array.from(map.values()).sort((a, b) => a.brand.localeCompare(b.brand));
+      return { data: aggregates, error: null };
+    } catch (error) {
+      return { data: [], error: error?.message };
+    }
+  },
+
   // Get full list of out-of-stock products respecting filters (for PDF names)
   async getOutOfStockProducts(filters = {}) {
     try {

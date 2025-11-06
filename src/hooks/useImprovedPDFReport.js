@@ -156,6 +156,46 @@ export const useImprovedPDFReport = () => {
         });
       }
       
+      // Conteo por marca (debajo de Productos Agotados)
+      const brandAggregates = Array.isArray(inventoryData.brandAggregates) ? inventoryData.brandAggregates : [];
+      if (brandAggregates.length > 0) {
+        // Título de sección
+        addText('CONTEO POR MARCA', 20, yPosition + 6, { fontSize: 16, bold: true, color: primaryColor });
+        yPosition += 12;
+
+        // Tabla: Marca | Tipos | Total
+        const startX = 30;
+        const gap = 5;
+        const brandWidth = 70;
+        const typesWidth = 35;
+        const totalWidth = 35;
+        const brandX = startX;
+        const typesX = brandX + brandWidth + gap;
+        const totalX = typesX + typesWidth + gap;
+
+        // Encabezados
+        addText('Marca', brandX, yPosition, { fontSize: 12, bold: true, color: primaryColor });
+        addText('Tipos', typesX, yPosition, { fontSize: 12, bold: true, color: primaryColor });
+        addText('Total', totalX, yPosition, { fontSize: 12, bold: true, color: primaryColor });
+        yPosition += 6;
+        addLine(startX, yPosition, pageWidth - 20, yPosition, secondaryColor, 0.5);
+        yPosition += 4;
+
+        brandAggregates.forEach(row => {
+          if (yPosition > pageHeight - 30) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          const brandName = fitText(String(row?.brand || 'Sin marca'), brandWidth, 12);
+          const typesStr = String(row?.types ?? 0);
+          const totalStr = String(row?.totalUnits ?? 0);
+          addText(brandName, brandX, yPosition, { fontSize: 12 });
+          addText(typesStr, typesX, yPosition, { fontSize: 12 });
+          addText(totalStr, totalX, yPosition, { fontSize: 12 });
+          yPosition += 7;
+        });
+      }
+
       // Footer simple
       yPosition = pageHeight - 20;
       addLine(20, yPosition, pageWidth - 20, yPosition, primaryColor, 0.5);
