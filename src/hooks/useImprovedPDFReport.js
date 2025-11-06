@@ -123,6 +123,13 @@ export const useImprovedPDFReport = () => {
       const stockPctRaw = totalProducts > 0 ? ((inStockCount / totalProducts) * 100) : 0;
       const stockPercentage = Math.trunc(stockPctRaw * 100) / 100;
 
+      // Porcentaje de agotados
+      const outOfStockCount = typeof inventoryData.outOfStockCount === 'number'
+        ? inventoryData.outOfStockCount
+        : (inventoryData.products || []).filter(p => (parseInt(p.stock) || 0) === 0).length;
+      const outPctRaw = totalProducts > 0 ? ((outOfStockCount / totalProducts) * 100) : 0;
+      const outPercentage = Math.trunc(outPctRaw * 100) / 100;
+
       addText(`• Tipos de Armazones: ${totalProducts}`, 30, yPosition, { fontSize: 12 });
       yPosition += 8;
       addText(`• Total de Armazones: ${totalUnits}`, 30, yPosition, { fontSize: 12 });
@@ -130,6 +137,8 @@ export const useImprovedPDFReport = () => {
       addText(`• Valor Total: $${totalValue.toLocaleString()}`, 30, yPosition, { fontSize: 12 });
       yPosition += 8;
       addText(`• En Stock: ${stockPercentage}%`, 30, yPosition, { fontSize: 12 });
+      yPosition += 8;
+      addText(`• Agotados: ${outPercentage}%`, 30, yPosition, { fontSize: 12, color: dangerColor });
 
       yPosition += 18;
 
