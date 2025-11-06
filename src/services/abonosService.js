@@ -63,8 +63,14 @@ export const abonosService = {
       if (error) {
         return { data: null, error: error.message };
       }
-
-      return { data, error: null };
+      // Tras registrar el abono, verificar si la venta queda completamente pagada
+      try {
+        const verificacion = await this.verificarYCompletarVenta(abonoData.venta_id);
+        return { data: { abono: data, verificacion: verificacion?.data || null }, error: null };
+      } catch (verifError) {
+        // Si la verificación falla, no impedimos el registro del abono
+        return { data: { abono: data, verificacion: null }, error: null };
+      }
     } catch (error) {
       return { data: null, error: error?.message };
     }
@@ -83,8 +89,21 @@ export const abonosService = {
       if (error) {
         return { data: null, error: error.message };
       }
-
-      return { data, error: null };
+      // Obtener la venta asociada para verificar estado tras actualizar el abono
+      try {
+        const { data: abonoRelacionado } = await supabase
+          .from('abonos')
+          .select('venta_id')
+          .eq('id', abonoId)
+          .single();
+        if (abonoRelacionado?.venta_id) {
+          const verificacion = await this.verificarYCompletarVenta(abonoRelacionado.venta_id);
+          return { data: { abono: data, verificacion: verificacion?.data || null }, error: null };
+        }
+      } catch (_) {
+        // Ignorar errores de verificación para no bloquear la actualización
+      }
+      return { data: { abono: data, verificacion: null }, error: null };
     } catch (error) {
       return { data: null, error: error?.message };
     }
@@ -133,7 +152,8 @@ export const abonosService = {
       }
 
       // Si el saldo es 0 o menor, marcar como completada
-      if (saldo <= 0) {
+      const epsilon = 0.01; // tolerancia para redondeos
+      if (saldo <= epsilon) {
         const { data, error: updateError } = await supabase
           .from('ventas')
           .update({ estado: 'completada' })

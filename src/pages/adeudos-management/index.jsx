@@ -48,8 +48,22 @@ const AdeudosManagement = () => {
       }
 
       // Filtrar solo ventas pendientes
-      const pendingSales = sales?.filter(sale => sale.estado === 'pendiente') || [];
-      
+      let pendingSales = sales?.filter(sale => sale.estado === 'pendiente') || [];
+
+      // Auto-verificar ventas con saldo 0 para actualizar estado a completada
+      const epsilon = 0.01;
+      const toVerify = pendingSales.filter(sale => (parseFloat(sale.saldoPendiente) || 0) <= epsilon);
+      if (toVerify.length > 0) {
+        try {
+          await Promise.all(toVerify.map(sale => abonosService.verificarYCompletarVenta(sale.id)));
+          // Volver a cargar ventas para reflejar estados actualizados
+          const { data: refreshed } = await salesService.getSalesNotes();
+          pendingSales = refreshed?.filter(sale => sale.estado === 'pendiente') || [];
+        } catch (e) {
+          console.warn('Auto-verificación de ventas falló:', e);
+        }
+      }
+
       setAdeudos(pendingSales);
       setFilteredAdeudos(pendingSales);
     } catch (error) {
