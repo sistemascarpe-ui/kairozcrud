@@ -39,18 +39,20 @@ const InventoryManagement = () => {
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(50); // 50 productos por página
+  const [itemsPerPage] = useState(50); // base: 50 productos por página
+  // Cuando hay búsqueda, pedir más filas para filtrar en cliente
+  const effectiveItemsPerPage = useMemo(() => (searchTerm ? 1000 : itemsPerPage), [searchTerm, itemsPerPage]);
 
   // Datos optimizados con paginación desde el servidor
   // Construir filtros para el servidor
+  // Enviar filtros al servidor SIN searchTerm; búsqueda flexible sólo en cliente
   const serverFilters = useMemo(() => ({
     brandId: selectedBrand || undefined,
     groupId: selectedGroup || undefined,
     descriptionId: selectedDescription || undefined,
     subBrandId: selectedSubBrand || undefined,
     stockStatus: selectedStockStatus || undefined,
-    searchTerm: searchTerm || undefined,
-  }), [selectedBrand, selectedGroup, selectedDescription, selectedSubBrand, selectedStockStatus, searchTerm]);
+  }), [selectedBrand, selectedGroup, selectedDescription, selectedSubBrand, selectedStockStatus]);
 
   // Mapear claves de la UI a columnas reales de la BD
   const serverSort = useMemo(() => {
@@ -64,7 +66,7 @@ const InventoryManagement = () => {
     return { key: mappedKey, direction: sortConfig?.direction || 'desc' };
   }, [sortConfig]);
 
-  const { data: productsSummary, isLoading: productsLoading, error: productsError, refetch: refetchSummary } = useOptimizedProducts(currentPage, itemsPerPage, serverFilters, serverSort);
+  const { data: productsSummary, isLoading: productsLoading, error: productsError, refetch: refetchSummary } = useOptimizedProducts(currentPage, effectiveItemsPerPage, serverFilters, serverSort);
   const { data: productsCountData, refetch: refetchCount } = useProductsCount(serverFilters);
   const { data: totalUnitsData, refetch: refetchTotalUnits } = useTotalUnits(serverFilters);
 
@@ -186,9 +188,13 @@ const InventoryManagement = () => {
     }) || [];
   }, [products]);
 
-  // Función mejorada de búsqueda que maneja diferentes formatos de modelos
+  // Función de búsqueda mejorada (ignora acentos y espacios)
+  const removeAccents = (text) => {
+    return text?.normalize('NFD')?.replace(/[\u0300-\u036f]/g, '') || '';
+  };
+
   const normalizeSearchTerm = (term) => {
-    return term?.toLowerCase()?.replace(/\s+/g, '')?.trim();
+    return removeAccents(term || '')?.toLowerCase()?.replace(/\s+/g, '')?.trim();
   };
 
   const matchesSearchTerm = (searchTerm, product) => {
@@ -196,12 +202,12 @@ const InventoryManagement = () => {
     
     const normalizedSearch = normalizeSearchTerm(searchTerm);
     
-    // Campos a buscar
+    // Campos a buscar: incluir modelo/descripcion y combinaciones útiles
     const searchFields = [
       product?.sku,
-      product?.brand,
-      product?.color,
-      product?.name
+      product?.description, // modelo
+      `${product?.brand || ''} ${product?.description || ''}`,
+      `${product?.description || ''} ${product?.sku || ''}`,
     ];
     
     return searchFields.some(field => {
@@ -209,7 +215,7 @@ const InventoryManagement = () => {
       
       const normalizedField = normalizeSearchTerm(field);
       
-      // Búsqueda exacta sin espacios
+      // Búsqueda exacta sin espacios (siempre permitir coincidencia parcial)
       if (normalizedField.includes(normalizedSearch)) {
         return true;
       }
@@ -231,13 +237,13 @@ const InventoryManagement = () => {
 
   // Filter and sort products
   const filteredAndSortedProducts = useMemo(() => {
-    const anyFilterActive = !!(searchTerm || selectedBrand || selectedGroup || selectedDescription || selectedSubBrand || selectedStockStatus);
     let base = transformedProducts || [];
 
-    // Si ya filtramos en servidor, no volver a filtrar en cliente
-    let filtered = anyFilterActive ? base : base.filter(product => {
+    // Siempre aplicar búsqueda en cliente para asegurar coincidencias flexibles (acentos, espacios)
+    let filtered = base.filter(product => {
       const matchesSearch = matchesSearchTerm(searchTerm, product);
 
+      // Aplicar también el resto de filtros en cliente para mayor robustez.
       const originalProduct = products?.find(p => p?.id === product?.id);
       const matchesBrand = !selectedBrand || originalProduct?.marca_id?.toString() === selectedBrand?.toString();
       const matchesGroup = !selectedGroup || originalProduct?.grupo_id?.toString() === selectedGroup?.toString();
@@ -250,7 +256,7 @@ const InventoryManagement = () => {
       return matchesSearch && matchesBrand && matchesGroup && matchesDescription && matchesSubBrand && matchesStockStatus;
     });
 
-    // Ordenar en cliente para consistencia visual (ya ordenado en servidor)
+    // Ordenar en cliente para consistencia visual (independientemente del orden en servidor)
     filtered?.sort((a, b) => {
       const aValue = a?.[sortConfig?.key];
       const bValue = b?.[sortConfig?.key];
@@ -281,11 +287,15 @@ const InventoryManagement = () => {
 
   // Pagination info
   const isAnyFilterActive = !!(searchTerm || selectedBrand || selectedGroup || selectedDescription || selectedSubBrand || selectedStockStatus);
-  const totalProducts = productsCountData?.count ?? (filteredAndSortedProducts?.length || 0);
-  const totalPages = Math.ceil((totalProducts || 0) / itemsPerPage);
+  const totalProducts = (typeof productsCountData?.count === 'number')
+    ? productsCountData?.count
+    : (filteredAndSortedProducts?.length || 0);
+  const totalPages = searchTerm ? 1 : Math.ceil((totalProducts || 0) / itemsPerPage);
   
   // Calculate total units (sum of all stock)
-  const totalUnits = totalUnitsData?.totalUnits ?? 0;
+  const totalUnits = (typeof totalUnitsData?.totalUnits === 'number')
+    ? totalUnitsData?.totalUnits
+    : (filteredAndSortedProducts?.reduce((sum, p) => sum + (parseInt(p?.stock) || 0), 0) || 0);
 
   // Handlers
   const handleSort = (key) => {
