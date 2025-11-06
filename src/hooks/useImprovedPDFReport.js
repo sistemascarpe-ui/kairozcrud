@@ -31,6 +31,21 @@ export const useImprovedPDFReport = () => {
         doc.text(text, x, y);
       };
       
+      // Ajustar texto al ancho máximo con "..."
+      const fitText = (text, maxWidth, fontSize = 12, isBold = false) => {
+        const originalFontSize = doc.getFontSize();
+        doc.setFontSize(fontSize);
+        if (isBold) doc.setFont(undefined, 'bold');
+        let t = String(text || '');
+        while (doc.getTextWidth(t) > maxWidth && t.length > 3) {
+          t = t.slice(0, Math.max(0, t.length - 4)) + '...';
+        }
+        // Restaurar font
+        doc.setFontSize(originalFontSize);
+        doc.setFont(undefined, 'normal');
+        return t;
+      };
+      
       // Función para agregar línea
       const addLine = (x1, y1, x2, y2, color = secondaryColor, width = 0.5) => {
         doc.setDrawColor(...color);
@@ -54,20 +69,23 @@ export const useImprovedPDFReport = () => {
       addLine(20, yPosition, pageWidth - 20, yPosition, primaryColor, 1);
       yPosition += 15;
       
-      // Resumen Ejecutivo - Diseño simple sin tarjetas
+      // Restaurar Resumen Ejecutivo (sin alertas ni distribución)
       addText('RESUMEN EJECUTIVO', 20, yPosition, { fontSize: 16, bold: true, color: primaryColor });
       yPosition += 15;
-      
-      // Calcular métricas
+
       const totalProducts = inventoryData.totalProducts || 0;
       const totalUnits = inventoryData.totalUnits || 0;
-      const totalValue = (inventoryData.products || []).reduce((sum, product) => {
-        return sum + (parseFloat(product.price) || 0) * (parseInt(product.stock) || 0);
-      }, 0);
-      const inStockCount = (inventoryData.products || []).filter(p => (parseInt(p.stock) || 0) > 0).length;
-      const stockPercentage = totalProducts > 0 ? Math.round((inStockCount / totalProducts) * 100) : 0;
-      
-      // Métricas en formato de lista simple
+      const totalValue = typeof inventoryData.totalValue === 'number'
+        ? inventoryData.totalValue
+        : (inventoryData.products || []).reduce((sum, product) => sum + (parseFloat(product.price) || 0) * (parseInt(product.stock) || 0), 0);
+
+      const inStockCount = typeof inventoryData.inStockCount === 'number'
+        ? inventoryData.inStockCount
+        : (inventoryData.products || []).filter(p => (parseInt(p.stock) || 0) > 0).length;
+      // No redondear: truncar a 2 decimales (p.ej., 99.52)
+      const stockPctRaw = totalProducts > 0 ? ((inStockCount / totalProducts) * 100) : 0;
+      const stockPercentage = Math.trunc(stockPctRaw * 100) / 100;
+
       addText(`• Tipos de Armazones: ${totalProducts}`, 30, yPosition, { fontSize: 12 });
       yPosition += 8;
       addText(`• Total de Armazones: ${totalUnits}`, 30, yPosition, { fontSize: 12 });
@@ -75,148 +93,67 @@ export const useImprovedPDFReport = () => {
       addText(`• Valor Total: $${totalValue.toLocaleString()}`, 30, yPosition, { fontSize: 12 });
       yPosition += 8;
       addText(`• En Stock: ${stockPercentage}%`, 30, yPosition, { fontSize: 12 });
-      yPosition += 8;
-      addText(`• Productos Agotados: ${totalProducts - inStockCount}`, 30, yPosition, { fontSize: 12 });
-      
-      yPosition += 20;
-      
-      // Análisis por Categorías
-      addText('ANÁLISIS POR CATEGORÍAS', 20, yPosition, { fontSize: 16, bold: true, color: primaryColor });
-      yPosition += 15;
-      
-      // Top 5 marcas
-      const brandCounts = {};
-      (inventoryData.products || []).forEach(product => {
-        const brand = String(product.brand || 'Sin marca');
-        brandCounts[brand] = (brandCounts[brand] || 0) + 1;
-      });
-      
-      const topBrands = Object.entries(brandCounts)
-        .sort(([,a], [,b]) => b - a)
-        .slice(0, 5);
-      
-      addText('TOP 5 MARCAS:', 30, yPosition, { fontSize: 14, bold: true, color: primaryColor });
-      yPosition += 10;
-      
-      topBrands.forEach(([brand, count], index) => {
-        addText(`${index + 1}. ${brand} - ${count} productos`, 30, yPosition, { fontSize: 11 });
-        yPosition += 7;
-      });
-      
-      yPosition += 15;
-      
-      // Distribución por estado
-      const outOfStockCount = (inventoryData.products || []).filter(p => (parseInt(p.stock) || 0) === 0).length;
-      
-      addText('DISTRIBUCIÓN POR ESTADO:', 30, yPosition, { fontSize: 14, bold: true, color: primaryColor });
-      yPosition += 10;
-      
-      addText(`• En Stock: ${inStockCount} productos`, 30, yPosition, { fontSize: 11, color: successColor });
-      yPosition += 7;
-      addText(`• Agotados: ${outOfStockCount} productos`, 30, yPosition, { fontSize: 11, color: dangerColor });
-      
-      yPosition += 20;
-      
-      // Alertas de Inventario
-      addText('ALERTAS DE INVENTARIO', 20, yPosition, { fontSize: 16, bold: true, color: primaryColor });
-      yPosition += 15;
-      
-      // Productos con mayor rotación
-      const topRotatingProducts = (inventoryData.products || [])
-        .filter(p => (parseInt(p.stock) || 0) > 0)
-        .sort((a, b) => (parseInt(b.stock) || 0) - (parseInt(a.stock) || 0))
-        .slice(0, 5);
-      
-      addText('PRODUCTOS CON MAYOR ROTACIÓN:', 30, yPosition, { fontSize: 14, bold: true, color: primaryColor });
-      yPosition += 10;
-      
-      topRotatingProducts.forEach((product, index) => {
-        addText(`${index + 1}. ${product.sku} (${product.brand}) - ${product.stock} unidades`, 30, yPosition, { fontSize: 11 });
-        yPosition += 7;
-      });
-      
-      yPosition += 15;
-      
-      // Productos agotados
-      const outOfStockProducts = (inventoryData.products || []).filter(p => (parseInt(p.stock) || 0) === 0);
-      
-      if (outOfStockProducts.length > 0) {
-        addText('PRODUCTOS AGOTADOS:', 30, yPosition, { fontSize: 14, bold: true, color: dangerColor });
+
+      yPosition += 18;
+
+      // Única sección adicional: lista de productos agotados por nombre
+      addText('PRODUCTOS AGOTADOS', 20, yPosition, { fontSize: 16, bold: true, color: primaryColor });
+      yPosition += 12;
+
+      // Preferir la lista completa pasada desde index.jsx; fallback a products paginados
+      const outOfStockProducts = Array.isArray(inventoryData.outOfStockList) 
+        ? inventoryData.outOfStockList.map(p => ({ 
+            // Nombre debe ser el SKU
+            name: p?.sku || p?.name || 'Sin nombre', 
+            sku: p?.sku || '',
+            color: p?.color || '',
+            brand: p?.brand || ''
+          }))
+        : (inventoryData.products || [])
+            .filter(p => (parseInt(p.stock) || 0) === 0)
+            .map(p => ({ 
+              name: p?.sku || p?.name || 'Sin nombre', 
+              sku: p?.sku || '',
+              color: p?.color || '',
+              brand: p?.brand || ''
+            }));
+
+      if (outOfStockProducts.length === 0) {
+        addText('No hay productos agotados', 30, yPosition, { fontSize: 12, color: successColor });
         yPosition += 10;
-        
-        outOfStockProducts.slice(0, 5).forEach((product, index) => {
-          addText(`${index + 1}. ${product.sku} (${product.brand})`, 30, yPosition, { fontSize: 11, color: dangerColor });
-          yPosition += 7;
-        });
-        
-        if (outOfStockProducts.length > 5) {
-          addText(`... y ${outOfStockProducts.length - 5} productos más`, 30, yPosition, { fontSize: 10, color: secondaryColor });
-          yPosition += 7;
-        }
       } else {
-        addText('¡EXCELENTE! No hay productos agotados', 30, yPosition, { fontSize: 12, color: successColor, bold: true });
-        yPosition += 10;
-      }
-      
-      yPosition += 20;
-      
-      // Detalle de Productos
-      addText('DETALLE DE PRODUCTOS', 20, yPosition, { fontSize: 16, bold: true, color: primaryColor });
-      yPosition += 15;
-      
-      // Verificar si necesitamos una nueva página
-      if (yPosition > pageHeight - 100) {
-        doc.addPage();
-        yPosition = 20;
-      }
-      
-      // Encabezados de tabla
-      const tableHeaders = ['SKU', 'Marca', 'Precio', 'Stock', 'Estado'];
-      const columnWidths = [40, 50, 35, 25, 30];
-      let xPosition = 20;
-      
-      // Encabezados
-      tableHeaders.forEach((header, index) => {
-        addText(header, xPosition, yPosition, { fontSize: 10, bold: true, color: primaryColor });
-        xPosition += columnWidths[index];
-      });
-      
-      yPosition += 8;
-      
-      // Línea separadora de tabla
-      addLine(20, yPosition, pageWidth - 20, yPosition, secondaryColor, 0.5);
-      yPosition += 5;
-      
-      // Filas de productos
-      const productsToShow = (inventoryData.products || []).slice(0, 15);
-      
-      productsToShow.forEach((product, index) => {
-        if (yPosition > pageHeight - 30) {
-          doc.addPage();
-          yPosition = 20;
-        }
-        
-        xPosition = 20;
-        const rowData = [
-          String(product.sku || 'N/A'),
-          String(product.brand || 'N/A'),
-          `$${(parseFloat(product.price) || 0).toLocaleString()}`,
-          (parseInt(product.stock) || 0).toString(),
-          (parseInt(product.stock) || 0) > 0 ? 'En Stock' : 'Agotado'
-        ];
-        
-        rowData.forEach((data, colIndex) => {
-          const color = colIndex === 4 ? ((parseInt(product.stock) || 0) > 0 ? successColor : dangerColor) : [0, 0, 0];
-          addText(data, xPosition, yPosition, { fontSize: 9, color: color });
-          xPosition += columnWidths[colIndex];
-        });
-        
+        // Tabla: Nombre | Color | Marca
+        const startX = 30;
+        // Ajuste de anchos para que la marca se vea mejor
+        const nameWidth = 75; // Nombre (SKU)
+        const gap = 5;
+        const colorWidth = 25;
+        const brandWidth = 60; // Más ancho para marcas largas
+        const nameX = startX;
+        const colorX = startX + nameWidth + gap;
+        const brandX = colorX + colorWidth + gap;
+
+        // Encabezados
+        addText('Nombre', nameX, yPosition, { fontSize: 12, bold: true, color: primaryColor });
+        addText('Color', colorX, yPosition, { fontSize: 12, bold: true, color: primaryColor });
+        addText('Marca', brandX, yPosition, { fontSize: 12, bold: true, color: primaryColor });
         yPosition += 6;
-      });
-      
-      if ((inventoryData.products || []).length > 15) {
-        yPosition += 5;
-        addText(`... y ${(inventoryData.products || []).length - 15} productos más`, 20, yPosition, { fontSize: 9, color: secondaryColor });
+        addLine(startX, yPosition, pageWidth - 20, yPosition, secondaryColor, 0.5);
+        yPosition += 4;
+
+        outOfStockProducts.forEach((product) => {
+          if (yPosition > pageHeight - 30) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          const nombre = fitText(String(product?.name || 'Sin nombre'), nameWidth, 12);
+          const color = fitText(String(product?.color || ''), colorWidth, 12);
+          const marca = fitText(String(product?.brand || ''), brandWidth, 12);
+          addText(nombre, nameX, yPosition, { fontSize: 12 });
+          addText(color, colorX, yPosition, { fontSize: 12 });
+          addText(marca, brandX, yPosition, { fontSize: 12 });
+          yPosition += 7;
+        });
       }
       
       // Footer simple

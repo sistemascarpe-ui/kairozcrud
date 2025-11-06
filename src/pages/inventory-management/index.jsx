@@ -448,6 +448,19 @@ const InventoryManagement = () => {
 
   const handleGenerateReport = async () => {
     try {
+      // Obtener agregados consistentes con filtros actuales para el PDF
+      const { aggregates } = await inventoryService.getInventoryAggregates(serverFilters);
+      // Obtener lista completa de productos agotados con los filtros
+      const { data: outOfStockRaw } = await inventoryService.getOutOfStockProducts(serverFilters);
+
+      const outOfStockList = (outOfStockRaw || []).map(p => {
+        const brand = p?.marcas?.nombre || (Array.isArray(p?.marcas) ? p?.marcas[0]?.nombre : null) || 'Sin marca';
+        const color = p?.color || '';
+        // Nombre debe ser el SKU (según tu requerimiento)
+        const name = p?.sku || 'Sin nombre';
+        return { name, color, brand, sku: p?.sku || '' };
+      });
+
       const reportData = {
         products: transformedProducts,
         brands,
@@ -456,6 +469,11 @@ const InventoryManagement = () => {
         subBrands,
         totalProducts: totalProducts,
         totalUnits: totalUnits,
+        // Pasar agregados calculados globalmente
+        inStockCount: aggregates?.inStock ?? 0,
+        outOfStockCount: aggregates?.outOfStock ?? 0,
+        totalValue: aggregates?.totalValue ?? 0,
+        outOfStockList,
         userProfile,
         filters: {
           searchTerm,

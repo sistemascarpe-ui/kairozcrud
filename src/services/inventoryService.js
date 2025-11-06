@@ -141,6 +141,103 @@ export const inventoryService = {
     }
   },
 
+  // Aggregates for PDF/report: in-stock, out-of-stock, total value (with filters)
+  async getInventoryAggregates(filters = {}) {
+    try {
+      let query = supabase
+        .from('armazones')
+        .select(`
+          stock,
+          precio,
+          sku,
+          color,
+          marcas(nombre),
+          grupos(nombre),
+          descripciones(nombre)
+        `);
+
+      const {
+        brandId,
+        groupId,
+        descriptionId,
+        subBrandId,
+        stockStatus,
+        searchTerm,
+      } = filters || {};
+
+      if (brandId) query = query.eq('marca_id', brandId);
+      if (groupId) query = query.eq('grupo_id', groupId);
+      if (descriptionId) query = query.eq('descripcion_id', descriptionId);
+      if (subBrandId) query = query.eq('sub_marca_id', subBrandId);
+      if (stockStatus === 'in-stock') query = query.gt('stock', 0);
+      if (stockStatus === 'out-of-stock') query = query.eq('stock', 0);
+      if (searchTerm && typeof searchTerm === 'string') {
+        const term = `%${searchTerm}%`;
+        query = query.or(`sku.ilike.${term},color.ilike.${term},marcas.nombre.ilike.${term},grupos.nombre.ilike.${term},descripciones.nombre.ilike.${term}`);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      let inStock = 0;
+      let outOfStock = 0;
+      let totalValue = 0;
+
+      data?.forEach(product => {
+        const stock = parseInt(product?.stock) || 0;
+        const price = parseFloat(product?.precio) || 0;
+        if (stock === 0) outOfStock++; else inStock++;
+        totalValue += stock * price;
+      });
+
+      return { aggregates: { inStock, outOfStock, totalValue }, error: null };
+    } catch (error) {
+      return { aggregates: { inStock: 0, outOfStock: 0, totalValue: 0 }, error: error?.message };
+    }
+  },
+
+  // Get full list of out-of-stock products respecting filters (for PDF names)
+  async getOutOfStockProducts(filters = {}) {
+    try {
+      let query = supabase
+        .from('armazones')
+        .select(`
+          id,
+          sku,
+          color,
+          marcas(nombre),
+          descripciones(nombre)
+        `)
+        .eq('stock', 0);
+
+      const {
+        brandId,
+        groupId,
+        descriptionId,
+        subBrandId,
+        stockStatus,
+        searchTerm,
+      } = filters || {};
+
+      if (brandId) query = query.eq('marca_id', brandId);
+      if (groupId) query = query.eq('grupo_id', groupId);
+      if (descriptionId) query = query.eq('descripcion_id', descriptionId);
+      if (subBrandId) query = query.eq('sub_marca_id', subBrandId);
+      if (stockStatus === 'in-stock') query = query.gt('stock', 0); // if explicit, override
+      if (stockStatus === 'out-of-stock') query = query.eq('stock', 0);
+      if (searchTerm && typeof searchTerm === 'string') {
+        const term = `%${searchTerm}%`;
+        query = query.or(`sku.ilike.${term},color.ilike.${term},marcas.nombre.ilike.${term},descripciones.nombre.ilike.${term}`);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      return { data: [], error: error?.message };
+    }
+  },
+
   // Get all products with relationships
   async getProducts() {
     try {
