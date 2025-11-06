@@ -23,6 +23,22 @@ export const useImprovedPDFReport = () => {
       const pageHeight = doc.internal.pageSize.height;
       const contentWidth = pageWidth - 40;
       
+      // Utilidad para cargar imagen como DataURL
+      const loadImageAsDataUrl = async (url) => {
+        try {
+          const response = await fetch(url);
+          const blob = await response.blob();
+          return await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        } catch (e) {
+          return null;
+        }
+      };
+      
       // Función para agregar texto
       const addText = (text, x, y, options = {}) => {
         doc.setFontSize(options.fontSize || 12);
@@ -53,9 +69,24 @@ export const useImprovedPDFReport = () => {
         doc.line(x1, y1, x2, y2);
       };
       
-      // Header simplificado
-      addText('ÓPTICAS KAIROZ', 20, yPosition, { fontSize: 20, bold: true, color: primaryColor });
-      addText('REPORTE DE INVENTARIO', 20, yPosition + 8, { fontSize: 14, color: secondaryColor });
+      // Header con logo
+      let headerTextX = 20;
+      try {
+        const logoDataUrl = await loadImageAsDataUrl('/logo.png');
+        if (logoDataUrl) {
+          // Dibuja logo a la izquierda del título
+          const logoX = 20;
+          const logoY = yPosition - 12; // ligeramente arriba
+          const logoSize = 12; // mm
+          doc.addImage(logoDataUrl, 'PNG', logoX, logoY, logoSize, logoSize);
+          headerTextX = logoX + logoSize + 3; // espacio a la derecha del logo
+        }
+      } catch (e) {
+        // Si falla la carga del logo, continuamos sin interrumpir
+      }
+
+      addText('ÓPTICAS KAIROZ', headerTextX, yPosition, { fontSize: 20, bold: true, color: primaryColor });
+      addText('REPORTE DE INVENTARIO', headerTextX, yPosition + 8, { fontSize: 14, color: secondaryColor });
       
       // Fecha en la esquina derecha
       const currentDate = new Date().toLocaleDateString('es-MX');
@@ -190,6 +221,110 @@ export const useImprovedPDFReport = () => {
           const typesStr = String(row?.types ?? 0);
           const totalStr = String(row?.totalUnits ?? 0);
           addText(brandName, brandX, yPosition, { fontSize: 12 });
+          addText(typesStr, typesX, yPosition, { fontSize: 12 });
+          addText(totalStr, totalX, yPosition, { fontSize: 12 });
+          yPosition += 7;
+        });
+      }
+
+      // Tablas de agregados simples: Grupo, Descripción, Sub Marca
+      const groupAggregates = Array.isArray(inventoryData.groupAggregates) ? inventoryData.groupAggregates : [];
+      const descriptionAggregates = Array.isArray(inventoryData.descriptionAggregates) ? inventoryData.descriptionAggregates : [];
+      const subBrandAggregates = Array.isArray(inventoryData.subBrandAggregates) ? inventoryData.subBrandAggregates : [];
+
+      // Render: Grupo con Tipos y Total
+      if (groupAggregates.length > 0) {
+        addText('CONTEO POR GRUPO', 20, yPosition + 6, { fontSize: 16, bold: true, color: primaryColor });
+        yPosition += 12;
+        const startX = 30;
+        const gap = 5;
+        const groupWidth = 70;
+        const typesWidth = 35;
+        const totalWidth = 35;
+        const groupX = startX;
+        const typesX = groupX + groupWidth + gap;
+        const totalX = typesX + typesWidth + gap;
+        addText('Grupo', groupX, yPosition, { fontSize: 12, bold: true, color: primaryColor });
+        addText('Tipos', typesX, yPosition, { fontSize: 12, bold: true, color: primaryColor });
+        addText('Total', totalX, yPosition, { fontSize: 12, bold: true, color: primaryColor });
+        yPosition += 6;
+        addLine(startX, yPosition, pageWidth - 20, yPosition, secondaryColor, 0.5);
+        yPosition += 4;
+        groupAggregates.forEach(row => {
+          if (yPosition > pageHeight - 30) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          const groupName = fitText(String(row?.group || 'Sin grupo'), groupWidth, 12);
+          const typesStr = String(row?.types ?? 0);
+          const totalStr = String(row?.totalUnits ?? 0);
+          addText(groupName, groupX, yPosition, { fontSize: 12 });
+          addText(typesStr, typesX, yPosition, { fontSize: 12 });
+          addText(totalStr, totalX, yPosition, { fontSize: 12 });
+          yPosition += 7;
+        });
+      }
+
+      // Render: Descripción con Tipos y Total
+      if (descriptionAggregates.length > 0) {
+        addText('CONTEO POR DESCRIPCIÓN', 20, yPosition + 6, { fontSize: 16, bold: true, color: primaryColor });
+        yPosition += 12;
+        const startX = 30;
+        const gap = 5;
+        const descWidth = 70;
+        const typesWidth = 35;
+        const totalWidth = 35;
+        const descX = startX;
+        const typesX = descX + descWidth + gap;
+        const totalX = typesX + typesWidth + gap;
+        addText('Descripción', descX, yPosition, { fontSize: 12, bold: true, color: primaryColor });
+        addText('Tipos', typesX, yPosition, { fontSize: 12, bold: true, color: primaryColor });
+        addText('Total', totalX, yPosition, { fontSize: 12, bold: true, color: primaryColor });
+        yPosition += 6;
+        addLine(startX, yPosition, pageWidth - 20, yPosition, secondaryColor, 0.5);
+        yPosition += 4;
+        descriptionAggregates.forEach(row => {
+          if (yPosition > pageHeight - 30) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          const descName = fitText(String(row?.description || 'Sin descripción'), descWidth, 12);
+          const typesStr = String(row?.types ?? 0);
+          const totalStr = String(row?.totalUnits ?? 0);
+          addText(descName, descX, yPosition, { fontSize: 12 });
+          addText(typesStr, typesX, yPosition, { fontSize: 12 });
+          addText(totalStr, totalX, yPosition, { fontSize: 12 });
+          yPosition += 7;
+        });
+      }
+
+      // Render: Sub Marca con Tipos y Total
+      if (subBrandAggregates.length > 0) {
+        addText('CONTEO POR SUB MARCA', 20, yPosition + 6, { fontSize: 16, bold: true, color: primaryColor });
+        yPosition += 12;
+        const startX = 30;
+        const gap = 5;
+        const subBrandWidth = 70;
+        const typesWidth = 35;
+        const totalWidth = 35;
+        const subBrandX = startX;
+        const typesX = subBrandX + subBrandWidth + gap;
+        const totalX = typesX + typesWidth + gap;
+        addText('Sub Marca', subBrandX, yPosition, { fontSize: 12, bold: true, color: primaryColor });
+        addText('Tipos', typesX, yPosition, { fontSize: 12, bold: true, color: primaryColor });
+        addText('Total', totalX, yPosition, { fontSize: 12, bold: true, color: primaryColor });
+        yPosition += 6;
+        addLine(startX, yPosition, pageWidth - 20, yPosition, secondaryColor, 0.5);
+        yPosition += 4;
+        subBrandAggregates.forEach(row => {
+          if (yPosition > pageHeight - 30) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          const subBrandName = fitText(String(row?.subBrand || 'Sin sub marca'), subBrandWidth, 12);
+          const typesStr = String(row?.types ?? 0);
+          const totalStr = String(row?.totalUnits ?? 0);
+          addText(subBrandName, subBrandX, yPosition, { fontSize: 12 });
           addText(typesStr, typesX, yPosition, { fontSize: 12 });
           addText(totalStr, totalX, yPosition, { fontSize: 12 });
           yPosition += 7;

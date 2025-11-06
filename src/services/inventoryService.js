@@ -251,6 +251,168 @@ export const inventoryService = {
     }
   },
 
+  // Aggregates by group: simple count of types per group
+  async getGroupCounts(filters = {}) {
+    try {
+      let query = supabase
+        .from('armazones')
+        .select(`
+          id,
+          stock,
+          grupo_id,
+          grupos(nombre)
+        `);
+
+      const {
+        brandId,
+        groupId,
+        descriptionId,
+        subBrandId,
+        stockStatus,
+        searchTerm,
+      } = filters || {};
+
+      if (brandId) query = query.eq('marca_id', brandId);
+      if (groupId) query = query.eq('grupo_id', groupId);
+      if (descriptionId) query = query.eq('descripcion_id', descriptionId);
+      if (subBrandId) query = query.eq('sub_marca_id', subBrandId);
+      if (stockStatus === 'in-stock') query = query.gt('stock', 0);
+      if (stockStatus === 'out-of-stock') query = query.eq('stock', 0);
+      if (searchTerm && typeof searchTerm === 'string') {
+        const term = `%${searchTerm}%`;
+        query = query.or(`grupos.nombre.ilike.${term}`);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const map = new Map();
+      (data || []).forEach(item => {
+        const groupName = item?.grupos?.nombre || (Array.isArray(item?.grupos) ? item?.grupos[0]?.nombre : null) || 'Sin grupo';
+        const stock = parseInt(item?.stock) || 0;
+        if (!map.has(groupName)) {
+          map.set(groupName, { group: groupName, types: 0, totalUnits: 0 });
+        }
+        const agg = map.get(groupName);
+        agg.types += 1;
+        agg.totalUnits += stock;
+      });
+      const aggregates = Array.from(map.values())
+        .sort((a, b) => a.group.localeCompare(b.group));
+      return { data: aggregates, error: null };
+    } catch (error) {
+      return { data: [], error: error?.message };
+    }
+  },
+
+  // Aggregates by description: simple count per description
+  async getDescriptionCounts(filters = {}) {
+    try {
+      let query = supabase
+        .from('armazones')
+        .select(`
+          id,
+          stock,
+          descripcion_id,
+          descripciones(nombre)
+        `);
+
+      const {
+        brandId,
+        groupId,
+        descriptionId,
+        subBrandId,
+        stockStatus,
+        searchTerm,
+      } = filters || {};
+
+      if (brandId) query = query.eq('marca_id', brandId);
+      if (groupId) query = query.eq('grupo_id', groupId);
+      if (descriptionId) query = query.eq('descripcion_id', descriptionId);
+      if (subBrandId) query = query.eq('sub_marca_id', subBrandId);
+      if (stockStatus === 'in-stock') query = query.gt('stock', 0);
+      if (stockStatus === 'out-of-stock') query = query.eq('stock', 0);
+      if (searchTerm && typeof searchTerm === 'string') {
+        const term = `%${searchTerm}%`;
+        query = query.or(`descripciones.nombre.ilike.${term}`);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const map = new Map();
+      (data || []).forEach(item => {
+        const descName = item?.descripciones?.nombre || (Array.isArray(item?.descripciones) ? item?.descripciones[0]?.nombre : null) || 'Sin descripción';
+        const stock = parseInt(item?.stock) || 0;
+        if (!map.has(descName)) {
+          map.set(descName, { description: descName, types: 0, totalUnits: 0 });
+        }
+        const agg = map.get(descName);
+        agg.types += 1;
+        agg.totalUnits += stock;
+      });
+      const aggregates = Array.from(map.values())
+        .sort((a, b) => a.description.localeCompare(b.description));
+      return { data: aggregates, error: null };
+    } catch (error) {
+      return { data: [], error: error?.message };
+    }
+  },
+
+  // Aggregates by sub-brand: simple count per sub-brand
+  async getSubBrandCounts(filters = {}) {
+    try {
+      let query = supabase
+        .from('armazones')
+        .select(`
+          id,
+          stock,
+          sub_marca_id,
+          sub_marcas(nombre)
+        `);
+
+      const {
+        brandId,
+        groupId,
+        descriptionId,
+        subBrandId,
+        stockStatus,
+        searchTerm,
+      } = filters || {};
+
+      if (brandId) query = query.eq('marca_id', brandId);
+      if (groupId) query = query.eq('grupo_id', groupId);
+      if (descriptionId) query = query.eq('descripcion_id', descriptionId);
+      if (subBrandId) query = query.eq('sub_marca_id', subBrandId);
+      if (stockStatus === 'in-stock') query = query.gt('stock', 0);
+      if (stockStatus === 'out-of-stock') query = query.eq('stock', 0);
+      if (searchTerm && typeof searchTerm === 'string') {
+        const term = `%${searchTerm}%`;
+        query = query.or(`sub_marcas.nombre.ilike.${term}`);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const map = new Map();
+      (data || []).forEach(item => {
+        const subBrandName = item?.sub_marcas?.nombre || (Array.isArray(item?.sub_marcas) ? item?.sub_marcas[0]?.nombre : null) || 'Sin sub marca';
+        const stock = parseInt(item?.stock) || 0;
+        if (!map.has(subBrandName)) {
+          map.set(subBrandName, { subBrand: subBrandName, types: 0, totalUnits: 0 });
+        }
+        const agg = map.get(subBrandName);
+        agg.types += 1;
+        agg.totalUnits += stock;
+      });
+      const aggregates = Array.from(map.values())
+        .sort((a, b) => a.subBrand.localeCompare(b.subBrand));
+      return { data: aggregates, error: null };
+    } catch (error) {
+      return { data: [], error: error?.message };
+    }
+  },
+
   // Get full list of out-of-stock products respecting filters (for PDF names)
   async getOutOfStockProducts(filters = {}) {
     try {

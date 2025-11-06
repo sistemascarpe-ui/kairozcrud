@@ -454,6 +454,12 @@ const InventoryManagement = () => {
       const { data: outOfStockRaw } = await inventoryService.getOutOfStockProducts(serverFilters);
       // Obtener agregados por marca (tipos y total de armazones)
       const { data: brandCounts } = await inventoryService.getBrandCounts(serverFilters);
+      // Nuevos agregados simples: Grupo, Descripción, Sub Marca (nombre-cantidad)
+      const [groupCountsRes, descriptionCountsRes, subBrandCountsRes] = await Promise.all([
+        inventoryService.getGroupCounts(serverFilters),
+        inventoryService.getDescriptionCounts(serverFilters),
+        inventoryService.getSubBrandCounts(serverFilters)
+      ]);
 
       const outOfStockList = (outOfStockRaw || []).map(p => {
         const brand = p?.marcas?.nombre || (Array.isArray(p?.marcas) ? p?.marcas[0]?.nombre : null) || 'Sin marca';
@@ -477,6 +483,9 @@ const InventoryManagement = () => {
         totalValue: aggregates?.totalValue ?? 0,
         outOfStockList,
         brandAggregates: brandCounts || [],
+        groupAggregates: groupCountsRes?.data || [],
+        descriptionAggregates: descriptionCountsRes?.data || [],
+        subBrandAggregates: subBrandCountsRes?.data || [],
         userProfile,
         filters: {
           searchTerm,
