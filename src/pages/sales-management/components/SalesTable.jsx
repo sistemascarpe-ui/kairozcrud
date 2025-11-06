@@ -60,12 +60,13 @@ const formatDate = (dateString) => {
         {/* Indicador de scroll horizontal */}
         <div className="absolute top-0 right-0 w-4 h-full bg-gradient-to-l from-white to-transparent pointer-events-none z-10"></div>
         <div className="absolute top-0 left-0 w-4 h-full bg-gradient-to-r from-white to-transparent pointer-events-none z-10"></div>
-        <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: '1620px' }}>
+        <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: '1740px' }}>
           <thead className="bg-gray-50">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Acciones</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Folio</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Clientes</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">Empresa</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Armazón</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Tipo de Mica</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Desc. Armazón</th>
@@ -118,11 +119,28 @@ const formatDate = (dateString) => {
                     <div className="text-sm text-gray-900">---</div>
                   )}
                 </td>
-<td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-  {sale.productosArmazon && sale.productosArmazon.length > 0 ? (
-    <div className="space-y-1">
-      {sale.productosArmazon.map((producto, index) => (
-        <div key={index}>
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {sale.clientes && sale.clientes.length > 0 ? (
+                    <div className="space-y-1">
+                      {sale.clientes.map((cliente, index) => (
+                        <div key={cliente.id || index} className="text-xs text-gray-700">
+                          {cliente.empresa ? cliente.empresa : 'Cliente Individual'}
+                        </div>
+                      ))}
+                    </div>
+                  ) : sale.cliente ? (
+                    <div className="text-xs text-gray-700">
+                      {sale.cliente.empresa ? sale.cliente.empresa : 'Cliente Individual'}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-gray-400">-</div>
+                  )}
+                </td>
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {sale.productosArmazon && sale.productosArmazon.length > 0 ? (
+                    <div className="space-y-1">
+                      {sale.productosArmazon.map((producto, index) => (
+                        <div key={index}>
           <div className="font-medium text-xs">
             {producto.armazon ? 
               `${producto.armazon.marca || ''} - ${producto.armazon.sku || ''} - ${producto.armazon.color || ''}` :
