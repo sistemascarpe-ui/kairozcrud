@@ -260,7 +260,8 @@ const SalesModal = ({ isOpen, onClose, onSave, sale = null, loading = false }) =
     .filter(p => p.stock > 0)
     .map(p => ({ 
       value: p.id, 
-      label: `${p.marcas?.nombre || 'N/A'} - ${p.sku || 'Sin SKU'} - ${p.color || 'Sin color'} (Stock: ${p.stock})`
+      // Mostrar solo SKU - Color en el buscador de ventas
+      label: `${p.sku || 'Sin SKU'} - ${p.color || 'Sin color'}`
     }));
   const userOptions = users
     .filter(u => u.nombre?.toLowerCase() !== 'sistemas')

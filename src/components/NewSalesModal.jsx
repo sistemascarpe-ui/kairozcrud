@@ -106,7 +106,8 @@ const NewSalesModal = ({
             return {
               id: Date.now() + idx,
               tipo_producto: tipo,
-              armazon_id: p.armazon_id || '',
+              // Aceptar tanto id directo como objeto armazon
+              armazon_id: p.armazon_id || p.armazon?.id || '',
               descripcion_mica: p.descripcion_mica || '',
               cantidad,
               precio_unitario: precioUnitario,
@@ -211,7 +212,8 @@ const NewSalesModal = ({
     try {
       const { data } = await inventoryService.getProducts();
       if (data) {
-        setInventory(data.filter(p => p.stock > 0));
+        // En creación ocultamos stock 0; en edición mostramos todo
+        setInventory(sale ? data : data.filter(p => (p.stock || 0) > 0));
       }
     } catch (error) {
       toast.error('Error al cargar inventario');
@@ -526,7 +528,8 @@ const NewSalesModal = ({
   // Opciones para los selects
   const productOptions = inventory.map(p => ({ 
     value: p.id, 
-    label: `${p.marcas?.nombre || 'Sin marca'} - ${p.descripciones?.nombre || p.sku || 'Sin modelo'} - ${p.color || 'Sin color'} (Stock: ${p.stock})`,
+    // Mostrar solo SKU - Color
+    label: `${p.sku || 'Sin SKU'} - ${p.color || 'Sin color'}`,
     // Campos extra para mejorar búsqueda
     description: p.marcas?.nombre || '',
     keywords: [p.marcas?.nombre, p.sku, p.descripciones?.nombre, p.color].filter(Boolean),
