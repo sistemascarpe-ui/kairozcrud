@@ -38,6 +38,40 @@ export const useImprovedPDFReport = () => {
           return null;
         }
       };
+
+      // Precargar logo una vez
+      const logoDataUrl = await loadImageAsDataUrl('/logo.png');
+
+      // Función para dibujar encabezado de página con logo y fecha
+      const renderHeader = () => {
+        let headerTextX = 20;
+        try {
+          if (logoDataUrl) {
+            const logoX = 20;
+            const logoY = yPosition - 12;
+            const logoSize = 12;
+            doc.addImage(logoDataUrl, 'PNG', logoX, logoY, logoSize, logoSize);
+            headerTextX = logoX + logoSize + 3;
+          }
+        } catch (e) {
+          // Continuar sin interrumpir
+        }
+
+        // Títulos
+        addText('ÓPTICAS KAIROZ', headerTextX, yPosition, { fontSize: 20, bold: true, color: primaryColor });
+        addText('REPORTE DE INVENTARIO', headerTextX, yPosition + 8, { fontSize: 14, color: secondaryColor });
+
+        // Fecha y hora
+        const currentDate = new Date().toLocaleDateString('es-MX');
+        const currentTime = new Date().toLocaleTimeString('es-MX');
+        addText(`Fecha: ${currentDate}`, pageWidth - 60, yPosition, { fontSize: 10, color: secondaryColor });
+        addText(`Hora: ${currentTime}`, pageWidth - 60, yPosition + 5, { fontSize: 10, color: secondaryColor });
+
+        // Avanzar y dibujar línea separadora
+        yPosition += 20;
+        addLine(20, yPosition, pageWidth - 20, yPosition, primaryColor, 1);
+        yPosition += 15;
+      };
       
       // Función para agregar texto
       const addText = (text, x, y, options = {}) => {
@@ -69,36 +103,8 @@ export const useImprovedPDFReport = () => {
         doc.line(x1, y1, x2, y2);
       };
       
-      // Header con logo
-      let headerTextX = 20;
-      try {
-        const logoDataUrl = await loadImageAsDataUrl('/logo.png');
-        if (logoDataUrl) {
-          // Dibuja logo a la izquierda del título
-          const logoX = 20;
-          const logoY = yPosition - 12; // ligeramente arriba
-          const logoSize = 12; // mm
-          doc.addImage(logoDataUrl, 'PNG', logoX, logoY, logoSize, logoSize);
-          headerTextX = logoX + logoSize + 3; // espacio a la derecha del logo
-        }
-      } catch (e) {
-        // Si falla la carga del logo, continuamos sin interrumpir
-      }
-
-      addText('ÓPTICAS KAIROZ', headerTextX, yPosition, { fontSize: 20, bold: true, color: primaryColor });
-      addText('REPORTE DE INVENTARIO', headerTextX, yPosition + 8, { fontSize: 14, color: secondaryColor });
-      
-      // Fecha en la esquina derecha
-      const currentDate = new Date().toLocaleDateString('es-MX');
-      const currentTime = new Date().toLocaleTimeString('es-MX');
-      addText(`Fecha: ${currentDate}`, pageWidth - 60, yPosition, { fontSize: 10, color: secondaryColor });
-      addText(`Hora: ${currentTime}`, pageWidth - 60, yPosition + 5, { fontSize: 10, color: secondaryColor });
-      
-      yPosition += 20;
-      
-      // Línea separadora
-      addLine(20, yPosition, pageWidth - 20, yPosition, primaryColor, 1);
-      yPosition += 15;
+      // Renderizar encabezado en la primera página
+      renderHeader();
       
       // Restaurar Resumen Ejecutivo (sin alertas ni distribución)
       addText('RESUMEN EJECUTIVO', 20, yPosition, { fontSize: 16, bold: true, color: primaryColor });
@@ -187,7 +193,11 @@ export const useImprovedPDFReport = () => {
         });
       }
       
-      // Conteo por marca (debajo de Productos Agotados)
+      // Nueva página para Conteo por Marca
+      doc.addPage();
+      yPosition = 20;
+      renderHeader();
+      // Conteo por marca
       const brandAggregates = Array.isArray(inventoryData.brandAggregates) ? inventoryData.brandAggregates : [];
       if (brandAggregates.length > 0) {
         // Título de sección
@@ -216,6 +226,7 @@ export const useImprovedPDFReport = () => {
           if (yPosition > pageHeight - 30) {
             doc.addPage();
             yPosition = 20;
+            renderHeader();
           }
           const brandName = fitText(String(row?.brand || 'Sin marca'), brandWidth, 12);
           const typesStr = String(row?.types ?? 0);
@@ -227,6 +238,10 @@ export const useImprovedPDFReport = () => {
         });
       }
 
+      // Nueva página para Conteo por Grupo
+      doc.addPage();
+      yPosition = 20;
+      renderHeader();
       // Tablas de agregados simples: Grupo, Descripción, Sub Marca
       const groupAggregates = Array.isArray(inventoryData.groupAggregates) ? inventoryData.groupAggregates : [];
       const descriptionAggregates = Array.isArray(inventoryData.descriptionAggregates) ? inventoryData.descriptionAggregates : [];
@@ -254,6 +269,7 @@ export const useImprovedPDFReport = () => {
           if (yPosition > pageHeight - 30) {
             doc.addPage();
             yPosition = 20;
+            renderHeader();
           }
           const groupName = fitText(String(row?.group || 'Sin grupo'), groupWidth, 12);
           const typesStr = String(row?.types ?? 0);
@@ -265,6 +281,10 @@ export const useImprovedPDFReport = () => {
         });
       }
 
+      // Nueva página para Conteo por Descripción
+      doc.addPage();
+      yPosition = 20;
+      renderHeader();
       // Render: Descripción con Tipos y Total
       if (descriptionAggregates.length > 0) {
         addText('CONTEO POR DESCRIPCIÓN', 20, yPosition + 6, { fontSize: 16, bold: true, color: primaryColor });
@@ -287,6 +307,7 @@ export const useImprovedPDFReport = () => {
           if (yPosition > pageHeight - 30) {
             doc.addPage();
             yPosition = 20;
+            renderHeader();
           }
           const descName = fitText(String(row?.description || 'Sin descripción'), descWidth, 12);
           const typesStr = String(row?.types ?? 0);
@@ -298,6 +319,10 @@ export const useImprovedPDFReport = () => {
         });
       }
 
+      // Nueva página para Conteo por Sub Marca
+      doc.addPage();
+      yPosition = 20;
+      renderHeader();
       // Render: Sub Marca con Tipos y Total
       if (subBrandAggregates.length > 0) {
         addText('CONTEO POR SUB MARCA', 20, yPosition + 6, { fontSize: 16, bold: true, color: primaryColor });
@@ -320,6 +345,7 @@ export const useImprovedPDFReport = () => {
           if (yPosition > pageHeight - 30) {
             doc.addPage();
             yPosition = 20;
+            renderHeader();
           }
           const subBrandName = fitText(String(row?.subBrand || 'Sin sub marca'), subBrandWidth, 12);
           const typesStr = String(row?.types ?? 0);
