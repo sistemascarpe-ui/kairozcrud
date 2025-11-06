@@ -205,8 +205,3 @@ CREATE TABLE public.ventas (
   CONSTRAINT ventas_pkey PRIMARY KEY (id),
   CONSTRAINT ventas_creado_por_id_fkey FOREIGN KEY (creado_por_id) REFERENCES public.usuarios(id)
 );
-
--- Índices recomendados para mejorar el rendimiento en filtros por fechas
--- Ejecutar en la base de datos (p.ej., en Supabase SQL) si no existen
-CREATE INDEX IF NOT EXISTS idx_ventas_created_at ON public.ventas (created_at);
-CREATE INDEX IF NOT EXISTS idx_ventas_fecha_venta ON public.ventas (fecha_venta);
