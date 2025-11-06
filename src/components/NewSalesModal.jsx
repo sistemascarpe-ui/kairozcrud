@@ -94,37 +94,64 @@ const NewSalesModal = ({
           observaciones_abono: ''
         });
         
-        // Cargar productos de la venta (esto se implementará cuando tengamos la nueva estructura)
-        // Por ahora, mantener la estructura actual
-        const productosVenta = [];
-        if (sale.armazon_id) {
-          productosVenta.push({
-            id: Date.now(),
-            tipo_producto: 'armazon',
-            armazon_id: sale.armazon_id,
-            descripcion_mica: '',
-            cantidad: 1,
-            precio_unitario: sale.precio_armazon || 0,
-            descuento_monto: sale.descuento_armazon_monto || 0,
-            subtotal: (sale.precio_armazon || 0) - (sale.descuento_armazon_monto || 0)
+        // Cargar productos de la venta:
+        // Preferir la nueva estructura `sale.productos`; si no existe, usar los campos legacy.
+        let productosVenta = [];
+        if (Array.isArray(sale.productos) && sale.productos.length > 0) {
+          productosVenta = sale.productos.map((p, idx) => {
+            const cantidad = parseFloat(p.cantidad) || 1;
+            const precioUnitario = parseFloat(p.precio_unitario) || 0;
+            const descuentoMonto = parseFloat(p.descuento_monto) || 0;
+            const tipo = p.tipo_producto || (p.armazon_id ? 'armazon' : 'mica');
+            return {
+              id: Date.now() + idx,
+              tipo_producto: tipo,
+              armazon_id: p.armazon_id || '',
+              descripcion_mica: p.descripcion_mica || '',
+              cantidad,
+              precio_unitario: precioUnitario,
+              // Mapear descuentos específicos según tipo
+              descuento_armazon_porcentaje: 0,
+              descuento_armazon_monto: tipo === 'armazon' ? descuentoMonto : 0,
+              descuento_micas_porcentaje: 0,
+              descuento_micas_monto: tipo === 'mica' ? descuentoMonto : 0,
+              subtotal: parseFloat(p.subtotal) || (cantidad * precioUnitario - descuentoMonto)
+            };
           });
+        } else {
+          // Fallback a los campos legacy si no hay array de productos
+          if (sale.armazon_id) {
+            productosVenta.push({
+              id: Date.now(),
+              tipo_producto: 'armazon',
+              armazon_id: sale.armazon_id,
+              descripcion_mica: '',
+              cantidad: 1,
+              precio_unitario: sale.precio_armazon || 0,
+              descuento_armazon_porcentaje: 0,
+              descuento_armazon_monto: sale.descuento_armazon_monto || 0,
+              descuento_micas_porcentaje: 0,
+              descuento_micas_monto: 0,
+              subtotal: (parseFloat(sale.precio_armazon) || 0) - (parseFloat(sale.descuento_armazon_monto) || 0)
+            });
+          }
+          if (sale.descripcion_micas) {
+            productosVenta.push({
+              id: Date.now() + 1,
+              tipo_producto: 'mica',
+              armazon_id: '',
+              descripcion_mica: sale.descripcion_micas,
+              cantidad: 1,
+              precio_unitario: sale.precio_micas || 0,
+              descuento_armazon_porcentaje: 0,
+              descuento_armazon_monto: 0,
+              descuento_micas_porcentaje: 0,
+              descuento_micas_monto: sale.descuento_micas_monto || 0,
+              subtotal: (parseFloat(sale.precio_micas) || 0) - (parseFloat(sale.descuento_micas_monto) || 0)
+            });
+          }
         }
-        if (sale.descripcion_micas) {
-          productosVenta.push({
-            id: Date.now() + 1,
-            tipo_producto: 'mica',
-            armazon_id: '',
-            descripcion_mica: sale.descripcion_micas,
-            cantidad: 1,
-            precio_unitario: sale.precio_micas || 0,
-            descuento_monto: sale.descuento_micas_monto || 0,
-            subtotal: (sale.precio_micas || 0) - (sale.descuento_micas_monto || 0)
-          });
-        }
-        
-        if (productosVenta.length > 0) {
-          setProductos(productosVenta);
-        }
+        if (productosVenta.length > 0) { setProductos(productosVenta); }
       } else {
         // Modo creación
         resetForm();
