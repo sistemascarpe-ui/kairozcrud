@@ -12,7 +12,7 @@ import { inventoryService } from '../../services/inventoryService';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRealtimeSync } from '../../hooks/useRealtimeSync';
 import { useImprovedPDFReport } from '../../hooks/useImprovedPDFReport.js';
-import { useOptimizedProducts, useProductsCount } from '../../hooks/useOptimizedInventory';
+import { useOptimizedProducts, useProductsCount, useTotalUnits } from '../../hooks/useOptimizedInventory';
 
 const InventoryManagement = () => {
   const { user, userProfile } = useAuth();
@@ -66,6 +66,7 @@ const InventoryManagement = () => {
 
   const { data: productsSummary, isLoading: productsLoading, error: productsError, refetch: refetchSummary } = useOptimizedProducts(currentPage, itemsPerPage, serverFilters, serverSort);
   const { data: productsCountData, refetch: refetchCount } = useProductsCount(serverFilters);
+  const { data: totalUnitsData, refetch: refetchTotalUnits } = useTotalUnits(serverFilters);
 
   // Load initial data
   useEffect(() => {
@@ -111,6 +112,7 @@ const InventoryManagement = () => {
     (newProduct) => {
       refetchSummary();
       refetchCount();
+      refetchTotalUnits();
       const sku = newProduct?.sku ? ` (${newProduct.sku})` : '';
       toast.success(`Producto actualizado${sku}`);
     },
@@ -118,6 +120,7 @@ const InventoryManagement = () => {
     (newProduct) => {
       refetchSummary();
       refetchCount();
+      refetchTotalUnits();
       const sku = newProduct?.sku ? ` (${newProduct.sku})` : '';
       toast.success(`Producto creado${sku}`);
     },
@@ -125,6 +128,7 @@ const InventoryManagement = () => {
     (deletedProduct) => {
       refetchSummary();
       refetchCount();
+      refetchTotalUnits();
       const sku = deletedProduct?.sku ? ` (${deletedProduct.sku})` : '';
       toast(`Producto eliminado${sku}`);
     }
@@ -281,9 +285,7 @@ const InventoryManagement = () => {
   const totalPages = Math.ceil((totalProducts || 0) / itemsPerPage);
   
   // Calculate total units (sum of all stock)
-  const totalUnits = useMemo(() => {
-    return filteredAndSortedProducts?.reduce((sum, product) => sum + (product?.stock || 0), 0) || 0;
-  }, [filteredAndSortedProducts]);
+  const totalUnits = totalUnitsData?.totalUnits ?? 0;
 
   // Handlers
   const handleSort = (key) => {

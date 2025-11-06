@@ -27,3 +27,15 @@ export const useProductsCount = (filters = {}) => {
     retryDelay: 2000, // 2 second delay between retries
   });
 };
+
+// Hook para obtener la suma total de unidades (stock) con filtros
+export const useTotalUnits = (filters = {}) => {
+  return useQuery({
+    queryKey: ['products-total-units', filters],
+    queryFn: () => inventoryService.getTotalUnits(filters),
+    staleTime: 15 * 60 * 1000, // 15 minutos
+    gcTime: 30 * 60 * 1000, // 30 minutos
+    retry: 1,
+    retryDelay: 2000,
+  });
+};
