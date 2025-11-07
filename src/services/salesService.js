@@ -89,6 +89,8 @@ export const salesService = {
           folio,
           total,
           subtotal,
+          descuento_armazon_monto,
+          descuento_micas_monto,
           descuento_monto,
           estado,
           fecha_venta,
@@ -159,11 +161,18 @@ export const salesService = {
         const productos = item.venta_productos?.map(vp => {
           const cantidad = parseFloat(vp.cantidad) || 0;
           const precioUnitario = parseFloat(vp.precio_unitario) || 0;
-          const subtotal = parseFloat(vp.subtotal) || 0;
-          const descuentoCalculado = Math.max(0, (cantidad * precioUnitario) - subtotal);
-          const descuentoReal = (vp.descuento_monto !== null && vp.descuento_monto !== undefined)
-            ? parseFloat(vp.descuento_monto) || 0
-            : descuentoCalculado;
+          const tieneSubtotal = !(vp.subtotal === null || vp.subtotal === undefined || `${vp.subtotal}` === '' || Number.isNaN(parseFloat(vp.subtotal)));
+          const subtotal = tieneSubtotal ? (parseFloat(vp.subtotal) || 0) : 0;
+          const descuentoCalculado = tieneSubtotal ? Math.max(0, (cantidad * precioUnitario) - subtotal) : 0;
+          const rawDescuento = vp.descuento_monto;
+          const tieneValorDescuento = !(
+            rawDescuento === null ||
+            rawDescuento === undefined ||
+            rawDescuento === '' ||
+            Number.isNaN(parseFloat(rawDescuento))
+          );
+          const descuentoExpl = tieneValorDescuento ? parseFloat(rawDescuento) || 0 : 0;
+          const descuentoReal = descuentoCalculado > 0 ? descuentoCalculado : descuentoExpl;
           return {
             id: vp.id,
             tipo: vp.tipo_producto,
@@ -195,13 +204,21 @@ export const salesService = {
         const productosMica = productos.filter(p => p.tipo === 'mica');
 
         // Calcular descuentos reales de los productos
-        const descuentoArmazonTotal = productosArmazon.reduce((total, producto) => {
+        let descuentoArmazonTotal = productosArmazon.reduce((total, producto) => {
           return total + (parseFloat(producto.descuento_monto || 0));
         }, 0);
 
-        const descuentoMicasTotal = productosMica.reduce((total, producto) => {
+        let descuentoMicasTotal = productosMica.reduce((total, producto) => {
           return total + (parseFloat(producto.descuento_monto || 0));
         }, 0);
+
+        // Fallback a campos de la venta si los descuentos por producto vienen en 0
+        if (!descuentoArmazonTotal && item.descuento_armazon_monto) {
+          descuentoArmazonTotal = parseFloat(item.descuento_armazon_monto) || 0;
+        }
+        if (!descuentoMicasTotal && item.descuento_micas_monto) {
+          descuentoMicasTotal = parseFloat(item.descuento_micas_monto) || 0;
+        }
 
         return {
           id: item.id,

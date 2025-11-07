@@ -156,15 +156,30 @@ const formatDate = (dateString) => {
       <div className="font-medium">
         {`${sale.armazon?.marcas?.nombre || ''} - ${sale.armazon?.sku || ''} - ${sale.armazon?.color || ''}`}
       </div>
-      <div className="text-gray-500">{formatCurrency(sale.armazon?.precio)}</div>
+      <div className="text-gray-500">{formatCurrency(sale.precio_armazon || sale.armazon?.precio)}</div>
     </div>
   ) : (
     <div className="text-gray-500">-</div>
   )}
 </td>
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                  <div className="font-medium">{sale.tipo_mica?.nombre || '---'}</div>
-                  <div className="text-gray-500">{formatCurrency(sale.tipo_mica?.precio)}</div>
+                  {sale.productosMica && sale.productosMica.length > 0 ? (
+                    <div className="space-y-1">
+                      {sale.productosMica.map((producto, index) => (
+                        <div key={index}>
+                          <div className="font-medium text-xs">
+                            {`Mica - ${producto.descripcion_mica || 'Sin descripción'}`}
+                          </div>
+                          <div className="text-gray-500 text-xs">{formatCurrency(producto.precio_unitario)} x {producto.cantidad}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="font-medium">{sale.tipo_mica?.nombre || '---'}</div>
+                      <div className="text-gray-500">{formatCurrency(sale.tipo_mica?.precio)}</div>
+                    </div>
+                  )}
                 </td>
                 
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
