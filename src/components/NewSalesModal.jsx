@@ -79,6 +79,32 @@ const NewSalesModal = ({
       
       if (sale) {
         // Modo edición - cargar datos de la venta existente
+        // Determinar si la venta usa productos o monto manual
+        const usaProductos = Array.isArray(sale.productos) && sale.productos.length > 0;
+        const baseMonto = !usaProductos ? (parseFloat(sale.subtotal) || parseFloat(sale.total) || 0) : '';
+
+        // Calcular descuento general de forma robusta:
+        // 1) Usar el valor guardado en la venta si existe
+        // 2) Si es 0/ausente, calcularlo como (subtotal - total) menos la suma de descuentos por producto
+        const sumaDescuentosProductos = (Array.isArray(sale.productos) ? sale.productos.reduce((sum, p) => {
+          return sum + (parseFloat(p.descuento_monto) || 0);
+        }, 0) : 0);
+
+        const descuentoCalculado = Math.max(0, (parseFloat(sale.subtotal) || 0) - (parseFloat(sale.total) || 0));
+        const descuentoGeneralMonto = (() => {
+          const dg = parseFloat(sale.descuento_monto) || 0;
+          if (dg > 0) return dg;
+          const restante = Math.max(0, descuentoCalculado - sumaDescuentosProductos);
+          return restante;
+        })();
+
+        const descuentoGeneralPorcentaje = (baseMonto && descuentoGeneralMonto > 0)
+          ? Math.round(((descuentoGeneralMonto / baseMonto) * 100) * 100) / 100
+          : 0;
+
+        // Tomar el primer abono como "abono inicial" si existe
+        const primerAbono = Array.isArray(sale.abonos) && sale.abonos.length > 0 ? sale.abonos[0] : null;
+
         setFormData({
           cliente_ids: sale.clientes ? sale.clientes.map(c => c.id) : [],
           vendedor_ids: sale.vendedores ? sale.vendedores.map(v => v.id) : [],
@@ -88,10 +114,15 @@ const NewSalesModal = ({
           rfc: sale.rfc || '',
           razon_social: sale.razon_social || '',
           folio_manual: '',
-          registrar_abono: false,
-          monto_abono: '',
-          forma_pago_abono: 'efectivo',
-          observaciones_abono: ''
+          // Registro de abono inicial
+          registrar_abono: !!primerAbono,
+          monto_abono: primerAbono ? (primerAbono.monto ?? '') : '',
+          forma_pago_abono: primerAbono?.forma_pago || 'efectivo',
+          observaciones_abono: primerAbono?.observaciones || '',
+          // Configuración de precios (monto manual y descuentos generales)
+          monto_total_compra: baseMonto || '',
+          descuento_general_porcentaje: descuentoGeneralPorcentaje || 0,
+          descuento_general_monto: descuentoGeneralMonto || 0
         });
         
         // Cargar productos de la venta:
@@ -516,6 +547,9 @@ const NewSalesModal = ({
 
     const salesData = {
       ...formData,
+      // Mapear a los nombres esperados por el servicio/BD
+      descuento_monto: parseFloat(formData.descuento_general_monto || 0),
+      monto_compra: formData.monto_total_compra ? parseFloat(formData.monto_total_compra) : undefined,
       productos: productosValidos,
       subtotal: totals.subtotal,
       total: totals.total,

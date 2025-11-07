@@ -118,7 +118,7 @@ export const salesService = {
             subtotal,
             armazones (id, sku, color, precio, marcas(nombre), descripciones(nombre))
           ),
-          abonos (id, monto, fecha_abono)
+          abonos (id, monto, fecha_abono, forma_pago, observaciones)
         `;
 
       let query = supabase
@@ -306,7 +306,7 @@ export const salesService = {
             subtotal,
             armazones (id, sku, color, precio, marcas(nombre), descripciones(nombre))
           ),
-          abonos (id, monto, fecha_abono)
+          abonos (id, monto, fecha_abono, forma_pago, observaciones)
         `;
 
       const { data, error } = await supabase
