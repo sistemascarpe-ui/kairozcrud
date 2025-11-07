@@ -89,8 +89,6 @@ export const salesService = {
           folio,
           total,
           subtotal,
-          descuento_armazon_monto,
-          descuento_micas_monto,
           descuento_monto,
           estado,
           fecha_venta,
