@@ -157,15 +157,22 @@ export const salesService = {
 
         // Extraer productos
         const productos = item.venta_productos?.map(vp => {
+          const cantidad = parseFloat(vp.cantidad) || 0;
+          const precioUnitario = parseFloat(vp.precio_unitario) || 0;
+          const subtotal = parseFloat(vp.subtotal) || 0;
+          const descuentoCalculado = Math.max(0, (cantidad * precioUnitario) - subtotal);
+          const descuentoReal = (vp.descuento_monto !== null && vp.descuento_monto !== undefined)
+            ? parseFloat(vp.descuento_monto) || 0
+            : descuentoCalculado;
           return {
             id: vp.id,
             tipo: vp.tipo_producto,
             armazon_id: vp.armazon_id,
             descripcion_mica: vp.descripcion_mica,
-            cantidad: vp.cantidad,
-            precio_unitario: vp.precio_unitario,
-            descuento_monto: vp.descuento_monto || 0,
-            subtotal: vp.subtotal,
+            cantidad: cantidad,
+            precio_unitario: precioUnitario,
+            descuento_monto: descuentoReal,
+            subtotal: subtotal,
             armazon: vp.armazones ? {
               id: vp.armazones.id,
               sku: vp.armazones.sku,

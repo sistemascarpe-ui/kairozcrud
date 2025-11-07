@@ -137,12 +137,13 @@ const NewSalesModal = ({
             return {
               id: Date.now() + idx,
               tipo_producto: tipo,
-              // Aceptar tanto id directo como objeto armazon
+              // Aceptar tanto id directo como objeto armazón
               armazon_id: p.armazon_id || p.armazon?.id || '',
               descripcion_mica: p.descripcion_mica || '',
               cantidad,
               precio_unitario: precioUnitario,
-              // Mapear descuentos específicos según tipo
+              // Evitar doble conteo: usar el descuento específico y poner descuento_monto en 0
+              descuento_monto: 0,
               descuento_armazon_porcentaje: 0,
               descuento_armazon_monto: tipo === 'armazon' ? descuentoMonto : 0,
               descuento_micas_porcentaje: 0,
@@ -160,6 +161,8 @@ const NewSalesModal = ({
               descripcion_mica: '',
               cantidad: 1,
               precio_unitario: sale.precio_armazon || 0,
+              // Evitar doble conteo en legacy: usar descuento específico y dejar descuento_monto en 0
+              descuento_monto: 0,
               descuento_armazon_porcentaje: 0,
               descuento_armazon_monto: sale.descuento_armazon_monto || 0,
               descuento_micas_porcentaje: 0,
@@ -175,6 +178,8 @@ const NewSalesModal = ({
               descripcion_mica: sale.descripcion_micas,
               cantidad: 1,
               precio_unitario: sale.precio_micas || 0,
+              // Evitar doble conteo en legacy: usar descuento específico y dejar descuento_monto en 0
+              descuento_monto: 0,
               descuento_armazon_porcentaje: 0,
               descuento_armazon_monto: 0,
               descuento_micas_porcentaje: 0,
@@ -545,12 +550,28 @@ const NewSalesModal = ({
       }
     });
 
+    // Adaptar productos al payload esperado por el servicio
+    const productosPayload = productosValidos.map(p => {
+      const descuento_monto = p.tipo_producto === 'armazon'
+        ? parseFloat(p.descuento_armazon_monto || 0)
+        : parseFloat(p.descuento_micas_monto || 0);
+      return {
+        tipo_producto: p.tipo_producto,
+        armazon_id: p.tipo_producto === 'armazon' ? p.armazon_id : null,
+        descripcion_mica: p.tipo_producto === 'mica' ? p.descripcion_mica : null,
+        cantidad: p.cantidad,
+        precio_unitario: p.precio_unitario,
+        descuento_monto,
+        subtotal: p.subtotal,
+      };
+    });
+
     const salesData = {
       ...formData,
       // Mapear a los nombres esperados por el servicio/BD
       descuento_monto: parseFloat(formData.descuento_general_monto || 0),
       monto_compra: formData.monto_total_compra ? parseFloat(formData.monto_total_compra) : undefined,
-      productos: productosValidos,
+      productos: productosPayload,
       subtotal: totals.subtotal,
       total: totals.total,
       monto_iva: totals.iva
