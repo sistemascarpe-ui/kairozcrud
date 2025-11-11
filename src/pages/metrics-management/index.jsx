@@ -153,16 +153,20 @@ const MetricsManagement = () => {
 
   const loadComparisonForMonth = async (ym) => {
     try {
+      // Obtener y computar métricas del mes actual directamente (evita leer estado aún no actualizado)
+      const { start: cStart, end: cEnd } = getMonthRange(ym);
+      const { data: currData } = await salesService.getSalesMetrics(cStart, cEnd);
+      const currComputed = await computeSalesMetricsForPeriod(currData || [], cStart, cEnd);
+      const currSalesTotal = currComputed.total || 0;
+      const currRevenueTotal = currComputed.revenue || 0;
+
+      // Obtener y computar métricas del mes previo
       const prevYM = getPrevMonthValue(ym);
       const { start: pStart, end: pEnd } = getMonthRange(prevYM);
       const { data: prevData } = await salesService.getSalesMetrics(pStart, pEnd);
       const prevComputed = await computeSalesMetricsForPeriod(prevData || [], pStart, pEnd);
       const prevSalesTotal = prevComputed.total || 0;
       const prevRevenueTotal = prevComputed.revenue || 0;
-
-      // Totales actuales ya calculados con el mismo criterio (pagos del período)
-      const currSalesTotal = metricsData.sales.total || 0;
-      const currRevenueTotal = metricsData.sales.revenue || 0;
 
       const salesChangePct = prevSalesTotal > 0 ? ((currSalesTotal - prevSalesTotal) / prevSalesTotal) * 100 : (currSalesTotal > 0 ? 100 : 0);
       const revenueChangePct = prevRevenueTotal > 0 ? ((currRevenueTotal - prevRevenueTotal) / prevRevenueTotal) * 100 : (currRevenueTotal > 0 ? 100 : 0);
