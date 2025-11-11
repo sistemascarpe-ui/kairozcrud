@@ -17,6 +17,7 @@ import { useMetrics } from '../../contexts/MetricsContext';
 import { useOptimizedSales, useSalesCount } from '../../hooks/useOptimizedSales';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
+import { includesNormalized, anyWordStartsWith } from '../../utils/textNormalize';
 
 // Input personalizado para darle el estilo correcto al calendario
 const CustomDateInput = forwardRef(({ value, onClick, placeholder }, ref) => (
@@ -131,20 +132,19 @@ const SalesManagement = () => {
   const filterSales = () => {
     let filtered = [...sales];
     if (searchTerm) {
-      const term = searchTerm.toLowerCase();
+      const term = searchTerm;
       filtered = filtered.filter(s => {
         // Search in customer name (both full name and individual words)
-        const customerNameMatch = s.cliente?.nombre?.toLowerCase().includes(term) ||
-          s.cliente?.nombre?.toLowerCase()?.split(' ' )?.some(word => 
-            word?.startsWith(term)
-          );
+        const customerName = s.cliente?.nombre || '';
+        const customerNameMatch = includesNormalized(customerName, term) ||
+          anyWordStartsWith(customerName, term);
         
         // Search in vendor names (support multiple vendors)
         const vendorNames = (s.vendedores || [])
-          .map(v => `${v?.nombre || ''} ${v?.apellido || ''}`.toLowerCase().trim())
+          .map(v => `${v?.nombre || ''} ${v?.apellido || ''}`.trim())
           .filter(Boolean);
         const vendorNameMatch = vendorNames.some(name => 
-          name.includes(term) || name.split(' ').some(word => word.startsWith(term))
+          includesNormalized(name, term) || anyWordStartsWith(name, term)
         );
         
         return customerNameMatch || vendorNameMatch;
