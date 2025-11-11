@@ -17,6 +17,7 @@ import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
+import { normalizeText, includesNormalized, anyWordStartsWith } from '../../utils/textNormalize';
 
 // Input personalizado para darle el estilo correcto al calendario
 const CustomDateInput = forwardRef(({ value, onClick, placeholder }, ref) => (
@@ -114,23 +115,21 @@ const CustomerManagement = () => {
   // Filter and sort customers
   const filteredAndSortedCustomers = useMemo(() => {
     let filtered = transformedCustomers?.filter(customer => {
-      const matchesName = !searchName || 
-        customer?.nombre?.toLowerCase()?.includes(searchName?.toLowerCase()) ||
-        customer?.nombre?.toLowerCase()?.split(' ')?.some(word => 
-          word?.startsWith(searchName?.toLowerCase())
-        );
-      
+      const matchesName = !searchName ||
+        includesNormalized(customer?.nombre, searchName) ||
+        anyWordStartsWith(customer?.nombre, searchName);
+
       const matchesPhone = !searchPhone || 
         customer?.telefono?.toLowerCase()?.includes(searchPhone?.toLowerCase());
-      
+
       const matchesDate = !selectedDate || 
         (customer?.created_at && new Date(customer?.created_at).toDateString() === selectedDate.toDateString());
-      
+
       const matchesUser = selectedUsers?.length === 0 || 
         selectedUsers?.some(userId => {
           const user = users?.find(u => u?.id === userId);
           const userName = user ? `${user?.nombre} ${user?.apellido || ''}`.trim() : '';
-          return customer?.atendido_por?.toLowerCase()?.includes(userName?.toLowerCase());
+          return includesNormalized(customer?.atendido_por, userName);
         });
 
       const matchesEmpresa = !selectedEmpresa || 
