@@ -202,7 +202,10 @@ const CustomerModal = ({
                     value={formData?.creado_por_id}
                     onChange={(value) => handleInputChange('creado_por_id', value)}
                     options={users
-                      ?.filter(user => user?.nombre?.toLowerCase() !== 'sistemas')
+                      ?.filter(user => {
+                        const n = (user?.nombre || '').toLowerCase();
+                        return n !== 'sistemas' && n !== 'sin vendedor';
+                      })
                       ?.map(user => ({
                         value: user?.id,
                         label: user?.nombre || user?.name || `Usuario ${user?.id}`

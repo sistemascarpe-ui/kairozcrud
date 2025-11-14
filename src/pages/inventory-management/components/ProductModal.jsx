@@ -44,10 +44,12 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode = 'create', brand
     label: subBrand?.nombre
   })) || [], [subBrands]);
 
-  const userOptions = useMemo(() => users?.map(user => ({
-    value: String(user?.id),
-    label: `${user?.nombre} ${user?.apellido || ''}`.trim()
-  })) || [], [users]);
+  const userOptions = useMemo(() => users
+    ?.filter(user => (user?.nombre || '').toLowerCase() !== 'sin vendedor')
+    ?.map(user => ({
+      value: String(user?.id),
+      label: `${user?.nombre} ${user?.apellido || ''}`.trim()
+    })) || [], [users]);
 
   useEffect(() => {
     if (isOpen) {
