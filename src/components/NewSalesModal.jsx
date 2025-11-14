@@ -646,6 +646,7 @@ const NewSalesModal = ({
                     options={customers}
                     value={formData.cliente_ids}
                     onChange={(value) => handleInputChange('cliente_ids', value)}
+                    searchable
                     placeholder="Seleccionar clientes..."
                     className="w-full"
                   />

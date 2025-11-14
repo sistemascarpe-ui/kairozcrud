@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { logger } from '../utils/logger';
 import { authSyncService } from './authSyncService';
+import { cashboxService } from './cashboxService';
 
 export const salesService = {
   // OPTIMIZED: Get sales summary (lightweight version for tables)
@@ -583,7 +584,23 @@ export const salesService = {
 
         if (abonoError) {
           console.warn('Error al registrar abono inicial:', abonoError.message);
-          // No eliminamos la venta por un error en el abono, solo advertimos
+        } else {
+          try {
+            const { data: openSession } = await cashboxService.getOpenSession();
+            if (openSession) {
+              await cashboxService.createMovement({
+                sesionId: openSession.id,
+                tipo: 'ingreso',
+                monto: parseFloat(monto_abono),
+                concepto: `Abono inicial venta ${data.folio || data.id}`,
+                categoria: 'abono',
+                metodo_pago: forma_pago_abono || 'efectivo',
+                referencia: 'abono_inicial',
+                ventaId: data.id,
+                usuarioId: creado_por_id || null
+              });
+            }
+          } catch (_) {}
         }
       }
 

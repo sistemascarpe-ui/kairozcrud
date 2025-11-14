@@ -24,6 +24,11 @@ const Header = () => {
       icon: 'FileText'
     },
     {
+      label: 'Caja',
+      path: '/cashbox-management',
+      icon: 'Banknote'
+    },
+    {
       label: 'Campañas',
       path: '/campaign-management',
       icon: 'Calendar'

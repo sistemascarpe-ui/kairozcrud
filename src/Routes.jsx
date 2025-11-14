@@ -9,6 +9,7 @@ import LoginPage from './pages/login';
 import CustomerManagement from './pages/customer-management';
 import SalesManagement from './pages/sales-management';
 import MetricsManagement from './pages/metrics-management';
+import CashboxManagement from './pages/cashbox-management';
 import BrandManagement from './pages/brand-management';
 import EmpresaManagement from './pages/empresa-management';
 import AdeudosManagement from './pages/adeudos-management';
@@ -51,6 +52,11 @@ const Routes = () => {
         <Route path="/metrics-management" element={
           <ProtectedRoute>
             <MetricsManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/cashbox-management" element={
+          <ProtectedRoute>
+            <CashboxManagement />
           </ProtectedRoute>
         } />
         <Route path="/brand-management" element={

@@ -28,6 +28,11 @@ const Dashboard = () => {
       path: '/sales-management',
     },
     {
+      title: 'Caja',
+      icon: '💵',
+      path: '/cashbox-management',
+    },
+    {
       title: 'Métricas',
       icon: '📊',
       path: '/metrics-management',

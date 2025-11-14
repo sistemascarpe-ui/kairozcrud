@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { cashboxService } from './cashboxService';
 
 export const abonosService = {
   // Obtener todos los abonos de una venta
@@ -63,6 +64,29 @@ export const abonosService = {
       if (error) {
         return { data: null, error: error.message };
       }
+      try {
+        const { data: openSession } = await cashboxService.getOpenSession();
+        if (openSession) {
+          let folio = null;
+          const { data: ventaRow } = await supabase
+            .from('ventas')
+            .select('folio')
+            .eq('id', abonoData.venta_id)
+            .single();
+          folio = ventaRow?.folio || null;
+          await cashboxService.createMovement({
+            sesionId: openSession.id,
+            tipo: 'ingreso',
+            monto: parseFloat(abonoData.monto || 0),
+            concepto: `Abono venta ${folio || abonoData.venta_id}`,
+            categoria: 'abono',
+            metodo_pago: abonoData.forma_pago || 'efectivo',
+            referencia: data.id,
+            ventaId: abonoData.venta_id,
+            usuarioId: abonoData.creado_por_id || null
+          });
+        }
+      } catch (_) {}
       // Tras registrar el abono, verificar si la venta queda completamente pagada
       try {
         const verificacion = await this.verificarYCompletarVenta(abonoData.venta_id);
