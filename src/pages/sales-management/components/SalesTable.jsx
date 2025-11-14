@@ -3,7 +3,28 @@ import { Edit } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 
 const SalesTable = ({ sales = [], onEdit, loading = false }) => {
-  const sortedSales = [...sales];
+  const sortedSales = React.useMemo(() => {
+    const arr = [...(sales || [])];
+    arr.sort((a, b) => {
+      const aDigits = String(a?.folio || '').replace(/\D/g, '').slice(-4);
+      const bDigits = String(b?.folio || '').replace(/\D/g, '').slice(-4);
+      const aNum = aDigits ? parseInt(aDigits, 10) : -1;
+      const bNum = bDigits ? parseInt(bDigits, 10) : -1;
+      if (bNum !== aNum) return bNum - aNum;
+      const ad = new Date(a?.created_at || 0).getTime();
+      const bd = new Date(b?.created_at || 0).getTime();
+      return bd - ad;
+    });
+    return arr;
+  }, [sales]);
+  const last4Counts = React.useMemo(() => {
+    const counts = {};
+    (sales || []).forEach(s => {
+      const v = String(s?.folio || '').replace(/\D/g, '').slice(-4);
+      if (v && v.length === 4) counts[v] = (counts[v] || 0) + 1;
+    });
+    return counts;
+  }, [sales]);
 
 const formatDate = (dateString) => {
   if (!dateString) return '---';
@@ -22,20 +43,11 @@ const formatDate = (dateString) => {
     return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount || 0);
   };
 
-  // Función para extraer solo el número del folio
-  const getFolioNumber = (folio) => {
+  const getFolioDisplay = (folio) => {
     if (!folio) return '---';
-    
-    // Si es un folio automático (formato: VYYYYMMDDNNNNNN), extraer solo el número
-    const autoMatch = folio.match(/^V\d{8}(\d+)$/);
-    if (autoMatch) {
-      // Convertir a número y quitar los ceros a la izquierda
-      const number = parseInt(autoMatch[1]);
-      return number.toString();
-    }
-    
-    // Si es un folio manual, devolverlo tal como está
-    return folio;
+    const digits = String(folio).replace(/\D/g, '');
+    if (!digits) return '---';
+    return digits.slice(-4);
   };
 
   const getStatusBadge = (status) => {
@@ -96,9 +108,18 @@ const formatDate = (dateString) => {
                   </div>
                 </td>
                 <td className="px-4 py-4 whitespace-nowrap text-center">
-                  <div className="text-sm font-mono font-bold text-gray-900" title={sale.folio}>
-                    {getFolioNumber(sale.folio)}
-                  </div>
+                  {(() => {
+                    const last4 = getFolioDisplay(sale.folio);
+                    const isDup = last4 && last4.length === 4 && last4Counts[last4] > 1;
+                    const cls = isDup 
+                      ? "text-sm font-mono font-bold text-red-700 bg-red-50 border border-red-200 rounded px-2 py-0.5 inline-block"
+                      : "text-sm font-mono font-bold text-gray-900";
+                    return (
+                      <div className={cls} title={sale.folio}>
+                        {last4}
+                      </div>
+                    );
+                  })()}
                 </td>
                 <td className="px-4 py-4 whitespace-nowrap">
                   {sale.clientes && sale.clientes.length > 0 ? (

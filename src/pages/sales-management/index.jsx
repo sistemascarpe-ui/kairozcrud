@@ -67,7 +67,7 @@ const SalesManagement = () => {
   const [salesPerPage] = useState(20);
 
   // Usar hooks optimizados
-  const { data: salesData, isLoading: salesLoading, error: salesError } = useOptimizedSales(currentPage, salesPerPage);
+  const { data: salesData, isLoading: salesLoading, error: salesError } = useOptimizedSales(1, null);
   const { data: salesCountData } = useSalesCount();
 
   useEffect(() => { loadInitialData(); }, []);
@@ -129,6 +129,12 @@ const SalesManagement = () => {
     setStats({ totalSales, totalRevenue, completedRevenue, pendingRevenue });
   };
   
+  const getLast4 = (folio) => {
+    const digits = String(folio || '').replace(/\D/g, '');
+    if (!digits) return -1;
+    return parseInt(digits.slice(-4), 10);
+  };
+
   const filterSales = () => {
     let filtered = [...sales];
     if (searchTerm) {
@@ -174,6 +180,14 @@ const SalesManagement = () => {
     if (statusFilter) {
       filtered = filtered.filter(s => s.estado === statusFilter);
     }
+    filtered.sort((a, b) => {
+      const ba = getLast4(b.folio);
+      const aa = getLast4(a.folio);
+      if (ba !== aa) return ba - aa;
+      const bd = new Date(b.created_at || 0).getTime();
+      const ad = new Date(a.created_at || 0).getTime();
+      return bd - ad;
+    });
     setFilteredSales(filtered);
   };
   
@@ -225,8 +239,28 @@ const handleSaveSale = async (saleData) => {
 
     let result;
     if (selectedSale) {
+      // Mapear edición de folio desde folio_manual a folio real
+      if (typeof dataToSave.folio_manual !== 'undefined') {
+        const last4Raw = String(dataToSave.folio_manual || '').replace(/\D/g, '');
+        const last4 = last4Raw.padStart(4, '0').slice(-4);
+        const originalFolio = String(selectedSale.folio || '');
+        const autoMatch = originalFolio.match(/^(V\d{8})(\d+)$/);
+        if (autoMatch) {
+          const prefix = autoMatch[1];
+          const suffix = autoMatch[2];
+          const newSuffix = suffix.slice(0, Math.max(0, suffix.length - 4)) + last4;
+          dataToSave.folio = prefix + newSuffix;
+        } else {
+          dataToSave.folio = last4;
+        }
+        delete dataToSave.folio_manual;
+      }
+      // Sanitizar campos para actualización en tabla 'ventas'
+      const allowedKeys = ['folio','subtotal','total','descuento_monto','requiere_factura','monto_iva','rfc','razon_social','estado','observaciones','fecha_venta'];
+      const updates = {};
+      allowedKeys.forEach(k => { if (typeof dataToSave[k] !== 'undefined') updates[k] = dataToSave[k]; });
       // Actualizar venta existente
-      result = await salesService.updateSalesNote(selectedSale.id, dataToSave);
+      result = await salesService.updateSalesNote(selectedSale.id, updates);
     } else {
       // Crear nueva venta
       result = await salesService.createSalesNote(dataToSave);
@@ -238,9 +272,8 @@ const handleSaveSale = async (saleData) => {
       return;
     }
 
-    // Mostrar mensaje de éxito con información de abono registrado
     let mensajeExito = `Nota de venta ${selectedSale ? 'actualizada' : 'creada'} exitosamente`;
-    if (result.data.abonoRegistrado && result.data.abonoRegistrado.monto > 0) {
+    if (!selectedSale && result.data?.abonoRegistrado && result.data.abonoRegistrado.monto > 0) {
       mensajeExito += `\nAbono registrado: $${result.data.abonoRegistrado.monto.toFixed(2)} (${result.data.abonoRegistrado.forma_pago})`;
       if (result.data.estado === 'completada') {
         mensajeExito += '\nLa venta ha sido marcada como completada automáticamente.';
@@ -257,8 +290,11 @@ const handleSaveSale = async (saleData) => {
     // Notificar actualización de métricas
     console.log('📊 Notificando actualización de métricas...');
     if (selectedSale) {
-      console.log('🔄 Notificando actualización de venta:', result.data);
-      notifySaleUpdate(result.data);
+      const allowedKeysMetrics = ['folio','subtotal','total','descuento_monto','requiere_factura','monto_iva','rfc','razon_social','estado','observaciones','fecha_venta'];
+      const updatesForMetrics = { ...selectedSale };
+      allowedKeysMetrics.forEach(k => { if (typeof dataToSave[k] !== 'undefined') updatesForMetrics[k] = dataToSave[k]; });
+      console.log('🔄 Notificando actualización de venta:', updatesForMetrics);
+      notifySaleUpdate(updatesForMetrics);
     } else {
       console.log('🆕 Notificando creación de venta:', result.data);
       notifySaleCreated(result.data);
@@ -460,14 +496,18 @@ const handleSaveSale = async (saleData) => {
           
           <div className="mb-4">
             <p className="text-sm text-gray-600">
-              Mostrando {filteredSales.length} de {salesCountData?.count || sales.length} notas de venta
-              {salesCountData?.count && ` (Página ${currentPage} de ${Math.ceil(salesCountData.count / salesPerPage)})`}
+              Mostrando {Math.min(salesPerPage, filteredSales.length - (currentPage - 1) * salesPerPage)} de {filteredSales.length} notas de venta (Página {currentPage} de {Math.max(1, Math.ceil(filteredSales.length / salesPerPage))})
             </p>
           </div>
-          <SalesTable sales={filteredSales} onEdit={handleEditSale} loading={loading} />
+          {(() => {
+            const start = (currentPage - 1) * salesPerPage;
+            const end = start + salesPerPage;
+            const displayedSales = filteredSales.slice(start, end);
+            return <SalesTable sales={displayedSales} onEdit={handleEditSale} loading={loading} />;
+          })()}
           
           {/* Controles de paginación */}
-          {salesCountData?.count > salesPerPage && (
+          {filteredSales.length > salesPerPage && (
             <div className="mt-6 flex justify-center items-center space-x-4">
               <Button
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
@@ -479,8 +519,8 @@ const handleSaveSale = async (saleData) => {
               </Button>
               
               <div className="flex items-center space-x-2">
-                {Array.from({ length: Math.min(5, Math.ceil(salesCountData.count / salesPerPage)) }, (_, i) => {
-                  const totalPages = Math.ceil(salesCountData.count / salesPerPage);
+                {Array.from({ length: Math.min(5, Math.ceil(filteredSales.length / salesPerPage)) }, (_, i) => {
+                  const totalPages = Math.ceil(filteredSales.length / salesPerPage);
                   let pageNumber;
                   
                   if (totalPages <= 5) {
@@ -507,8 +547,8 @@ const handleSaveSale = async (saleData) => {
               </div>
               
               <Button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(salesCountData.count / salesPerPage)))}
-                disabled={currentPage === Math.ceil(salesCountData.count / salesPerPage)}
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredSales.length / salesPerPage)))}
+                disabled={currentPage === Math.ceil(filteredSales.length / salesPerPage)}
                 variant="outline"
                 className="px-4 py-2"
               >

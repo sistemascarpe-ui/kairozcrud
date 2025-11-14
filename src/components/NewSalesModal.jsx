@@ -113,7 +113,7 @@ const NewSalesModal = ({
           requiere_factura: sale.requiere_factura || false,
           rfc: sale.rfc || '',
           razon_social: sale.razon_social || '',
-          folio_manual: '',
+          folio_manual: String(sale.folio || '').replace(/\D/g, '').slice(-4) || '',
           // Registro de abono inicial
           registrar_abono: !!primerAbono,
           monto_abono: primerAbono ? (primerAbono.monto ?? '') : '',
@@ -988,7 +988,7 @@ const NewSalesModal = ({
                   
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-gray-700">
-                      Folio Manual (Opcional)
+                      {sale ? 'Folio (últimos 4 dígitos)' : 'Folio Manual (últimos 4 dígitos)'}
                     </label>
                     <Input
                       type="text"

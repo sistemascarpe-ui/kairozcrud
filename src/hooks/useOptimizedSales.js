@@ -3,11 +3,12 @@ import { salesService } from '../services/salesService';
 
 // Hook optimizado para obtener ventas completas con productos, armazones y micas
 export const useOptimizedSales = (page = 1, limit = 20) => {
-  const offset = (page - 1) * limit;
+  const hasLimit = typeof limit === 'number';
+  const offset = hasLimit ? (page - 1) * limit : null;
   
   return useQuery({
-    queryKey: ['sales-notes', page, limit],
-    queryFn: () => salesService.getSalesNotes(limit, offset),
+    queryKey: ['sales-notes', hasLimit ? page : 'all', hasLimit ? limit : 'all'],
+    queryFn: () => salesService.getSalesNotes(hasLimit ? limit : null, offset),
     staleTime: 5 * 60 * 1000, // 5 minutos
     gcTime: 10 * 60 * 1000, // 10 minutos (updated from cacheTime)
     keepPreviousData: true,
