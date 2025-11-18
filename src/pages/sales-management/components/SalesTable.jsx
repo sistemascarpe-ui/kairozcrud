@@ -1,8 +1,8 @@
-import React from 'react';
-import { Edit } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { Edit, MoreHorizontal, Ban } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 
-const SalesTable = ({ sales = [], onEdit, loading = false }) => {
+const SalesTable = ({ sales = [], onEdit, onCancel, loading = false }) => {
   const sortedSales = React.useMemo(() => {
     const arr = [...(sales || [])];
     arr.sort((a, b) => {
@@ -25,6 +25,11 @@ const SalesTable = ({ sales = [], onEdit, loading = false }) => {
     });
     return counts;
   }, [sales]);
+
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const toggleMenu = useCallback((id) => {
+    setOpenMenuId(prev => (prev === id ? null : id));
+  }, []);
 
 const formatDate = (dateString) => {
   if (!dateString) return '---';
@@ -141,12 +146,47 @@ const formatDate = (dateString) => {
           <tbody className="bg-white divide-y divide-gray-200">
             {sortedSales.map((sale) => (
               <tr key={sale.id} className="group hover:bg-gray-50">
-                <td className="px-4 py-4 whitespace-nowrap text-left text-sm font-medium">
-                  <div className="flex items-center space-x-2">
-                    {onEdit && (
-                      <Button variant="ghost" size="sm" onClick={() => onEdit(sale)} className="text-indigo-600 hover:text-indigo-900">
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                <td className="px-4 py-4 whitespace-nowrap text-left text-sm font-medium relative">
+                  <div className="flex items-center">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => toggleMenu(sale.id)}
+                      iconName={null}
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                    {openMenuId === sale.id && (
+                      <div className="absolute z-20 mt-2 bg-white border border-gray-200 rounded-md shadow-md p-2 left-4">
+                        <div className="flex flex-col space-y-1">
+                          {onEdit && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const ok = window.confirm('¿Deseas editar esta nota?');
+                                if (!ok) return;
+                                onEdit(sale);
+                                setOpenMenuId(null);
+                              }}
+                              className="justify-start"
+                            >
+                              <Edit className="h-4 w-4 mr-2" /> Editar
+                            </Button>
+                          )}
+                          {onCancel && (
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              onClick={() => { onCancel(sale); setOpenMenuId(null); }}
+                              className="justify-start"
+                            >
+                              <Ban className="h-4 w-4 mr-2" /> Cancelar
+                            </Button>
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
                 </td>

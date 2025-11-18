@@ -614,14 +614,53 @@ export const salesService = {
   // Resto de funciones del servicio...
   async updateSalesNote(id, updates) {
     try {
+      let shouldRestoreStock = false;
+      // Determinar si se requiere reponer stock al cancelar
+      if (updates && updates.estado === 'cancelada') {
+        const { data: currentSale } = await supabase
+          .from('ventas')
+          .select('estado')
+          .eq('id', id)
+          .single();
+        if (currentSale && currentSale.estado !== 'cancelada') {
+          shouldRestoreStock = true;
+        }
+      }
+
       const { error } = await supabase
         .from('ventas')
         .update(updates, { returning: 'minimal' })
         .eq('id', id);
       
       if (error) throw error;
+
+      let restoredCount = 0;
+      if (shouldRestoreStock) {
+        // Obtener productos de la venta y reponer stock de armazones
+        const { data: productos } = await supabase
+          .from('venta_productos')
+          .select('armazon_id, cantidad, tipo_producto')
+          .eq('venta_id', id);
+
+        const toRestore = (productos || []).filter(p => p && p.tipo_producto === 'armazon' && p.armazon_id);
+        for (const p of toRestore) {
+          const { data: armazon } = await supabase
+            .from('armazones')
+            .select('stock')
+            .eq('id', p.armazon_id)
+            .single();
+          if (armazon) {
+            const nuevoStock = Math.max(0, (armazon.stock || 0) + (parseInt(p.cantidad, 10) || 1));
+            const { error: updateError } = await supabase
+              .from('armazones')
+              .update({ stock: nuevoStock })
+              .eq('id', p.armazon_id);
+            if (!updateError) restoredCount++;
+          }
+        }
+      }
       
-      return { error: null };
+      return { error: null, restoredStock: shouldRestoreStock, restoredCount };
     } catch (error) {
       return { error: error?.message };
     }

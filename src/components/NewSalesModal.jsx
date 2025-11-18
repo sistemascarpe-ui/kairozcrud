@@ -593,7 +593,8 @@ const NewSalesModal = ({
 
   const stateOptions = [
     { value: 'pendiente', label: 'Pendiente' },
-    { value: 'completada', label: 'Completada' }
+    { value: 'completada', label: 'Completada' },
+    { value: 'cancelada', label: 'Cancelada' }
   ];
 
   const paymentOptions = [

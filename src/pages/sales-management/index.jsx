@@ -206,6 +206,38 @@ const SalesManagement = () => {
     setTimeout(() => setIsModalOpen(true), 0); 
   };
   const handleEditSale = (sale) => { setSelectedSale(sale); setIsModalOpen(true); };
+  const [cancelSale, setCancelSale] = useState(null);
+  const openCancelSaleDialog = (sale) => { setCancelSale(sale); };
+  
+  const handleCancelSale = async () => {
+    const sale = cancelSale;
+    try {
+      setModalLoading(true);
+      const result = await salesService.updateSalesNote(sale.id, { estado: 'cancelada' });
+      if (result.error) {
+        toast.error(`Error al cancelar la nota: ${result.error}`);
+        return;
+      }
+      const productsArmazon = (sale.productosArmazon || sale.productos || []).filter(p => (p.tipo === 'armazon') || p.armazon);
+      const detalles = productsArmazon.map(p => {
+        const a = p.armazon || {};
+        const marca = a.marca || a.marcas?.nombre || 'Armazón';
+        const sku = a.sku || '';
+        const color = a.color || '';
+        const qty = p.cantidad || 1;
+        return `${marca}${sku ? ' - ' + sku : ''}${color ? ' (' + color + ')' : ''} x ${qty}`;
+      }).join(', ');
+      toast.success(`Nota cancelada. Stock repuesto para ${result.restoredCount || 0} armazón(es).${detalles ? ` Detalle: ${detalles}` : ''}`);
+      await loadInitialData();
+      const updatesForMetrics = { ...sale, estado: 'cancelada' };
+      notifySaleUpdate(updatesForMetrics);
+      setCancelSale(null);
+    } catch (e) {
+      toast.error(`Error al cancelar la nota: ${e.message || 'Error desconocido'}`);
+    } finally {
+      setModalLoading(false);
+    }
+  };
 
 const handleSaveSale = async (saleData) => {
   try {
@@ -282,6 +314,10 @@ const handleSaveSale = async (saleData) => {
         mensajeExito += `\nSaldo pendiente: $${saldoPendiente.toFixed(2)}`;
       }
     }
+
+    if (selectedSale && result.restoredStock) {
+      mensajeExito += `\nStock repuesto para ${result.restoredCount || 0} armazón(es).`;
+    }
     
     toast.success(mensajeExito);
     setIsModalOpen(false);
@@ -309,7 +345,7 @@ const handleSaveSale = async (saleData) => {
 };
 
   const vendorOptions = [{ value: '', label: 'Todos los vendedores' }, ...vendedores.map(v => ({ value: v.id, label: `${v.nombre} ${v.apellido || ''}`.trim() }))];
-  const statusOptions = [{ value: '', label: 'Todos los estados' }, { value: 'pendiente', label: 'Pendiente' }, { value: 'completada', label: 'Completada' }];
+  const statusOptions = [{ value: '', label: 'Todos los estados' }, { value: 'pendiente', label: 'Pendiente' }, { value: 'completada', label: 'Completada' }, { value: 'cancelada', label: 'Cancelada' }];
   
   const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
   
@@ -503,7 +539,7 @@ const handleSaveSale = async (saleData) => {
             const start = (currentPage - 1) * salesPerPage;
             const end = start + salesPerPage;
             const displayedSales = filteredSales.slice(start, end);
-            return <SalesTable sales={displayedSales} onEdit={handleEditSale} loading={loading} />;
+            return <SalesTable sales={displayedSales} onEdit={handleEditSale} onCancel={openCancelSaleDialog} loading={loading} />;
           })()}
           
           {/* Controles de paginación */}
@@ -557,6 +593,61 @@ const handleSaveSale = async (saleData) => {
             </div>
           )}
           
+          {cancelSale && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl">
+                <div className="p-6 border-b">
+                  <h3 className="text-xl font-bold text-gray-800">Confirmar Cancelación</h3>
+                  <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-700">
+                    <p>Folio: <span className="font-semibold">{String(cancelSale.folio || '').replace(/\D/g,'').slice(-4)}</span></p>
+                    <p>Fecha: <span className="font-semibold">{new Date(cancelSale.created_at).toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'America/Mexico_City' })}</span></p>
+                    <p className="md:col-span-2">Cliente: <span className="font-semibold">{(cancelSale.clientes && cancelSale.clientes.length > 0 ? cancelSale.clientes[0]?.nombre : cancelSale.cliente?.nombre) || 'Cliente'}</span></p>
+                  </div>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-700">Armazones a restablecer</h4>
+                    <ul className="mt-2 space-y-1 text-sm text-gray-800">
+                      {((cancelSale.productosArmazon || cancelSale.productos || []).filter(p => (p.tipo === 'armazon') || p.armazon)).map((p, idx) => {
+                        const a = p.armazon || {};
+                        const marca = a.marca || a.marcas?.nombre || 'Armazón';
+                        const sku = a.sku || '';
+                        const color = a.color || '';
+                        const qty = p.cantidad || 1;
+                        return (
+                          <li key={idx} className="flex justify-between">
+                            <span>{marca}{sku ? ` - ${sku}` : ''}{color ? ` (${color})` : ''}</span>
+                            <span className="text-gray-600">x {qty}</span>
+                          </li>
+                        );
+                      })}
+                      {((cancelSale.productosArmazon || cancelSale.productos || []).filter(p => (p.tipo === 'armazon') || p.armazon)).length === 0 && (
+                        <li className="text-gray-500">Sin armazones</li>
+                      )}
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-700">Micas</h4>
+                    <ul className="mt-2 space-y-1 text-sm text-gray-800">
+                      {(cancelSale.productosMica || (cancelSale.productos || []).filter(p => p.tipo === 'mica')).map((p, idx) => (
+                        <li key={idx} className="flex justify-between">
+                          <span>{`Mica - ${p.descripcion_mica || 'Sin descripción'}`}</span>
+                          <span className="text-gray-600">x {p.cantidad || 1}</span>
+                        </li>
+                      ))}
+                      {((cancelSale.productosMica || (cancelSale.productos || []).filter(p => p.tipo === 'mica')).length) === 0 && (
+                        <li className="text-gray-500">Sin micas</li>
+                      )}
+                    </ul>
+                  </div>
+                </div>
+                <div className="p-6 border-t flex justify-end space-x-3">
+                  <Button variant="outline" onClick={() => setCancelSale(null)}>Cerrar</Button>
+                  <Button variant="danger" onClick={handleCancelSale}>Cancelar Nota</Button>
+                </div>
+              </div>
+            </div>
+          )}
           <NewSalesModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveSale} sale={selectedSale} loading={modalLoading}/>
         </div>
       </div>
