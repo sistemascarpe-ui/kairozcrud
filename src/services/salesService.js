@@ -454,6 +454,14 @@ export const salesService = {
             };
             console.log('Producto mica preparado:', micaProduct);
             return micaProduct;
+          } else if (producto.tipo_producto === 'otro' && producto.descripcion_mica) {
+            const otroProduct = {
+              ...baseProduct,
+              tipo_producto: 'otro',
+              descripcion_mica: producto.descripcion_mica
+            };
+            console.log('Producto otro preparado:', otroProduct);
+            return otroProduct;
           }
           console.log('Producto no válido, se descarta:', producto);
           return null;

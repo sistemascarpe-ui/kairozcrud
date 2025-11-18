@@ -369,6 +369,10 @@ const NewSalesModal = ({
           const descuentoPorcentaje = (precioUnitario * cantidad * (parseFloat(updated.descuento_micas_porcentaje) || 0)) / 100;
           const descuentoMonto = parseFloat(updated.descuento_micas_monto) || 0;
           descuentoEspecifico = descuentoPorcentaje + descuentoMonto;
+        } else if (updated.tipo_producto === 'otro') {
+          const descuentoPorcentaje = (precioUnitario * cantidad * (parseFloat(updated.descuento_micas_porcentaje) || 0)) / 100;
+          const descuentoMonto = parseFloat(updated.descuento_micas_monto) || 0;
+          descuentoEspecifico = descuentoPorcentaje + descuentoMonto;
         }
         
         updated.subtotal = (cantidad * precioUnitario) - descuentoGeneral - descuentoEspecifico;
@@ -424,6 +428,10 @@ const NewSalesModal = ({
           const descuentoMonto = parseFloat(p.descuento_armazon_monto) || 0;
           descuentoEspecifico = descuentoPorcentaje + descuentoMonto;
         } else if (p.tipo_producto === 'mica') {
+          const descuentoPorcentaje = (precioUnitario * cantidad * (parseFloat(p.descuento_micas_porcentaje) || 0)) / 100;
+          const descuentoMonto = parseFloat(p.descuento_micas_monto) || 0;
+          descuentoEspecifico = descuentoPorcentaje + descuentoMonto;
+        } else if (p.tipo_producto === 'otro') {
           const descuentoPorcentaje = (precioUnitario * cantidad * (parseFloat(p.descuento_micas_porcentaje) || 0)) / 100;
           const descuentoMonto = parseFloat(p.descuento_micas_monto) || 0;
           descuentoEspecifico = descuentoPorcentaje + descuentoMonto;
@@ -558,7 +566,7 @@ const NewSalesModal = ({
       return {
         tipo_producto: p.tipo_producto,
         armazon_id: p.tipo_producto === 'armazon' ? p.armazon_id : null,
-        descripcion_mica: p.tipo_producto === 'mica' ? p.descripcion_mica : null,
+        descripcion_mica: (p.tipo_producto === 'mica' || p.tipo_producto === 'otro') ? p.descripcion_mica : null,
         cantidad: p.cantidad,
         precio_unitario: p.precio_unitario,
         descuento_monto,
@@ -737,15 +745,16 @@ const NewSalesModal = ({
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Tipo *
                         </label>
-                        <Select
+                          <Select
                           options={[
                             { value: 'armazon', label: 'Armazón' },
-                            { value: 'mica', label: 'Mica' }
+                            { value: 'mica', label: 'Mica' },
+                            { value: 'otro', label: 'Otro' }
                           ]}
                           value={producto.tipo_producto}
                           onChange={(value) => updateProducto(producto.id, 'tipo_producto', value)}
                           placeholder="Seleccionar tipo..."
-                        />
+                          />
                       </div>
                       
                       {producto.tipo_producto === 'armazon' ? (
@@ -767,13 +776,13 @@ const NewSalesModal = ({
                       ) : (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Descripción Mica *
+                            {producto.tipo_producto === 'mica' ? 'Descripción Mica *' : 'Descripción *'}
                           </label>
                           <Input
                             type="text"
                             value={producto.descripcion_mica}
                             onChange={(e) => updateProducto(producto.id, 'descripcion_mica', e.target.value)}
-                            placeholder="Descripción de la mica..."
+                            placeholder={producto.tipo_producto === 'mica' ? 'Descripción de la mica...' : 'Descripción del accesorio...'}
                           />
                           {errors[`producto_${index}_mica`] && (
                             <p className="text-xs text-red-600 mt-1">{errors[`producto_${index}_mica`]}</p>
@@ -867,6 +876,38 @@ const NewSalesModal = ({
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Desc. Micas ($)
+                            </label>
+                            <Input
+                              type="number"
+                              value={producto.descuento_micas_monto}
+                              onChange={(e) => updateProducto(producto.id, 'descuento_micas_monto', e.target.value)}
+                              min="0"
+                              step="0.01"
+                              placeholder="0.00"
+                            />
+                          </div>
+                        </>
+                      )}
+                      {producto.tipo_producto === 'otro' && (
+                        <>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Desc. Otros (%)
+                            </label>
+                            <Input
+                              type="number"
+                              value={producto.descuento_micas_porcentaje}
+                              onChange={(e) => updateProducto(producto.id, 'descuento_micas_porcentaje', e.target.value)}
+                              min="0"
+                              max="100"
+                              step="0.01"
+                              placeholder="0"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Desc. Otros ($)
                             </label>
                             <Input
                               type="number"
@@ -1226,8 +1267,10 @@ const NewSalesModal = ({
                                   return `${marca} - ${descripcion} (${color})`;
                                 }
                                 return 'Armazón - Sin información';
-                              } else if (producto.tipo_producto === 'mica' || producto.descripcion_mica) {
+                              } else if (producto.tipo_producto === 'mica') {
                                 return `Mica - ${producto.descripcion_mica || 'Sin descripción'}`;
+                              } else if (producto.tipo_producto === 'otro') {
+                                return `Otro - ${producto.descripcion_mica || 'Sin descripción'}`;
                               }
                               return producto.tipo_producto || 'Producto';
                             })()}

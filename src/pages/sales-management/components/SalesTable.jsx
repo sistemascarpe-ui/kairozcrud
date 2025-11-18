@@ -120,7 +120,7 @@ const formatDate = (dateString) => {
         {/* Indicador de scroll horizontal */}
         <div className="absolute top-0 right-0 w-4 h-full bg-gradient-to-l from-white to-transparent pointer-events-none z-10"></div>
         <div className="absolute top-0 left-0 w-4 h-full bg-gradient-to-r from-white to-transparent pointer-events-none z-10"></div>
-        <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: '1740px' }}>
+        <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: '1900px' }}>
           <thead className="bg-gray-50">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Acciones</th>
@@ -129,6 +129,7 @@ const formatDate = (dateString) => {
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">Empresa</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Armazón</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Tipo de Mica</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Otros</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Desc. Armazón</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Desc. Micas</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Desc. General</th>
@@ -284,6 +285,24 @@ const formatDate = (dateString) => {
                       <div className="text-gray-500">{formatCurrency(sale.tipo_mica?.precio)}</div>
                     </div>
                   )}
+                </td>
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {(() => {
+                    const otros = (sale.productos || []).filter(p => p.tipo === 'otro');
+                    if (otros.length > 0) {
+                      return (
+                        <div className="space-y-1">
+                          {otros.map((producto, index) => (
+                            <div key={index}>
+                              <div className="font-medium text-xs">{`Otro - ${producto.descripcion_mica || 'Sin descripción'}`}</div>
+                              <div className="text-gray-500 text-xs">{formatCurrency(producto.precio_unitario)} x {producto.cantidad}</div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    }
+                    return <div className="text-gray-500">-</div>;
+                  })()}
                 </td>
                 
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
