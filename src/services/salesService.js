@@ -455,13 +455,14 @@ export const salesService = {
             console.log('Producto mica preparado:', micaProduct);
             return micaProduct;
           } else if (producto.tipo_producto === 'otro' && producto.descripcion_mica) {
-            const otroProduct = {
+            // Mapear 'otro' a 'mica' para cumplir con las restricciones del esquema
+            const otroComoMica = {
               ...baseProduct,
-              tipo_producto: 'otro',
+              tipo_producto: 'mica',
               descripcion_mica: producto.descripcion_mica
             };
-            console.log('Producto otro preparado:', otroProduct);
-            return otroProduct;
+            console.log('Producto "otro" re-mapeado a mica:', otroComoMica);
+            return otroComoMica;
           }
           console.log('Producto no válido, se descarta:', producto);
           return null;

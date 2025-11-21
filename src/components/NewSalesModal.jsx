@@ -564,7 +564,7 @@ const NewSalesModal = ({
         ? parseFloat(p.descuento_armazon_monto || 0)
         : parseFloat(p.descuento_micas_monto || 0);
       return {
-        tipo_producto: p.tipo_producto,
+        tipo_producto: p.tipo_producto === 'otro' ? 'mica' : p.tipo_producto,
         armazon_id: p.tipo_producto === 'armazon' ? p.armazon_id : null,
         descripcion_mica: (p.tipo_producto === 'mica' || p.tipo_producto === 'otro') ? p.descripcion_mica : null,
         cantidad: p.cantidad,
