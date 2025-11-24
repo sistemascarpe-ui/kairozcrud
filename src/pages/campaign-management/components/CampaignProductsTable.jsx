@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Package, ArrowRight, ArrowLeft, Search, AlertTriangle } from 'lucide-react';
+import { Package, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import Button from '../../../components/ui/Button';
-import { campaignService } from '../../../services/campaignService';
+import { inventoryService } from '../../../services/inventoryService';
 import { useAuth } from '../../../contexts/AuthContext';
 
 const CampaignProductsTable = ({ campaign }) => {
@@ -11,10 +11,7 @@ const CampaignProductsTable = ({ campaign }) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [returnModalOpen, setReturnModalOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [returnQuantity, setReturnQuantity] = useState(1);
-  const [returnObservations, setReturnObservations] = useState('');
+  
 
   // Cargar productos de la campaña
   useEffect(() => {
@@ -26,7 +23,7 @@ const CampaignProductsTable = ({ campaign }) => {
   const loadCampaignProducts = async () => {
     try {
       setLoading(true);
-      const result = await campaignService.getCampaignProducts(campaign.id);
+      const result = await inventoryService.getProductsSummary(1000, 0, { location: 'campana' }, { key: 'created_at', direction: 'desc' });
       
       if (result.error) {
         toast.error(`Error al cargar productos: ${result.error}`);
@@ -41,40 +38,7 @@ const CampaignProductsTable = ({ campaign }) => {
     }
   };
 
-  const handleReturnProduct = async () => {
-    if (!selectedProduct || returnQuantity <= 0) {
-      toast.error('Selecciona una cantidad válida para devolver');
-      return;
-    }
-
-    const availableQuantity = selectedProduct.cantidad_enviada - (selectedProduct.cantidad_devuelta || 0);
-    if (returnQuantity > availableQuantity) {
-      toast.error(`No puedes devolver más cantidad de la disponible (${availableQuantity})`);
-      return;
-    }
-
-    try {
-      const result = await campaignService.returnProductFromCampaign(
-        selectedProduct.id,
-        returnQuantity,
-        returnObservations || `Devolución realizada por ${userProfile?.nombre} el ${new Date().toLocaleString('es-ES')}`
-      );
-
-      if (result.error) {
-        toast.error(result.error);
-      } else {
-        toast.success(`${returnQuantity} unidad(es) devuelta(s) exitosamente`);
-        setReturnModalOpen(false);
-        setSelectedProduct(null);
-        setReturnQuantity(1);
-        setReturnObservations('');
-        loadCampaignProducts(); // Recargar la lista
-      }
-    } catch (error) {
-      toast.error('Error inesperado al devolver producto');
-      console.error('Error:', error);
-    }
-  };
+  
 
   const getStatusColor = (estado) => {
     switch (estado) {
@@ -103,9 +67,9 @@ const CampaignProductsTable = ({ campaign }) => {
   };
 
   const filteredProducts = products.filter(product =>
-    product.armazones?.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.armazones?.color?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.armazones?.marcas?.nombre?.toLowerCase().includes(searchTerm.toLowerCase())
+    product?.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product?.color?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (product?.marcas?.nombre || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (!campaign) return null;
@@ -120,7 +84,7 @@ const CampaignProductsTable = ({ campaign }) => {
               Productos Enviados a la Campaña
             </h2>
             <p className="text-sm text-gray-600 mt-1">
-              Productos enviados desde el inventario a esta campaña
+              Productos con ubicación "Campaña" en inventario
             </p>
           </div>
           <div className="text-sm text-gray-500">
@@ -152,13 +116,8 @@ const CampaignProductsTable = ({ campaign }) => {
           <div className="text-center py-8 text-gray-500">
             <Package className="h-8 w-8 mx-auto mb-2 text-gray-400" />
             <p className="text-sm">
-              {searchTerm ? 'No se encontraron productos con ese criterio' : 'No hay productos enviados a esta campaña'}
+              {searchTerm ? 'No se encontraron productos con ese criterio' : 'No hay productos con ubicación Campaña'}
             </p>
-            {!searchTerm && (
-              <p className="text-xs text-gray-400 mt-1">
-                Usa el botón "Enviar Productos" para agregar productos desde el inventario
-              </p>
-            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -168,162 +127,32 @@ const CampaignProductsTable = ({ campaign }) => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Producto
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cantidad Enviada
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cantidad Devuelta
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Disponible
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha Envío
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
-                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marca</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Color</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredProducts.map((product) => {
-                  const availableQuantity = product.cantidad_enviada - (product.cantidad_devuelta || 0);
-                  return (
-                    <tr key={product.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {product.armazones?.sku}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {product.armazones?.color} - {product.armazones?.marcas?.nombre}
-                          </div>
-                          <div className="text-xs text-gray-400">
-                            ${product.armazones?.precio}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {product.cantidad_enviada}
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {product.cantidad_devuelta || 0}
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <span className={`font-medium ${availableQuantity > 0 ? 'text-green-600' : 'text-gray-500'}`}>
-                          {availableQuantity}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(product.estado)}`}>
-                          {getStatusText(product.estado)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(product.fecha_envio).toLocaleDateString('es-ES')}
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
-                        {availableQuantity > 0 && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedProduct(product);
-                              setReturnQuantity(Math.min(1, availableQuantity));
-                              setReturnModalOpen(true);
-                            }}
-                            className="text-orange-600 hover:text-orange-700"
-                          >
-                            <ArrowLeft className="h-4 w-4 mr-1" />
-                            Devolver
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {filteredProducts.map((product) => (
+                  <tr key={product.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{product?.sku}</div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{product?.marcas?.nombre || 'Sin marca'}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{product?.color || 'Sin color'}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">${product?.precio}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{product?.stock}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
         )}
       </div>
-
-      {/* Modal para devolver productos */}
-      {returnModalOpen && selectedProduct && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg border border-gray-200 shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                <ArrowLeft className="h-5 w-5 mr-2 text-orange-600" />
-                Devolver Producto
-              </h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setReturnModalOpen(false)}
-              >
-                ✕
-              </Button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="font-medium text-gray-900">{selectedProduct.armazones?.sku}</h4>
-                <p className="text-sm text-gray-600">{selectedProduct.armazones?.color} - {selectedProduct.armazones?.marcas?.nombre}</p>
-                <p className="text-sm text-gray-500">
-                  Disponible para devolver: {selectedProduct.cantidad_enviada - (selectedProduct.cantidad_devuelta || 0)} unidades
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cantidad a devolver
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max={selectedProduct.cantidad_enviada - (selectedProduct.cantidad_devuelta || 0)}
-                  value={returnQuantity}
-                  onChange={(e) => setReturnQuantity(parseInt(e.target.value) || 1)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Observaciones
-                </label>
-                <textarea
-                  value={returnObservations}
-                  onChange={(e) => setReturnObservations(e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
-                  placeholder="Motivo de la devolución..."
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
-              <Button
-                variant="secondary"
-                onClick={() => setReturnModalOpen(false)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleReturnProduct}
-                className="flex items-center bg-orange-600 hover:bg-orange-700"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Devolver {returnQuantity} Unidad(es)
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      
     </div>
   );
 };

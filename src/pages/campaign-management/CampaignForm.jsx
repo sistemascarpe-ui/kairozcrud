@@ -335,18 +335,7 @@ const CampaignForm = () => {
 
               {/* Botones de acción */}
               <div className="mt-8 flex items-center justify-between">
-                <div>
-                  {isViewMode && campaign?.estado === 'activa' && (
-                    <Button
-                      type="button"
-                      onClick={() => setSendProductsModalOpen(true)}
-                      className="flex items-center bg-green-600 hover:bg-green-700"
-                    >
-                      <Package className="h-4 w-4 mr-2" />
-                      Enviar Productos
-                    </Button>
-                  )}
-                </div>
+                <div></div>
                 
                 <div className="flex items-center space-x-3">
                   {isViewMode ? (
@@ -401,12 +390,7 @@ const CampaignForm = () => {
           </div>
         )}
 
-        {/* Modal para enviar productos */}
-        <SendProductsModal
-          isOpen={sendProductsModalOpen}
-          onClose={() => setSendProductsModalOpen(false)}
-          campaign={campaign}
-        />
+        
       </div>
       </div>
     </div>

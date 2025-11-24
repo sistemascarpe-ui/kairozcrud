@@ -8,7 +8,9 @@ const ProductTable = ({
   onEdit, 
   onDelete,
   sortConfig,
-  onSort 
+  onSort,
+  showActions = true,
+  hideCreatedBy = false
 }) => {
   const [expandedRows, setExpandedRows] = useState(new Set());
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -137,7 +139,9 @@ const ProductTable = ({
           <table className="w-full">
           <thead className="bg-muted/50 border-b border-border">
             <tr>
-              <th className="px-4 py-3 text-left">Acciones</th>
+              {showActions && (
+                <th className="px-4 py-3 text-left">Acciones</th>
+              )}
               {[
                 { key: 'sku', label: 'Modelo', sortable: false },
                 { key: 'ubicacion', label: 'Ubicación', sortable: false },
@@ -148,7 +152,7 @@ const ProductTable = ({
                 { key: 'grupo', label: 'Grupo', sortable: false },
                 { key: 'descripcion', label: 'Descripción', sortable: false },
                 { key: 'sub_marca', label: 'Sub Marca', sortable: false },
-                { key: 'creado_por', label: 'Usuario Creador', sortable: false }
+                ...(!hideCreatedBy ? [{ key: 'creado_por', label: 'Usuario Creador', sortable: false }] : [])
               ]?.map((column) => (
                 <th key={column?.key} className="px-4 py-3 text-left">
                   {column?.sortable ? (
@@ -171,27 +175,29 @@ const ProductTable = ({
           <tbody className="divide-y divide-border">
             {products?.map((product) => (
               <tr key={product?.id} className="hover:bg-muted/30 transition-smooth">
-                <td className="px-4 py-3">
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      iconName="Edit"
-                      onClick={() => onEdit(product)}
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      iconName="Trash2"
-                      onClick={() => handleDeleteClick(product)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      Eliminar
-                    </Button>
-                  </div>
-                </td>
+                {showActions && (
+                  <td className="px-4 py-3">
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        iconName="Edit"
+                        onClick={() => onEdit(product)}
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        iconName="Trash2"
+                        onClick={() => handleDeleteClick(product)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        Eliminar
+                      </Button>
+                    </div>
+                  </td>
+                )}
                 <td className="px-4 py-3">
                   <div className="flex items-center space-x-2">
                     <span className="font-mono text-sm text-muted-foreground">
@@ -248,9 +254,11 @@ const ProductTable = ({
                 <td className="px-4 py-3">
                   <span className="text-sm text-foreground">{product?.supplier}</span>
                 </td>
-                <td className="px-4 py-3">
-                  <span className="text-sm text-foreground">{product?.createdBy || 'No especificado'}</span>
-                </td>
+                {!hideCreatedBy && (
+                  <td className="px-4 py-3">
+                    <span className="text-sm text-foreground">{product?.createdBy || 'No especificado'}</span>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -261,29 +269,30 @@ const ProductTable = ({
       <div className="lg:hidden divide-y divide-border">
         {products?.map((product) => (
           <div key={product?.id} className="p-3">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <h3 className="font-semibold text-foreground text-base">{product?.sku}</h3>
-                      {product?.hasBeenEdited && (
-                        <div 
-                          className="w-2 h-2 bg-amber-400 rounded-full" 
-                          title="Este producto ha sido editado"
-                        />
-                      )}
-                      {(product?.location || 'optica') === 'campana' ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
-                          Campaña
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
-                          Óptica
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground">{product?.brand || 'Sin marca'}</p>
-                    <p className="text-xs text-muted-foreground">{product?.color || 'Sin color'}</p>
-                  </div>
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1">
+                <div className="flex items-center space-x-2">
+                  <h3 className="font-semibold text-foreground text-base">{product?.sku}</h3>
+                  {product?.hasBeenEdited && (
+                    <div 
+                      className="w-2 h-2 bg-amber-400 rounded-full" 
+                      title="Este producto ha sido editado"
+                    />
+                  )}
+                  {(product?.location || 'optica') === 'campana' ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                      Campaña
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
+                      Óptica
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">{product?.brand || 'Sin marca'}</p>
+                <p className="text-xs text-muted-foreground">{product?.color || 'Sin color'}</p>
+              </div>
+              {showActions && (
               <button
                 onClick={() => toggleRowExpansion(product?.id)}
                 className="p-2 hover:bg-muted rounded-md transition-smooth flex-shrink-0"
@@ -294,6 +303,7 @@ const ProductTable = ({
                   className="text-muted-foreground" 
                 />
               </button>
+              )}
             </div>
 
             {/* Información principal en grid compacto */}
@@ -323,26 +333,28 @@ const ProductTable = ({
             </div>
 
             {/* Botones de acción compactos */}
-            <div className="flex space-x-2 mb-2">
-              <Button
-                variant="outline"
-                size="sm"
-                iconName="Edit"
-                onClick={() => onEdit(product)}
-                className="flex-1 text-xs py-1"
-              >
-                Editar
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                iconName="Trash2"
-                onClick={() => handleDeleteClick(product)}
-                className="flex-1 text-xs py-1 text-red-600 hover:text-red-700 hover:bg-red-50"
-              >
-                Eliminar
-              </Button>
-            </div>
+            {showActions && (
+              <div className="flex space-x-2 mb-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  iconName="Edit"
+                  onClick={() => onEdit(product)}
+                  className="flex-1 text-xs py-1"
+                >
+                  Editar
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  iconName="Trash2"
+                  onClick={() => handleDeleteClick(product)}
+                  className="flex-1 text-xs py-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  Eliminar
+                </Button>
+              </div>
+            )}
 
             {/* Información expandible compacta */}
             {expandedRows?.has(product?.id) && (
@@ -360,12 +372,14 @@ const ProductTable = ({
                       {product?.supplier || 'Sin sub marca'}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Creado por:</span>
-                    <span className="font-medium text-foreground truncate">
-                      {product?.createdBy || 'No especificado'}
-                    </span>
-                  </div>
+                  {!hideCreatedBy && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Creado por:</span>
+                      <span className="font-medium text-foreground truncate">
+                        {product?.createdBy || 'No especificado'}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
