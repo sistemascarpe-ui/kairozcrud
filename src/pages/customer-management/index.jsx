@@ -55,6 +55,8 @@ const CustomerManagement = () => {
   const [isHistorialModalOpen, setIsHistorialModalOpen] = useState(false);
   const [selectedCustomerForHistorial, setSelectedCustomerForHistorial] = useState(null);
   const [error, setError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   // Load customers and users
   useEffect(() => {
@@ -168,6 +170,24 @@ const CustomerManagement = () => {
 
     return filtered || [];
   }, [transformedCustomers, searchName, searchPhone, selectedDate, selectedUsers, selectedEmpresa, sortConfig, users]);
+
+  const totalItems = filteredAndSortedCustomers?.length || 0;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedCustomers = useMemo(() => {
+    return filteredAndSortedCustomers?.slice(startIndex, endIndex);
+  }, [filteredAndSortedCustomers, startIndex, endIndex]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchName, searchPhone, selectedDate, selectedUsers, selectedEmpresa, sortConfig]);
 
   // Clear all filters
   const clearAllFilters = () => {
@@ -332,7 +352,7 @@ const CustomerManagement = () => {
 
           <div className="mb-4">
             <p className="text-sm text-gray-600">
-              Mostrando {filteredAndSortedCustomers?.length} de {transformedCustomers?.length} clientes
+              Mostrando {paginatedCustomers?.length} de {filteredAndSortedCustomers?.length} clientes
             </p>
           </div>
 
@@ -463,12 +483,46 @@ const CustomerManagement = () => {
 
           {/* Customers Table */}
           <CustomerTable
-            customers={filteredAndSortedCustomers}
+            customers={paginatedCustomers}
             onEditCustomer={handleEditCustomer}
             onViewHistorial={handleViewHistorial}
             handleSort={handleSort}
             sortConfig={sortConfig}
           />
+
+          <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="text-sm text-muted-foreground">
+              Página {currentPage} de {totalPages} · Mostrando {Math.min(endIndex, totalItems) - startIndex} de {totalItems}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Por página</span>
+              <Select
+                value={String(pageSize)}
+                onChange={(value) => setPageSize(Number(value) || 20)}
+                options={[
+                  { value: '10', label: '10' },
+                  { value: '20', label: '20' },
+                  { value: '50', label: '50' }
+                ]}
+                className="w-24"
+                placeholder=""
+              />
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                Anterior
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Siguiente
+              </Button>
+            </div>
+          </div>
 
           {/* Customer Modal */}
           <CustomerModal
