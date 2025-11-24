@@ -140,6 +140,7 @@ const ProductTable = ({
               <th className="px-4 py-3 text-left">Acciones</th>
               {[
                 { key: 'sku', label: 'Modelo', sortable: false },
+                { key: 'ubicacion', label: 'Ubicación', sortable: false },
                 { key: 'marca', label: 'Marca', sortable: false },
                 { key: 'price', label: 'Precio', sortable: true },
                 { key: 'stock', label: 'Cantidad', sortable: true },
@@ -205,6 +206,17 @@ const ProductTable = ({
                   </div>
                 </td>
                 <td className="px-4 py-3">
+                  {(product?.location || 'optica') === 'campana' ? (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                      Campaña
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
+                      Óptica
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-3">
                   <span className="text-sm text-foreground">{product?.brand}</span>
                 </td>
                 <td className="px-4 py-3">
@@ -216,21 +228,11 @@ const ProductTable = ({
                   <div className="flex items-center space-x-2">
                     <div className="flex flex-col">
                       <span className="font-medium text-foreground">{product?.stock}</span>
-                      {product?.cantidad_en_campanas > 0 && (
-                        <span className="text-xs text-purple-600 font-medium">
-                          {product.cantidad_en_campanas} en campañas
-                        </span>
-                      )}
                     </div>
                     <div className="flex flex-col space-y-1">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStockStatusColor(product?.stock)}`}>
                         {getStockStatusText(product?.stock)}
                       </span>
-                      {product?.cantidad_en_campanas > 0 && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
-                          En Campañas
-                        </span>
-                      )}
                     </div>
                   </div>
                 </td>
@@ -259,20 +261,29 @@ const ProductTable = ({
       <div className="lg:hidden divide-y divide-border">
         {products?.map((product) => (
           <div key={product?.id} className="p-3">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex-1">
-                <div className="flex items-center space-x-2">
-                  <h3 className="font-semibold text-foreground text-base">{product?.sku}</h3>
-                  {product?.hasBeenEdited && (
-                    <div 
-                      className="w-2 h-2 bg-amber-400 rounded-full" 
-                      title="Este producto ha sido editado"
-                    />
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground">{product?.brand || 'Sin marca'}</p>
-                <p className="text-xs text-muted-foreground">{product?.color || 'Sin color'}</p>
-              </div>
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2">
+                      <h3 className="font-semibold text-foreground text-base">{product?.sku}</h3>
+                      {product?.hasBeenEdited && (
+                        <div 
+                          className="w-2 h-2 bg-amber-400 rounded-full" 
+                          title="Este producto ha sido editado"
+                        />
+                      )}
+                      {(product?.location || 'optica') === 'campana' ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                          Campaña
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
+                          Óptica
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">{product?.brand || 'Sin marca'}</p>
+                    <p className="text-xs text-muted-foreground">{product?.color || 'Sin color'}</p>
+                  </div>
               <button
                 onClick={() => toggleRowExpansion(product?.id)}
                 className="p-2 hover:bg-muted rounded-md transition-smooth flex-shrink-0"
@@ -299,11 +310,7 @@ const ProductTable = ({
                   <span className={`inline-flex items-center px-1 py-0.5 rounded text-xs font-medium w-fit ${getStockStatusColor(product?.stock)}`}>
                     {product?.stock}
                   </span>
-                  {product?.cantidad_en_campanas > 0 && (
-                    <span className="inline-flex items-center px-1 py-0.5 rounded text-xs font-medium w-fit bg-purple-100 text-purple-800">
-                      {product.cantidad_en_campanas} en campañas
-                    </span>
-                  )}
+                  
                 </div>
               </div>
             </div>

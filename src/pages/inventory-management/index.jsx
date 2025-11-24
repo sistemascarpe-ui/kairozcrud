@@ -31,6 +31,7 @@ const InventoryManagement = () => {
   const [selectedDescription, setSelectedDescription] = useState('');
   const [selectedSubBrand, setSelectedSubBrand] = useState('');
   const [selectedStockStatus, setSelectedStockStatus] = useState('');
+  const [selectedLocation, setSelectedLocation] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('create');
@@ -52,7 +53,8 @@ const InventoryManagement = () => {
     descriptionId: selectedDescription || undefined,
     subBrandId: selectedSubBrand || undefined,
     stockStatus: selectedStockStatus || undefined,
-  }), [selectedBrand, selectedGroup, selectedDescription, selectedSubBrand, selectedStockStatus]);
+    location: selectedLocation || undefined,
+  }), [selectedBrand, selectedGroup, selectedDescription, selectedSubBrand, selectedStockStatus, selectedLocation]);
 
   // Mapear claves de la UI a columnas reales de la BD
   const serverSort = useMemo(() => {
@@ -176,14 +178,14 @@ const InventoryManagement = () => {
         cost: parseFloat(product?.precio * 0.6 || 0), // Estimate cost as 60% of price
         stock: parseInt(product?.stock || 0),
         maxStock: 100, // Default maximum stock
-        location: 'Almacén Principal', // Default location
+        location: product?.ubicacion || 'optica',
         barcode: product?.sku || '',
         color: product?.color || '',
         createdAt: createdAt,
         updatedAt: updatedAt,
         hasBeenEdited: hasBeenEdited,
         createdBy: createdBy,
-        cantidad_en_campanas: product?.cantidad_en_campanas || 0 // PRESERVAR esta propiedad
+        cantidad_en_campanas: 0
       };
     }) || [];
   }, [products]);
@@ -252,8 +254,9 @@ const InventoryManagement = () => {
       const matchesStockStatus = !selectedStockStatus || 
         (selectedStockStatus === 'in-stock' && product?.stock > 0) ||
         (selectedStockStatus === 'out-of-stock' && product?.stock === 0);
+      const matchesLocation = !selectedLocation || (originalProduct?.ubicacion || 'optica') === selectedLocation;
 
-      return matchesSearch && matchesBrand && matchesGroup && matchesDescription && matchesSubBrand && matchesStockStatus;
+      return matchesSearch && matchesBrand && matchesGroup && matchesDescription && matchesSubBrand && matchesStockStatus && matchesLocation;
     });
 
     // Ordenar en cliente para consistencia visual (independientemente del orden en servidor)
@@ -277,7 +280,7 @@ const InventoryManagement = () => {
     });
 
     return filtered;
-  }, [transformedProducts, products, searchTerm, selectedBrand, selectedGroup, selectedDescription, selectedSubBrand, selectedStockStatus, sortConfig]);
+  }, [transformedProducts, products, searchTerm, selectedBrand, selectedGroup, selectedDescription, selectedSubBrand, selectedStockStatus, selectedLocation, sortConfig]);
 
   // Paginated products
   const paginatedProducts = useMemo(() => {
@@ -286,7 +289,7 @@ const InventoryManagement = () => {
   }, [filteredAndSortedProducts, currentPage, itemsPerPage]);
 
   // Pagination info
-  const isAnyFilterActive = !!(searchTerm || selectedBrand || selectedGroup || selectedDescription || selectedSubBrand || selectedStockStatus);
+  const isAnyFilterActive = !!(searchTerm || selectedBrand || selectedGroup || selectedDescription || selectedSubBrand || selectedStockStatus || selectedLocation);
   const totalProducts = (typeof productsCountData?.count === 'number')
     ? productsCountData?.count
     : (filteredAndSortedProducts?.length || 0);
@@ -308,7 +311,7 @@ const InventoryManagement = () => {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedBrand, selectedGroup, selectedDescription, selectedSubBrand, selectedStockStatus]);
+  }, [searchTerm, selectedBrand, selectedGroup, selectedDescription, selectedSubBrand, selectedStockStatus, selectedLocation]);
 
   // Vincular datos del resumen paginado a estado local
   useEffect(() => {
@@ -381,7 +384,8 @@ const InventoryManagement = () => {
           sub_marca_id: productData?.sub_marca_id || null,
           precio: parseFloat(productData?.precio || 0),
           stock: parseInt(productData?.stock || 0),
-          creado_por_id: productData?.creado_por_id || userProfile?.id
+          creado_por_id: productData?.creado_por_id || userProfile?.id,
+          ubicacion: productData?.ubicacion || 'optica'
         };
         
         console.log('handleSaveProduct - createData final:', createData);
@@ -396,7 +400,8 @@ const InventoryManagement = () => {
           sub_marca_id: productData?.sub_marca_id || null,
           precio: parseFloat(productData?.precio || 0),
           stock: parseInt(productData?.stock || 0),
-          creado_por_id: productData?.creado_por_id || userProfile?.id
+          creado_por_id: productData?.creado_por_id || userProfile?.id,
+          ubicacion: productData?.ubicacion || 'optica'
         };
         
         console.log('handleSaveProduct - updateData final:', updateData);
@@ -600,6 +605,8 @@ const InventoryManagement = () => {
             onSubBrandChange={setSelectedSubBrand}
             selectedStockStatus={selectedStockStatus}
             onStockStatusChange={setSelectedStockStatus}
+            selectedLocation={selectedLocation}
+            onLocationChange={setSelectedLocation}
             brands={brands}
             groups={groups}
             descriptions={descriptions}

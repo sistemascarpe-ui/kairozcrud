@@ -4,9 +4,7 @@ export const inventoryService = {
   // OPTIMIZED: Get products summary (lightweight version for tables)
   async getProductsSummary(limit = 50, offset = 0, filters = {}, sort = { key: 'created_at', direction: 'desc' }) {
     try {
-      let query = supabase
-        .from('armazones')
-        .select(`
+      let columns = `
           id,
           sku,
           color,
@@ -25,7 +23,10 @@ export const inventoryService = {
           sub_marcas(id, nombre),
           descripciones(id, nombre),
           usuarios(id, nombre, apellido)
-        `)
+        `;
+      let query = supabase
+        .from('armazones')
+        .select(columns)
         .order(sort?.key || 'created_at', { ascending: (sort?.direction === 'asc') })
         .range(offset, offset + limit - 1);
 
@@ -35,6 +36,7 @@ export const inventoryService = {
         descriptionId,
         subBrandId,
         stockStatus,
+        location,
         searchTerm,
       } = filters || {};
 
@@ -44,12 +46,28 @@ export const inventoryService = {
       if (subBrandId) query = query.eq('sub_marca_id', subBrandId);
       if (stockStatus === 'in-stock') query = query.gt('stock', 0);
       if (stockStatus === 'out-of-stock') query = query.eq('stock', 0);
+      if (location) query = query.eq('ubicacion', location);
       if (searchTerm && typeof searchTerm === 'string') {
         const term = `%${searchTerm}%`;
         query = query.or(`sku.ilike.${term},color.ilike.${term},marcas.nombre.ilike.${term},grupos.nombre.ilike.${term},descripciones.nombre.ilike.${term}`);
       }
 
-      const { data, error } = await query;
+      let { data, error } = await query;
+
+      // Fallback: intentar incluir ubicacion si existe
+      if (!error) {
+        // intentar otra consulta sólo para ubicacion y mergear si columna existe
+        try {
+          const { data: locData } = await supabase
+            .from('armazones')
+            .select('id, ubicacion')
+            .range(offset, offset + limit - 1);
+          if (Array.isArray(locData)) {
+            const map = new Map(locData.map(r => [r.id, r.ubicacion]));
+            data = (data || []).map(r => ({ ...r, ubicacion: map.get(r.id) || null }));
+          }
+        } catch {}
+      }
 
       if (error) throw error;
       
@@ -73,6 +91,7 @@ export const inventoryService = {
         descriptionId,
         subBrandId,
         stockStatus,
+        location,
         searchTerm,
       } = filters || {};
 
@@ -82,6 +101,7 @@ export const inventoryService = {
       if (subBrandId) query = query.eq('sub_marca_id', subBrandId);
       if (stockStatus === 'in-stock') query = query.gt('stock', 0);
       if (stockStatus === 'out-of-stock') query = query.eq('stock', 0);
+      if (location) query = query.eq('ubicacion', location);
       if (searchTerm && typeof searchTerm === 'string') {
         const term = `%${searchTerm}%`;
         query = query.or(`sku.ilike.${term},color.ilike.${term},marcas.nombre.ilike.${term},grupos.nombre.ilike.${term},descripciones.nombre.ilike.${term}`);
@@ -458,7 +478,7 @@ export const inventoryService = {
   // Get all products with relationships
   async getProducts() {
     try {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('armazones')
         .select(`
           id,
@@ -486,6 +506,17 @@ export const inventoryService = {
         throw error
       }
       
+      // Enrich ubicacion si la columna existe
+      try {
+        const { data: locData } = await supabase
+          .from('armazones')
+          .select('id, ubicacion');
+        if (Array.isArray(locData)) {
+          const map = new Map(locData.map(r => [r.id, r.ubicacion]));
+          data = (data || []).map(r => ({ ...r, ubicacion: map.get(r.id) || null }));
+        }
+      } catch {}
+
       // Obtener información de campañas para todos los productos de una vez
       const productIds = data?.map(p => p.id) || [];
       let campaignInfo = {};
@@ -536,7 +567,7 @@ export const inventoryService = {
   // Get product by ID
   async getProduct(id) {
     try {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('armazones')
         .select(`
           id,
@@ -556,6 +587,16 @@ export const inventoryService = {
         `)
         .eq('id', id)
         .single()
+
+      // Fallback: tratar de leer ubicacion aparte si existe
+      try {
+        const { data: loc } = await supabase
+          .from('armazones')
+          .select('ubicacion')
+          .eq('id', id)
+          .single();
+        if (loc) data = { ...data, ubicacion: loc.ubicacion };
+      } catch {}
       
       if (error) {
         throw error
@@ -573,7 +614,15 @@ export const inventoryService = {
       console.log('inventoryService - Datos recibidos para crear producto:', productData);
       console.log('inventoryService - creado_por_id específicamente:', productData.creado_por_id);
       
-      const { data, error } = await supabase?.from('armazones')?.insert([productData])?.select()?.single()
+      const payload = { ...productData };
+      if (!payload?.ubicacion) payload.ubicacion = 'optica';
+      let { data, error } = await supabase?.from('armazones')?.insert([payload])?.select()?.single()
+      // Fallback si columna no existe: intentar sin ubicacion
+      if (error && (error?.code === '42703' || /column.*ubicacion/i.test(error?.message || ''))) {
+        const { ubicacion, ...withoutLoc } = payload;
+        const res = await supabase?.from('armazones')?.insert([withoutLoc])?.select()?.single();
+        data = res?.data; error = res?.error;
+      }
       
       if (error) {
         console.error('inventoryService - Error al crear producto:', error);
@@ -595,7 +644,12 @@ export const inventoryService = {
       console.log('inventoryService - ID del producto a actualizar:', id);
       console.log('inventoryService - creado_por_id específicamente:', updates.creado_por_id);
       
-      const { data, error } = await supabase?.from('armazones')?.update(updates)?.eq('id', id)?.select()?.single()
+      let { data, error } = await supabase?.from('armazones')?.update(updates)?.eq('id', id)?.select()?.single()
+      if (error && (error?.code === '42703' || /column.*ubicacion/i.test(error?.message || ''))) {
+        const { ubicacion, ...withoutLoc } = updates || {};
+        const res = await supabase?.from('armazones')?.update(withoutLoc)?.eq('id', id)?.select()?.single();
+        data = res?.data; error = res?.error;
+      }
       
       if (error) {
         console.error('inventoryService - Error al actualizar producto:', error);

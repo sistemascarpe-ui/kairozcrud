@@ -137,6 +137,36 @@ export const campaignService = {
     }
   },
 
+  // Obtener cantidades en campañas por armazón
+  async getProductsCampaignCounts(productIds = []) {
+    try {
+      if (!Array.isArray(productIds) || productIds.length === 0) {
+        return { data: {}, error: null };
+      }
+      const { data, error } = await supabase
+        .from('campana_productos')
+        .select('armazon_id, cantidad_enviada, cantidad_devuelta, estado')
+        .in('armazon_id', productIds);
+
+      if (error) throw error;
+
+      const counts = {};
+      (data || []).forEach(item => {
+        const id = item?.armazon_id;
+        if (!id) return;
+        const enviada = parseInt(item?.cantidad_enviada || 0);
+        const devuelta = parseInt(item?.cantidad_devuelta || 0);
+        const neta = Math.max(0, enviada - devuelta);
+        counts[id] = (counts[id] || 0) + neta;
+      });
+
+      return { data: counts, error: null };
+    } catch (error) {
+      console.error('Error obteniendo cantidades de campañas por armazón:', error);
+      return { data: {}, error: error?.message };
+    }
+  },
+
   // Enviar producto a campaña
   async sendProductToCampaign(campaignId, productId, quantity, sentBy, observations = null) {
     try {

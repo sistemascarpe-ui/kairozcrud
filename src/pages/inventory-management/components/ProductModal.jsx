@@ -17,7 +17,8 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode = 'create', brand
     grupo_id: '',
     descripcion_id: '',
     sub_marca_id: '',
-    creado_por_id: userProfile?.id || ''
+    creado_por_id: userProfile?.id || '',
+    ubicacion: 'optica'
   });
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState([]);
@@ -66,7 +67,8 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode = 'create', brand
           grupo_id: String(product.grupo_id || ''),
           descripcion_id: String(product.descripcion_id || ''),
           sub_marca_id: String(product.sub_marca_id || ''),
-          creado_por_id: String(product.creado_por_id || userProfile?.id || '')
+          creado_por_id: String(product.creado_por_id || userProfile?.id || ''),
+          ubicacion: String(product.ubicacion || 'optica')
         };
         
         setFormData(formDataToSet);
@@ -80,7 +82,8 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode = 'create', brand
           grupo_id: '',
           descripcion_id: '',
           sub_marca_id: '',
-          creado_por_id: userProfile?.id || ''
+          creado_por_id: userProfile?.id || '',
+          ubicacion: 'optica'
         });
       }
     }
@@ -164,6 +167,10 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode = 'create', brand
       newErrors.creado_por_id = 'Debe seleccionar un usuario';
     }
 
+    if (!formData?.ubicacion) {
+      newErrors.ubicacion = 'La ubicación es obligatoria';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors)?.length === 0;
   };
@@ -188,7 +195,8 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode = 'create', brand
         grupo_id: formData.grupo_id || null,
         descripcion_id: formData.descripcion_id || null,
         sub_marca_id: formData.sub_marca_id || null,
-        creado_por_id: formData.creado_por_id || null
+        creado_por_id: formData.creado_por_id || null,
+        ubicacion: formData.ubicacion || 'optica'
       };
 
       console.log('Datos del formulario antes de enviar:', formData);
@@ -218,10 +226,10 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode = 'create', brand
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-0">
-      <div className="bg-card w-full h-full max-w-none max-h-none overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between p-6 border-b border-border bg-white">
-          <h2 className="text-2xl font-bold text-foreground">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-6">
+      <div className="bg-card w-full max-w-2xl rounded-xl shadow-2xl border border-border overflow-hidden flex flex-col max-h-[85vh]">
+        <div className="flex items-center justify-between p-4 border-b border-border bg-white">
+          <h2 className="text-xl font-bold text-foreground">
             {getModalTitle()}
           </h2>
           <Button
@@ -234,9 +242,9 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode = 'create', brand
         </div>
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-          <div className="p-8 space-y-8">
+          <div className="p-6 space-y-6">
             {/* Basic Information */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Input
                   label="Modelo"
@@ -246,7 +254,7 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode = 'create', brand
                   error={errors?.sku}
                   required
                   placeholder="Ej: RB-001"
-                  className="h-12 text-lg"
+                  className="h-11 rounded-lg"
                 />
               </div>
 
@@ -257,13 +265,13 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode = 'create', brand
                   value={formData?.color}
                   onChange={(e) => handleInputChange('color', e?.target?.value)}
                   placeholder="Ej: Negro, Transparente"
-                  className="h-12 text-lg"
+                  className="h-11 rounded-lg"
                 />
               </div>
             </div>
 
             {/* Dropdowns for relationships */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Select
                   label="Marca"
@@ -274,7 +282,7 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode = 'create', brand
                   required
                   placeholder="Seleccionar marca"
                   searchable
-                  className="[&>div>button]:h-12 [&>div>button]:text-lg"
+                  className="[&>div>button]:h-11 [&>div>button]:rounded-lg [&>div>button]:bg-white [&>div>button]:shadow-sm"
                 />
               </div>
 
@@ -288,12 +296,12 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode = 'create', brand
                   required
                   placeholder="Seleccionar grupo"
                   searchable
-                  className="[&>div>button]:h-12 [&>div>button]:text-lg"
+                  className="[&>div>button]:h-11 [&>div>button]:rounded-lg [&>div>button]:bg-white [&>div>button]:shadow-sm"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Select
                   label="Descripción"
@@ -302,7 +310,7 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode = 'create', brand
                   onChange={(value) => handleInputChange('descripcion_id', value)}
                   placeholder="Seleccionar descripción"
                   searchable
-                  className="[&>div>button]:h-12 [&>div>button]:text-lg"
+                  className="[&>div>button]:h-11 [&>div>button]:rounded-lg [&>div>button]:bg-white [&>div>button]:shadow-sm"
                 />
               </div>
 
@@ -314,13 +322,13 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode = 'create', brand
                   onChange={(value) => handleInputChange('sub_marca_id', value)}
                   placeholder="Seleccionar sub marca"
                   searchable
-                  className="[&>div>button]:h-12 [&>div>button]:text-lg"
+                  className="[&>div>button]:h-11 [&>div>button]:rounded-lg [&>div>button]:bg-white [&>div>button]:shadow-sm"
                 />
               </div>
             </div>
 
             {/* Pricing and Stock */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Input
                   label="Precio"
@@ -332,7 +340,7 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode = 'create', brand
                   error={errors?.precio}
                   required
                   placeholder="0.00"
-                  className="h-12 text-lg"
+                  className="h-11 rounded-lg"
                 />
               </div>
 
@@ -346,7 +354,7 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode = 'create', brand
                   error={errors?.stock}
                   required
                   placeholder="0"
-                  className="h-12 text-lg"
+                  className="h-11 rounded-lg"
                 />
               </div>
             </div>
@@ -365,25 +373,41 @@ const ProductModal = ({ isOpen, onClose, product, onSave, mode = 'create', brand
                 searchable
                 description="Selecciona el usuario que registra este producto"
                 error={errors?.creado_por_id}
-                className="[&>div>button]:h-12 [&>div>button]:text-lg"
+                className="[&>div>button]:h-11 [&>div>button]:rounded-lg [&>div>button]:bg-white [&>div>button]:shadow-sm"
+              />
+            </div>
+
+            {/* Ubicación */}
+            <div className="space-y-2">
+              <Select
+                label="Ubicación"
+                options={[
+                  { value: 'optica', label: 'Óptica' },
+                  { value: 'campana', label: 'Campaña' }
+                ]}
+                value={formData.ubicacion}
+                onChange={(value) => handleInputChange('ubicacion', value)}
+                placeholder="Selecciona ubicación"
+                error={errors?.ubicacion}
+                className="[&>div>button]:h-11 [&>div>button]:rounded-lg [&>div>button]:bg-white [&>div>button]:shadow-sm"
               />
             </div>
           </div>
 
-          <div className="flex items-center justify-end space-x-4 p-8 border-t border-border bg-gray-50">
+          <div className="flex items-center justify-end space-x-3 p-4 border-t border-border bg-gray-50">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
               disabled={loading}
-              className="h-12 px-8 text-lg font-semibold"
+              className="h-10 px-6"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
               disabled={loading}
-              className="h-12 px-8 text-lg font-semibold"
+              className="h-10 px-6"
             >
               {loading ? 'Guardando...' : `${mode === 'edit' ? 'Actualizar' : 'Crear'} Producto`}
             </Button>

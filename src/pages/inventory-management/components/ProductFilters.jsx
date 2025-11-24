@@ -16,6 +16,8 @@ const ProductFilters = ({
   onSubBrandChange,
   selectedStockStatus,
   onStockStatusChange,
+  selectedLocation,
+  onLocationChange,
   resultCount,
   totalUnits = 0,
   brands = [],
@@ -50,7 +52,7 @@ const ProductFilters = ({
     { value: 'out-of-stock', label: 'Agotado' }
   ];
 
-  const hasActiveFilters = selectedBrand || selectedGroup || selectedDescription || selectedSubBrand || selectedStockStatus || searchTerm;
+  const hasActiveFilters = selectedBrand || selectedGroup || selectedDescription || selectedSubBrand || selectedStockStatus || selectedLocation || searchTerm;
 
   return (
     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 p-6 shadow-lg">
@@ -98,7 +100,7 @@ const ProductFilters = ({
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <div className="space-y-2">
           <label className="text-sm font-semibold text-white bg-blue-500 px-3 py-1 rounded-full">Marca</label>
           <div className="bg-blue-100 rounded-2xl p-3 shadow-lg hover:shadow-xl hover:bg-blue-200 transition-all duration-200">
@@ -167,6 +169,23 @@ const ProductFilters = ({
             />
           </div>
         </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-white bg-orange-500 px-3 py-1 rounded-full">Ubicación</label>
+          <div className="bg-orange-100 rounded-2xl p-3 shadow-lg hover:shadow-xl hover:bg-orange-200 transition-all duration-200">
+            <Select
+              options={[
+                { value: '', label: 'Todas las ubicaciones' },
+                { value: 'optica', label: 'Óptica' },
+                { value: 'campana', label: 'Campaña' }
+              ]}
+              value={selectedLocation}
+              onChange={onLocationChange}
+              placeholder=""
+              className="w-full [&>div>button]:bg-orange-50 [&>div>button]:border-0 [&>div>button]:text-orange-800 [&>div>button]:hover:bg-orange-100 [&>div>button]:focus:ring-0 [&>div>button]:focus:outline-none [&>div>button]:shadow-none [&>div>div]:bg-white [&>div>div]:border-0 [&>div>div>div>div]:bg-orange-50 [&>div>div>div>div]:text-orange-800 [&>div>div>div>div]:hover:bg-orange-100"
+            />
+          </div>
+        </div>
       </div>
       
       {hasActiveFilters && (
@@ -182,6 +201,7 @@ const ProductFilters = ({
                 onDescriptionChange('');
                 onSubBrandChange('');
                 onStockStatusChange('');
+                onLocationChange('');
               }}
               className="text-red-700 hover:text-red-900 font-semibold border-0 bg-transparent hover:bg-transparent focus:ring-0 focus:outline-none shadow-none"
             >
@@ -230,6 +250,12 @@ const ProductFilters = ({
               {selectedStockStatus && (
                 <span className="inline-flex items-center px-4 py-2 bg-yellow-600 text-white text-sm font-semibold rounded-full shadow-md">
                   📊 {stockStatusOptions?.find(s => s?.value === selectedStockStatus)?.label}
+                </span>
+              )}
+
+              {selectedLocation && (
+                <span className="inline-flex items-center px-4 py-2 bg-orange-600 text-white text-sm font-semibold rounded-full shadow-md">
+                  📍 {selectedLocation === 'optica' ? 'Óptica' : 'Campaña'}
                 </span>
               )}
             </div>
