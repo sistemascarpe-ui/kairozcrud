@@ -2,14 +2,17 @@ import { supabase } from '../lib/supabase';
 
 export const inventoryService = {
   // OPTIMIZED: Get products summary (lightweight version for tables)
-  async getProductsSummary(limit = 50, offset = 0, filters = {}, sort = { key: 'created_at', direction: 'desc' }) {
+  async getProductsSummary(limit = 50, offset = 0, filters = {}, sort = { key: 'created_at', direction: 'asc' }) {
     try {
-      let columns = `
+      let query = supabase
+        .from('armazones')
+        .select(`
           id,
           sku,
           color,
           stock,
           precio,
+          ubicacion,
           created_at,
           updated_at,
           editado_manualmente,
@@ -23,10 +26,7 @@ export const inventoryService = {
           sub_marcas(id, nombre),
           descripciones(id, nombre),
           usuarios(id, nombre, apellido)
-        `;
-      let query = supabase
-        .from('armazones')
-        .select(columns)
+        `)
         .order(sort?.key || 'created_at', { ascending: (sort?.direction === 'asc') })
         .range(offset, offset + limit - 1);
 
@@ -52,22 +52,7 @@ export const inventoryService = {
         query = query.or(`sku.ilike.${term},color.ilike.${term},marcas.nombre.ilike.${term},grupos.nombre.ilike.${term},descripciones.nombre.ilike.${term}`);
       }
 
-      let { data, error } = await query;
-
-      // Fallback: intentar incluir ubicacion si existe
-      if (!error) {
-        // intentar otra consulta sólo para ubicacion y mergear si columna existe
-        try {
-          const { data: locData } = await supabase
-            .from('armazones')
-            .select('id, ubicacion')
-            .range(offset, offset + limit - 1);
-          if (Array.isArray(locData)) {
-            const map = new Map(locData.map(r => [r.id, r.ubicacion]));
-            data = (data || []).map(r => ({ ...r, ubicacion: map.get(r.id) || null }));
-          }
-        } catch {}
-      }
+      const { data, error } = await query;
 
       if (error) throw error;
       
@@ -478,7 +463,7 @@ export const inventoryService = {
   // Get all products with relationships
   async getProducts() {
     try {
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from('armazones')
         .select(`
           id,
@@ -486,6 +471,7 @@ export const inventoryService = {
           color,
           stock,
           precio,
+          ubicacion,
           created_at,
           updated_at,
           editado_manualmente,
@@ -506,17 +492,6 @@ export const inventoryService = {
         throw error
       }
       
-      // Enrich ubicacion si la columna existe
-      try {
-        const { data: locData } = await supabase
-          .from('armazones')
-          .select('id, ubicacion');
-        if (Array.isArray(locData)) {
-          const map = new Map(locData.map(r => [r.id, r.ubicacion]));
-          data = (data || []).map(r => ({ ...r, ubicacion: map.get(r.id) || null }));
-        }
-      } catch {}
-
       // Obtener información de campañas para todos los productos de una vez
       const productIds = data?.map(p => p.id) || [];
       let campaignInfo = {};
@@ -567,7 +542,7 @@ export const inventoryService = {
   // Get product by ID
   async getProduct(id) {
     try {
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from('armazones')
         .select(`
           id,
@@ -575,6 +550,7 @@ export const inventoryService = {
           color,
           stock,
           precio,
+          ubicacion,
           marca_id,
           grupo_id,
           descripcion_id,
@@ -587,16 +563,6 @@ export const inventoryService = {
         `)
         .eq('id', id)
         .single()
-
-      // Fallback: tratar de leer ubicacion aparte si existe
-      try {
-        const { data: loc } = await supabase
-          .from('armazones')
-          .select('ubicacion')
-          .eq('id', id)
-          .single();
-        if (loc) data = { ...data, ubicacion: loc.ubicacion };
-      } catch {}
       
       if (error) {
         throw error
