@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Edit, MoreHorizontal, Ban, Trash2 } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 
@@ -30,6 +30,25 @@ const SalesTable = ({ sales = [], onEdit, onCancel, onDelete, loading = false })
   const toggleMenu = useCallback((id) => {
     setOpenMenuId(prev => (prev === id ? null : id));
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!openMenuId) return;
+      const target = e.target;
+      const inMenu = target.closest(`[data-sale-menu="${openMenuId}"]`);
+      const inToggle = target.closest(`[data-sale-toggle="${openMenuId}"]`);
+      if (!inMenu && !inToggle) setOpenMenuId(null);
+    };
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') setOpenMenuId(null);
+    };
+    document.addEventListener('mousedown', handleClickOutside, true);
+    document.addEventListener('keydown', handleEscape, true);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside, true);
+      document.removeEventListener('keydown', handleEscape, true);
+    };
+  }, [openMenuId]);
 
 const formatDate = (dateString) => {
   if (!dateString) return '---';
@@ -154,12 +173,13 @@ const formatDate = (dateString) => {
                       size="icon"
                       className="h-8 w-8"
                       onClick={() => toggleMenu(sale.id)}
+                      data-sale-toggle={sale.id}
                       iconName={null}
                     >
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                     {openMenuId === sale.id && (
-                      <div className="absolute z-20 mt-2 bg-white border border-gray-200 rounded-md shadow-md p-2 left-4">
+                      <div className="absolute z-20 mt-2 bg-white border border-gray-200 rounded-md shadow-md p-2 left-4" data-sale-menu={sale.id}>
                         <div className="flex flex-col space-y-1">
                           {onEdit && (
                             <Button
