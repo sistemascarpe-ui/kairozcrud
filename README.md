@@ -91,7 +91,7 @@ Sistema completo de gestión para ópticas desarrollado con React y Supabase. Pe
 
 ## 📋 Requisitos Previos
 
-- **Node.js** 16 o superior
+- **Node.js** 18 o superior
 - **npm** o **yarn**
 - **Cuenta de Supabase** activa
 - **Git** para control de versiones
@@ -329,7 +329,7 @@ npm install
 **Problemas de dependencias:**
 ```
 # Verificar versión de Node.js
-node --version  # Debe ser 16+
+node --version  # Debe ser 18+
 npm --version
 ```
 
@@ -366,6 +366,15 @@ npm --version
 
 Este proyecto es privado y está destinado exclusivamente para **Ópticas Kairoz**.
 
+## 👤 Autor
+
+- GitHub: [@ismaiars](https://github.com/ismaiars)
+- Email: iarsfate@gmail.com
+
+<a href="https://github.com/ismaiars" target="_blank">
+  <img src="https://github.com/ismaiars.png?size=160" alt="Avatar de ismaiars" width="120" height="120" style="border-radius: 50%;" />
+</a>
+
 ## 📞 Soporte
 
 Para soporte técnico, consultas sobre el sistema o reportar bugs:
@@ -379,45 +388,3 @@ Para soporte técnico, consultas sobre el sistema o reportar bugs:
 
 *Sistema de gestión integral optimizado para el sector óptico*
 
-## 📸 Capturas del Sistema
-
-> Coloca las imágenes en `public/screenshots/` con los nombres sugeridos. Si usas Vercel, puedes arrastrarlas a ese directorio y hacer commit.
-
-- Inicio de sesión:
-  
-  ![Login](public/screenshots/login.png)
-
-- Dashboard principal:
-  
-  ![Dashboard](public/screenshots/dashboard.png)
-
-- Inventario: filtros y conteos correctos por ubicación:
-  
-  ![Inventario Filtros](public/screenshots/inventory-filters.png)
-
-- Reporte de Inventario: selector de General / Por Marca:
-  
-  ![Reporte Modal](public/screenshots/report-modal.png)
-
-- PDF Generado (General):
-  
-  ![PDF General](public/screenshots/pdf-general.png)
-
-- PDF Generado (Por Marca):
-  
-  ![PDF Por Marca](public/screenshots/pdf-brand.png)
-
-- Ventas: menú de acciones con cierre por clic fuera:
-  
-  ![Ventas Acciones](public/screenshots/sales-actions-menu.png)
-
-- Eliminar Nota con PIN:
-  
-  ![Eliminar Nota](public/screenshots/delete-sale-pin.png)
-
-### Cómo generar las capturas
-
-1. Inicia el proyecto en desarrollo: `npm start` y abre `http://localhost:5173`.
-2. Toma capturas a 1366×768 o 1440×900 para consistencia.
-3. Guarda los archivos en `public/screenshots/` con los nombres anteriores.
-4. Opcional: sube las capturas a un CDN y actualiza los links en este README.
