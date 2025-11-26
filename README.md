@@ -1,4 +1,4 @@
-# 🏪 Ópticas Kairoz - Sistema de Gestión Integral (Con Punto de Venta Proximo)
+# 🏪 Ópticas Kairoz - Sistema de Gestión Integral (Con Punto de Venta Proximo a Implementar)
 
 Sistema completo de gestión para ópticas desarrollado con React y Supabase. Permite administrar inventario, clientes, ventas, métricas avanzadas y generar reportes detallados del negocio.
 
