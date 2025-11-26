@@ -121,6 +121,7 @@ export const inventoryService = {
         descriptionId,
         subBrandId,
         stockStatus,
+        location,
         searchTerm,
       } = filters || {};
 
@@ -130,6 +131,7 @@ export const inventoryService = {
       if (subBrandId) query = query.eq('sub_marca_id', subBrandId);
       if (stockStatus === 'in-stock') query = query.gt('stock', 0);
       if (stockStatus === 'out-of-stock') query = query.eq('stock', 0);
+      if (location) query = query.eq('ubicacion', location);
       if (searchTerm && typeof searchTerm === 'string') {
         const term = `%${searchTerm}%`;
         // Permitir búsqueda por columnas relacionadas incluidas en el select
@@ -167,6 +169,7 @@ export const inventoryService = {
         descriptionId,
         subBrandId,
         stockStatus,
+        location,
         searchTerm,
       } = filters || {};
 
@@ -176,6 +179,7 @@ export const inventoryService = {
       if (subBrandId) query = query.eq('sub_marca_id', subBrandId);
       if (stockStatus === 'in-stock') query = query.gt('stock', 0);
       if (stockStatus === 'out-of-stock') query = query.eq('stock', 0);
+      if (location) query = query.eq('ubicacion', location);
       if (searchTerm && typeof searchTerm === 'string') {
         const term = `%${searchTerm}%`;
         query = query.or(`sku.ilike.${term},color.ilike.${term},marcas.nombre.ilike.${term},grupos.nombre.ilike.${term},descripciones.nombre.ilike.${term}`);
@@ -219,6 +223,7 @@ export const inventoryService = {
         descriptionId,
         subBrandId,
         stockStatus,
+        location,
         searchTerm,
       } = filters || {};
 
@@ -228,6 +233,7 @@ export const inventoryService = {
       if (subBrandId) query = query.eq('sub_marca_id', subBrandId);
       if (stockStatus === 'in-stock') query = query.gt('stock', 0);
       if (stockStatus === 'out-of-stock') query = query.eq('stock', 0);
+      if (location) query = query.eq('ubicacion', location);
       if (searchTerm && typeof searchTerm === 'string') {
         const term = `%${searchTerm}%`;
         query = query.or(`marcas.nombre.ilike.${term}`);
@@ -274,6 +280,7 @@ export const inventoryService = {
         descriptionId,
         subBrandId,
         stockStatus,
+        location,
         searchTerm,
       } = filters || {};
 
@@ -283,6 +290,7 @@ export const inventoryService = {
       if (subBrandId) query = query.eq('sub_marca_id', subBrandId);
       if (stockStatus === 'in-stock') query = query.gt('stock', 0);
       if (stockStatus === 'out-of-stock') query = query.eq('stock', 0);
+      if (location) query = query.eq('ubicacion', location);
       if (searchTerm && typeof searchTerm === 'string') {
         const term = `%${searchTerm}%`;
         query = query.or(`grupos.nombre.ilike.${term}`);
@@ -328,6 +336,7 @@ export const inventoryService = {
         descriptionId,
         subBrandId,
         stockStatus,
+        location,
         searchTerm,
       } = filters || {};
 
@@ -337,6 +346,7 @@ export const inventoryService = {
       if (subBrandId) query = query.eq('sub_marca_id', subBrandId);
       if (stockStatus === 'in-stock') query = query.gt('stock', 0);
       if (stockStatus === 'out-of-stock') query = query.eq('stock', 0);
+      if (location) query = query.eq('ubicacion', location);
       if (searchTerm && typeof searchTerm === 'string') {
         const term = `%${searchTerm}%`;
         query = query.or(`descripciones.nombre.ilike.${term}`);
@@ -382,6 +392,7 @@ export const inventoryService = {
         descriptionId,
         subBrandId,
         stockStatus,
+        location,
         searchTerm,
       } = filters || {};
 
@@ -391,6 +402,7 @@ export const inventoryService = {
       if (subBrandId) query = query.eq('sub_marca_id', subBrandId);
       if (stockStatus === 'in-stock') query = query.gt('stock', 0);
       if (stockStatus === 'out-of-stock') query = query.eq('stock', 0);
+      if (location) query = query.eq('ubicacion', location);
       if (searchTerm && typeof searchTerm === 'string') {
         const term = `%${searchTerm}%`;
         query = query.or(`sub_marcas.nombre.ilike.${term}`);
@@ -438,6 +450,7 @@ export const inventoryService = {
         descriptionId,
         subBrandId,
         stockStatus,
+        location,
         searchTerm,
       } = filters || {};
 
@@ -447,6 +460,7 @@ export const inventoryService = {
       if (subBrandId) query = query.eq('sub_marca_id', subBrandId);
       if (stockStatus === 'in-stock') query = query.gt('stock', 0); // if explicit, override
       if (stockStatus === 'out-of-stock') query = query.eq('stock', 0);
+      if (location) query = query.eq('ubicacion', location);
       if (searchTerm && typeof searchTerm === 'string') {
         const term = `%${searchTerm}%`;
         query = query.or(`sku.ilike.${term},color.ilike.${term},marcas.nombre.ilike.${term},descripciones.nombre.ilike.${term}`);
