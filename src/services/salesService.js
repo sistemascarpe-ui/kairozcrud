@@ -1181,6 +1181,24 @@ export const salesService = {
     }
   },
 
+  async deleteSalesNoteWithAuth(id, userId, adminPin) {
+    try {
+      const ADMIN_DELETE_PIN = import.meta.env.VITE_ADMIN_DELETE_PIN || '1234';
+      if (adminPin !== ADMIN_DELETE_PIN) {
+        return { error: 'PIN de administración incorrecto. No tienes permisos para eliminar esta nota' };
+      }
+      // Eliminar la nota y relaciones
+      const delRes = await this.deleteSalesNote(id);
+      if (delRes.error) {
+        return { error: delRes.error };
+      }
+
+      return { error: null };
+    } catch (error) {
+      return { error: error?.message };
+    }
+  },
+
   async getSalesStats() {
     try {
       const { data, error } = await supabase.from('ventas').select('total, estado');
@@ -1219,96 +1237,34 @@ export const salesService = {
 
   async generateUniqueFolio() {
     try {
-      // Obtener configuración de folios
-      const { data: config, error: configError } = await supabase
-        .from('configuracion_folios')
-        .select('prefijo, numero_inicio')
-        .eq('id', 1)
-        .single();
-
-      let prefijo = 'V';
-      let numeroInicio = 1;
-
-      if (config && !configError) {
-        prefijo = config.prefijo || 'V';
-        numeroInicio = config.numero_inicio || 1;
-      }
-
-      // Obtener todos los folios del día actual para encontrar el siguiente número disponible
-      const today = new Date();
-      const mexicoToday = new Date(today.toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
-      const todayStr = `${mexicoToday.getFullYear()}${String(mexicoToday.getMonth() + 1).padStart(2, '0')}${String(mexicoToday.getDate()).padStart(2, '0')}`;
-
-      // Obtener todos los folios que contengan números (automáticos y manuales)
+      // Obtener todos los folios existentes
       const { data: allFolios, error } = await supabase
         .from('ventas')
         .select('folio')
         .not('folio', 'is', null);
 
       if (error) {
-        logger.error('Error al obtener folios:', error);
-        // Si hay error, generar folio basado en configuración con zona horaria de México
-        const now = new Date();
-        const mexicoDate = new Date(now.toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
-        const year = mexicoDate.getFullYear();
-        const month = String(mexicoDate.getMonth() + 1).padStart(2, '0');
-        const day = String(mexicoDate.getDate()).padStart(2, '0');
-        const time = String(now.getTime()).slice(-6); // Últimos 6 dígitos del timestamp
-        return `${prefijo}${year}${month}${day}${time}`;
+        // Fallback: iniciar en 1 si no se pueden leer folios
+        return '1';
       }
 
-      let nextNumber = numeroInicio;
-      const usedNumbers = new Set();
-
-      if (allFolios && allFolios.length > 0) {
-        // Extraer números de todos los folios (automáticos y manuales)
-        allFolios.forEach(folioObj => {
-          const folio = folioObj.folio;
-          
-          // Para folios automáticos del día actual (formato: VYYYYMMDDNNNNNN)
-          const autoMatch = folio.match(new RegExp(`^${prefijo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}${todayStr}(\\d+)$`));
-          if (autoMatch) {
-            const number = parseInt(autoMatch[1]);
-            usedNumbers.add(number);
-          }
-          
-          // Para folios manuales que sean solo números
-          const manualMatch = folio.match(/^(\d+)$/);
-          if (manualMatch) {
-            const number = parseInt(manualMatch[1]);
-            usedNumbers.add(number);
-          }
-        });
-
-        // Encontrar el siguiente número disponible
-        let candidate = numeroInicio;
-        while (usedNumbers.has(candidate)) {
-          candidate++;
+      // Tomar referencia del último número completo y continuar ascendente
+      let maxNumber = 0;
+      (allFolios || []).forEach(folioObj => {
+        const digits = String(folioObj.folio || '').replace(/\D/g, '');
+        if (!digits) return;
+        const last4 = digits.slice(-4); // solo los últimos 4 dígitos
+        const num = parseInt(last4 || '0', 10);
+        if (!Number.isNaN(num)) {
+          if (num > maxNumber) maxNumber = num;
         }
-        nextNumber = candidate;
-        
-        logger.log(`Números usados: [${Array.from(usedNumbers).sort((a,b) => a-b).join(', ')}], siguiente disponible: ${nextNumber}`);
-      }
+      });
 
-      // Generar nuevo folio usando zona horaria de México
-      const now = new Date();
-      const mexicoDate = new Date(now.toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
-      const year = mexicoDate.getFullYear();
-      const month = String(mexicoDate.getMonth() + 1).padStart(2, '0');
-      const day = String(mexicoDate.getDate()).padStart(2, '0');
-      const number = String(nextNumber).padStart(6, '0');
-      
-      return `${prefijo}${year}${month}${day}${number}`;
+      const nextNumber = maxNumber + 1;
+      return String(nextNumber).padStart(4, '0');
     } catch (error) {
-      logger.error('Error generando folio:', error);
-      // Fallback: folio basado en timestamp con zona horaria de México
-      const now = new Date();
-      const mexicoDate = new Date(now.toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
-      const year = mexicoDate.getFullYear();
-      const month = String(mexicoDate.getMonth() + 1).padStart(2, '0');
-      const day = String(mexicoDate.getDate()).padStart(2, '0');
-      const time = String(now.getTime()).slice(-6);
-      return `V${year}${month}${day}${time}`;
+      // Fallback: iniciar en 1
+      return '1';
     }
   },
 

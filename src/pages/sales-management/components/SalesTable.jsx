@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { Edit, MoreHorizontal, Ban } from 'lucide-react';
+import { Edit, MoreHorizontal, Ban, Trash2 } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 
-const SalesTable = ({ sales = [], onEdit, onCancel, loading = false }) => {
+const SalesTable = ({ sales = [], onEdit, onCancel, onDelete, loading = false }) => {
   const sortedSales = React.useMemo(() => {
     const arr = [...(sales || [])];
     arr.sort((a, b) => {
@@ -184,6 +184,16 @@ const formatDate = (dateString) => {
                               className="justify-start"
                             >
                               <Ban className="h-4 w-4 mr-2" /> Cancelar
+                            </Button>
+                          )}
+                          {onDelete && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => { onDelete(sale); setOpenMenuId(null); }}
+                              className="justify-start"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" /> Eliminar
                             </Button>
                           )}
                         </div>

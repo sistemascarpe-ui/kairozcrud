@@ -8,7 +8,8 @@ const DeleteConfirmModal = ({
   onClose, 
   onConfirm, 
   productName,
-  isLoading = false 
+  isLoading = false,
+  itemLabel = 'armazón'
 }) => {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
@@ -26,7 +27,7 @@ const DeleteConfirmModal = ({
     }
 
     if (pin !== ADMIN_DELETE_PIN) {
-      setError('PIN incorrecto. No tienes permisos para eliminar este armazón');
+      setError(`PIN incorrecto. No tienes permisos para eliminar este ${itemLabel}`);
       return;
     }
 
@@ -64,7 +65,7 @@ const DeleteConfirmModal = ({
           {/* Content */}
           <div className="mb-6">
             <p className="text-sm text-foreground mb-2">
-              Estás a punto de eliminar el armazón:
+              Estás a punto de eliminar el {itemLabel}:
             </p>
             <div className="bg-muted/50 rounded-lg p-3 mb-4">
               <p className="font-medium text-foreground">{productName}</p>
@@ -117,7 +118,7 @@ const DeleteConfirmModal = ({
               disabled={isLoading || !pin.trim()}
               iconName={isLoading ? "Loader2" : "Trash2"}
             >
-              {isLoading ? 'Eliminando...' : 'Eliminar Armazón'}
+              {isLoading ? 'Eliminando...' : `Eliminar ${itemLabel.charAt(0).toUpperCase() + itemLabel.slice(1)}`}
             </Button>
           </div>
         </div>

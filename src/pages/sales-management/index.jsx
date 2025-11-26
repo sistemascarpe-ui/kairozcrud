@@ -9,6 +9,7 @@ import Button from '../../components/ui/Button';
 import Header from '../../components/ui/Header';
 import SalesTable from './components/SalesTable';
 import NewSalesModal from '../../components/NewSalesModal';
+import DeleteConfirmModal from '../inventory-management/components/DeleteConfirmModal';
 
 import { salesService } from '../../services/salesService';
 import { userService } from '../../services/userService';
@@ -67,7 +68,7 @@ const SalesManagement = () => {
   const [salesPerPage] = useState(20);
 
   // Usar hooks optimizados
-  const { data: salesData, isLoading: salesLoading, error: salesError } = useOptimizedSales(1, null);
+  const { data: salesData, isLoading: salesLoading, error: salesError, refetch: refetchSales } = useOptimizedSales(1, null);
   const { data: salesCountData } = useSalesCount();
 
   useEffect(() => { loadInitialData(); }, []);
@@ -208,6 +209,9 @@ const SalesManagement = () => {
   const handleEditSale = (sale) => { setSelectedSale(sale); setIsModalOpen(true); };
   const [cancelSale, setCancelSale] = useState(null);
   const openCancelSaleDialog = (sale) => { setCancelSale(sale); };
+  const [deleteSale, setDeleteSale] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const openDeleteSaleDialog = (sale) => { setDeleteSale(sale); };
   
   const handleCancelSale = async () => {
     const sale = cancelSale;
@@ -228,6 +232,7 @@ const SalesManagement = () => {
         return `${marca}${sku ? ' - ' + sku : ''}${color ? ' (' + color + ')' : ''} x ${qty}`;
       }).join(', ');
       toast.success(`Nota cancelada. Stock repuesto para ${result.restoredCount || 0} armazón(es).${detalles ? ` Detalle: ${detalles}` : ''}`);
+      await refetchSales();
       await loadInitialData();
       const updatesForMetrics = { ...sale, estado: 'cancelada' };
       notifySaleUpdate(updatesForMetrics);
@@ -321,6 +326,7 @@ const handleSaveSale = async (saleData) => {
     
     toast.success(mensajeExito);
     setIsModalOpen(false);
+    await refetchSales();
     await loadInitialData();
     
     // Notificar actualización de métricas
@@ -539,7 +545,7 @@ const handleSaveSale = async (saleData) => {
             const start = (currentPage - 1) * salesPerPage;
             const end = start + salesPerPage;
             const displayedSales = filteredSales.slice(start, end);
-            return <SalesTable sales={displayedSales} onEdit={handleEditSale} onCancel={openCancelSaleDialog} loading={loading} />;
+            return <SalesTable sales={displayedSales} onEdit={handleEditSale} onCancel={openCancelSaleDialog} onDelete={openDeleteSaleDialog} loading={loading} />;
           })()}
           
           {/* Controles de paginación */}
@@ -648,6 +654,31 @@ const handleSaveSale = async (saleData) => {
               </div>
             </div>
           )}
+          <DeleteConfirmModal
+            isOpen={!!deleteSale}
+            onClose={() => setDeleteSale(null)}
+            onConfirm={async (pin) => {
+              try {
+                setDeleteLoading(true);
+                const result = await salesService.deleteSalesNoteWithAuth(deleteSale.id, userProfile?.id, pin);
+                if (result?.error) {
+                  toast.error(`Error al eliminar la nota: ${result.error}`);
+                } else {
+                  toast.success('Nota de venta eliminada');
+                  setDeleteSale(null);
+                  await refetchSales();
+                  await loadInitialData();
+                }
+              } catch (e) {
+                toast.error(`Error al eliminar la nota: ${e.message || 'Error desconocido'}`);
+              } finally {
+                setDeleteLoading(false);
+              }
+            }}
+            productName={`Folio ${String(deleteSale?.folio || '').replace(/\D/g,'').slice(-4)}${deleteSale?.cliente?.nombre ? ' - ' + deleteSale.cliente.nombre : ''}`}
+            isLoading={deleteLoading}
+            itemLabel="nota de venta"
+          />
           <NewSalesModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveSale} sale={selectedSale} loading={modalLoading}/>
         </div>
       </div>
