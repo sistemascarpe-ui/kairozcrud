@@ -197,9 +197,12 @@ src/
 - `sub_marcas` - Sub-marcas y proveedores
 - `grupos` - Categorías de productos
 - `descripciones` - Descripciones de productos
-- `ventas` - Registro de transacciones
+- `ventas` - Registro de transacciones (Tienda)
+- `ventas_campana` - Registro de transacciones (Campaña)
 - `venta_vendedores` - Relación vendedores-ventas
 - `abonos` - Registro de pagos parciales
+- `caja_sesiones` - Control de apertura y cierre de caja
+- `caja_movimientos` - Registro de ingresos y egresos
 - `historial_graduaciones` - Historial clínico
 
 ### **Políticas de Seguridad (RLS):**

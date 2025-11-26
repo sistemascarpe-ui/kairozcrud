@@ -1,4 +1,6 @@
---es solo de referencia, no se debe ejecutar
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
 CREATE TABLE public.abonos (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   venta_id uuid NOT NULL,
@@ -12,6 +14,18 @@ CREATE TABLE public.abonos (
   CONSTRAINT abonos_pkey PRIMARY KEY (id),
   CONSTRAINT abonos_venta_id_fkey FOREIGN KEY (venta_id) REFERENCES public.ventas(id),
   CONSTRAINT abonos_creado_por_id_fkey FOREIGN KEY (creado_por_id) REFERENCES public.usuarios(id)
+);
+CREATE TABLE public.abonos_campana (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  venta_id bigint NOT NULL,
+  monto numeric NOT NULL,
+  forma_pago text,
+  fecha_abono timestamp with time zone DEFAULT now(),
+  observaciones text,
+  creado_por_id uuid,
+  CONSTRAINT abonos_campana_pkey PRIMARY KEY (id),
+  CONSTRAINT abonos_campana_venta_id_fkey FOREIGN KEY (venta_id) REFERENCES public.ventas_campana(id),
+  CONSTRAINT abonos_campana_creado_por_id_fkey FOREIGN KEY (creado_por_id) REFERENCES public.usuarios(id)
 );
 CREATE TABLE public.armazones (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -27,12 +41,46 @@ CREATE TABLE public.armazones (
   precio numeric NOT NULL DEFAULT 0,
   updated_at timestamp with time zone DEFAULT now(),
   editado_manualmente timestamp with time zone,
+  ubicacion text NOT NULL DEFAULT 'optica'::text CHECK (ubicacion = ANY (ARRAY['optica'::text, 'campana'::text])),
   CONSTRAINT armazones_pkey PRIMARY KEY (id),
   CONSTRAINT armazones_marca_id_fkey FOREIGN KEY (marca_id) REFERENCES public.marcas(id),
   CONSTRAINT armazones_descripcion_id_fkey FOREIGN KEY (descripcion_id) REFERENCES public.descripciones(id),
   CONSTRAINT armazones_grupo_id_fkey FOREIGN KEY (grupo_id) REFERENCES public.grupos(id),
   CONSTRAINT armazones_creado_por_id_fkey FOREIGN KEY (creado_por_id) REFERENCES public.usuarios(id),
   CONSTRAINT armazones_sub_marca_id_fkey FOREIGN KEY (sub_marca_id) REFERENCES public.sub_marcas(id)
+);
+CREATE TABLE public.caja_movimientos (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  sesion_id uuid NOT NULL,
+  tipo text NOT NULL CHECK (tipo = ANY (ARRAY['ingreso'::text, 'egreso'::text])),
+  monto numeric NOT NULL,
+  categoria text,
+  concepto text,
+  metodo_pago text,
+  referencia text,
+  venta_id uuid,
+  usuario_id uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT caja_movimientos_pkey PRIMARY KEY (id),
+  CONSTRAINT caja_movimientos_sesion_id_fkey FOREIGN KEY (sesion_id) REFERENCES public.caja_sesiones(id),
+  CONSTRAINT caja_movimientos_venta_id_fkey FOREIGN KEY (venta_id) REFERENCES public.ventas(id),
+  CONSTRAINT caja_movimientos_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.usuarios(id)
+);
+CREATE TABLE public.caja_sesiones (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  fecha_apertura timestamp with time zone NOT NULL DEFAULT now(),
+  usuario_apertura_id uuid,
+  saldo_inicial numeric NOT NULL DEFAULT 0,
+  estado text NOT NULL CHECK (estado = ANY (ARRAY['abierta'::text, 'cerrada'::text])),
+  fecha_cierre timestamp with time zone,
+  usuario_cierre_id uuid,
+  saldo_cierre numeric,
+  observaciones text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT caja_sesiones_pkey PRIMARY KEY (id),
+  CONSTRAINT caja_sesiones_usuario_apertura_id_fkey FOREIGN KEY (usuario_apertura_id) REFERENCES public.usuarios(id),
+  CONSTRAINT caja_sesiones_usuario_cierre_id_fkey FOREIGN KEY (usuario_cierre_id) REFERENCES public.usuarios(id)
 );
 CREATE TABLE public.campana_miembros (
   campana_id uuid NOT NULL,
@@ -73,9 +121,10 @@ CREATE TABLE public.campanas (
   ubicacion text,
   observaciones text,
   estado text NOT NULL DEFAULT 'activa'::text CHECK (estado = ANY (ARRAY['activa'::text, 'finalizada'::text, 'cancelada'::text])),
-  creado_por_id uuid NOT NULL,
+  creado_por_id uuid,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  identificador text,
   CONSTRAINT campanas_pkey PRIMARY KEY (id),
   CONSTRAINT campanas_creado_por_id_fkey FOREIGN KEY (creado_por_id) REFERENCES public.usuarios(id)
 );
@@ -98,6 +147,13 @@ CREATE TABLE public.configuracion_folios (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT configuracion_folios_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.configuracion_folios_campana (
+  id integer NOT NULL,
+  prefijo text DEFAULT 'CAM'::text,
+  numero_inicio integer DEFAULT 1,
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT configuracion_folios_campana_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.descripciones (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -154,6 +210,36 @@ CREATE TABLE public.usuarios (
   apellido text,
   CONSTRAINT usuarios_pkey PRIMARY KEY (id)
 );
+CREATE TABLE public.venta_campana_clientes (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  venta_id bigint NOT NULL,
+  cliente_id uuid NOT NULL,
+  CONSTRAINT venta_campana_clientes_pkey PRIMARY KEY (id),
+  CONSTRAINT venta_campana_clientes_venta_id_fkey FOREIGN KEY (venta_id) REFERENCES public.ventas_campana(id),
+  CONSTRAINT venta_campana_clientes_cliente_id_fkey FOREIGN KEY (cliente_id) REFERENCES public.clientes(id)
+);
+CREATE TABLE public.venta_campana_productos (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  venta_id bigint NOT NULL,
+  tipo_producto text NOT NULL CHECK (tipo_producto = ANY (ARRAY['armazon'::text, 'mica'::text])),
+  armazon_id uuid,
+  descripcion_mica text,
+  cantidad numeric DEFAULT 1,
+  precio_unitario numeric DEFAULT 0,
+  descuento_monto numeric DEFAULT 0,
+  subtotal numeric DEFAULT 0,
+  CONSTRAINT venta_campana_productos_pkey PRIMARY KEY (id),
+  CONSTRAINT venta_campana_productos_venta_id_fkey FOREIGN KEY (venta_id) REFERENCES public.ventas_campana(id),
+  CONSTRAINT venta_campana_productos_armazon_id_fkey FOREIGN KEY (armazon_id) REFERENCES public.armazones(id)
+);
+CREATE TABLE public.venta_campana_vendedores (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  venta_id bigint NOT NULL,
+  vendedor_id uuid NOT NULL,
+  CONSTRAINT venta_campana_vendedores_pkey PRIMARY KEY (id),
+  CONSTRAINT venta_campana_vendedores_venta_id_fkey FOREIGN KEY (venta_id) REFERENCES public.ventas_campana(id),
+  CONSTRAINT venta_campana_vendedores_vendedor_id_fkey FOREIGN KEY (vendedor_id) REFERENCES public.usuarios(id)
+);
 CREATE TABLE public.venta_clientes (
   venta_id uuid NOT NULL,
   cliente_id uuid NOT NULL,
@@ -202,4 +288,23 @@ CREATE TABLE public.ventas (
   creado_por_id uuid,
   CONSTRAINT ventas_pkey PRIMARY KEY (id),
   CONSTRAINT ventas_creado_por_id_fkey FOREIGN KEY (creado_por_id) REFERENCES public.usuarios(id)
+);
+CREATE TABLE public.ventas_campana (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  folio text UNIQUE,
+  subtotal numeric,
+  total numeric,
+  descuento_monto numeric DEFAULT 0,
+  requiere_factura boolean DEFAULT false,
+  monto_iva numeric DEFAULT 0,
+  rfc text,
+  razon_social text,
+  estado text DEFAULT 'pendiente'::text,
+  observaciones text,
+  fecha_venta timestamp with time zone DEFAULT now(),
+  campana_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT ventas_campana_pkey PRIMARY KEY (id),
+  CONSTRAINT ventas_campana_campana_id_fkey FOREIGN KEY (campana_id) REFERENCES public.campanas(id)
 );

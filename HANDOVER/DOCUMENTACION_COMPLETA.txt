@@ -1,0 +1,191 @@
+================================================================================
+              DOCUMENTACIÓN TÉCNICA Y OPERATIVA - ÓPTICAS KAIROZ
+================================================================================
+
+FECHA DE ACTUALIZACIÓN: 26 de Noviembre, 2025
+VERSIÓN DEL DOCUMENTO: 1.1
+
+ESTA DOCUMENTACIÓN CONTIENE INFORMACIÓN CONFIDENCIAL Y PROPIETARIA DE ÓPTICAS 
+KAIROZ. SU USO ESTÁ RESTRINGIDO AL PERSONAL AUTORIZADO.
+
+================================================================================
+                               ÍNDICE GENERAL
+================================================================================
+
+1.  INTRODUCCIÓN Y ALCANCE
+2.  MANUAL DE OPERACIONES (USUARIO FINAL)
+3.  GUÍA TÉCNICA DE DESARROLLO
+4.  ARQUITECTURA DE BASE DE DATOS
+5.  CONFIGURACIÓN Y DESPLIEGUE
+
+================================================================================
+1. INTRODUCCIÓN Y ALCANCE
+================================================================================
+
+El Sistema de Gestión Integral de Ópticas Kairoz es una solución tecnológica 
+diseñada para centralizar y optimizar las operaciones de venta, inventario y 
+gestión de clientes. Este documento sirve como referencia única para la 
+transferencia de conocimiento, operación y mantenimiento del sistema.
+
+El sistema abarca:
+- Gestión de Inventario (Armazones, Micas, Accesorios).
+- Punto de Venta (POS) y Facturación.
+- Gestión de Campañas Externas.
+- Control de Caja y Flujo de Efectivo.
+- Administración de Clientes y Expedientes Clínicos.
+
+================================================================================
+2. MANUAL DE OPERACIONES (USUARIO FINAL)
+================================================================================
+
+2.1 PERFILES DE ACCESO
+----------------------
+El sistema implementa un control de acceso basado en roles (RBAC):
+
+*   ADMINISTRADOR: Control total del sistema.
+    -   Gestión de usuarios y permisos.
+    -   Acceso a reportes financieros sensibles.
+    -   Autorización de eliminaciones (requiere PIN de seguridad).
+    -   Configuración global del sistema.
+
+*   VENDEDOR: Operación diaria en piso de venta.
+    -   Registro y consulta de clientes.
+    -   Generación de notas de venta.
+    -   Consulta de inventario en tiempo real.
+    -   Registro de abonos.
+
+*   EMPLEADO: Funciones de soporte.
+    -   Consulta básica de información.
+    -   Generación de reportes operativos.
+
+2.2 FLUJOS DE TRABAJO CRÍTICOS
+------------------------------
+
+A. GESTIÓN DE INVENTARIO
+   El inventario se segrega lógicamente por ubicación: "Óptica" (Tienda) y 
+   "Campaña" (Eventos externos).
+   -   Búsqueda Avanzada: Filtros por Marca, Grupo, Descripción, Sub-marca y SKU.
+   -   Alertas de Stock: Indicadores visuales para productos agotados o con bajo stock.
+   -   Reportes: Generación de catálogos en PDF (General o por Marca).
+
+B. PROCESO DE VENTA
+   1.  Selección/Registro del Cliente.
+   2.  Selección de Productos (Armazones, Micas).
+   3.  Confirmación de Venta y Generación de Folio (Consecutivo Automático).
+   4.  Registro de Pago (Total o Parcial/Abono).
+   5.  Emisión de Comprobante/Nota.
+
+C. GESTIÓN DE CAMPAÑAS
+   Módulo especializado para ventas fuera de sucursal.
+   -   Asignación de inventario a campañas.
+   -   Registro de ventas independientes con folios propios (Prefijo 'CAM').
+   -   Control de caja independiente por campaña.
+
+D. CONTROL DE CAJA
+   -   Apertura y Cierre de Sesiones de Caja.
+   -   Registro de Movimientos (Ingresos/Egresos) con justificación.
+   -   Arqueo de caja al finalizar turno.
+
+2.3 SOLUCIÓN DE INCIDENCIAS COMUNES
+-----------------------------------
+*   ERROR DE CONEXIÓN: El sistema opera en la nube. Verifique su conexión a internet.
+*   BLOQUEO DE ACCIONES: Si un botón está deshabilitado, verifique que todos los 
+    campos obligatorios (*) estén completos.
+*   ELIMINACIÓN DE REGISTROS: Requiere autorización de supervisor (PIN). La 
+    eliminación de una venta es lógica y no afecta el histórico de inventario 
+    automáticamente (debe ajustarse si es necesario).
+
+================================================================================
+3. GUÍA TÉCNICA DE DESARROLLO
+================================================================================
+
+3.1 STACK TECNOLÓGICO
+---------------------
+*   Frontend: React 18, Vite, Tailwind CSS, Radix UI.
+*   Gestión de Estado: React Query (TanStack Query), Context API.
+*   Backend (BaaS): Supabase (PostgreSQL, Auth, Realtime).
+*   Infraestructura: Vercel (Hosting & CI/CD).
+
+3.2 ESTRUCTURA DEL CÓDIGO (SRC)
+-------------------------------
+/src
+  /components    -> Componentes UI atómicos y moleculares.
+  /contexts      -> Estado global (Auth, Métricas, Carrito).
+  /hooks         -> Lógica reutilizable (Custom Hooks).
+  /lib           -> Clientes de servicios externos (Supabase).
+  /pages         -> Vistas y contenedores principales.
+  /services      -> Capa de abstracción de datos (API Calls).
+  /utils         -> Funciones auxiliares y formateadores.
+
+3.3 NOTAS DE MANTENIMIENTO
+--------------------------
+*   OPTIMIZACIÓN DE CONSULTAS: Para evitar errores `net::ERR_ABORTED` en conteos, 
+    se utiliza `.select('id', { count: 'exact' }).limit(1)` en lugar de `HEAD`.
+*   FOLIOS: La generación de folios utiliza secuencias de PostgreSQL 
+    (`ventas_folio_seq`, `configuracion_folios_campana`) para garantizar unicidad 
+    y concurrencia.
+*   SEGURIDAD: Las acciones destructivas están protegidas por `VITE_ADMIN_DELETE_PIN` 
+    en el frontend y políticas RLS (Row Level Security) en el backend.
+
+================================================================================
+4. ARQUITECTURA DE BASE DE DATOS
+================================================================================
+
+El sistema utiliza una base de datos relacional PostgreSQL alojada en Supabase.
+
+4.1 TABLAS PRINCIPALES (CORE)
+-----------------------------
+*   usuarios: Catálogo de personal (Admin, Vendedores).
+*   clientes: Base de datos de clientes y pacientes.
+*   empresas: Catálogo de convenios corporativos.
+
+4.2 MÓDULO DE VENTAS (TIENDA)
+-----------------------------
+*   ventas: Cabecera de transacciones (Folio V-XXXX).
+*   venta_productos: Detalle de partidas (Armazones, Micas).
+*   venta_vendedores: Relación N:M para comisiones compartidas.
+*   abonos: Registro de pagos parciales y liquidaciones.
+
+4.3 MÓDULO DE INVENTARIO
+------------------------
+*   armazones: Maestro de productos.
+    -   Campo `ubicacion`: Define si está en 'optica' o 'campana'.
+*   marcas, sub_marcas, grupos, descripciones: Tablas catálogo para normalización.
+
+4.4 MÓDULO DE CAMPAÑAS (EXTERNO)
+--------------------------------
+*   campanas: Registro de eventos/campañas.
+*   campana_miembros: Personal asignado.
+*   campana_productos: Inventario transferido a campaña.
+*   ventas_campana: Cabecera de ventas en campaña.
+*   venta_campana_productos: Detalle de ventas campaña.
+*   abonos_campana: Pagos en campaña.
+
+4.5 MÓDULO DE CAJA
+------------------
+*   caja_sesiones: Control de turnos (Apertura/Cierre).
+*   caja_movimientos: Bitácora de flujo de efectivo (Ingresos/Egresos).
+
+================================================================================
+5. CONFIGURACIÓN Y DESPLIEGUE
+================================================================================
+
+5.1 VARIABLES DE ENTORNO (.env)
+-------------------------------
+Copie el siguiente contenido en un archivo `.env` en la raíz del proyecto para 
+entornos locales. En producción, configure estas variables en el panel de Vercel.
+
+VITE_SUPABASE_URL=https://[TU-PROYECTO].supabase.co
+VITE_SUPABASE_ANON_KEY=[TU-CLAVE-PUBLICA]
+VITE_ADMIN_DELETE_PIN=[PIN-NUMERICO-4-DIGITOS]
+
+5.2 DESPLIEGUE EN VERCEL
+------------------------
+El proyecto está optimizado para despliegue continuo en Vercel.
+1.  Comando de Build: `npm run build`
+2.  Directorio de Salida: `dist`
+3.  Asegúrese de configurar las variables de entorno en "Project Settings > Environment Variables".
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================
