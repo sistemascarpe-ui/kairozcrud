@@ -14,7 +14,8 @@ const NewSalesModal = ({
   onClose, 
   onSave, 
   sale = null, 
-  loading = false 
+  loading = false,
+  locationFilter = null 
 }) => {
   const [formData, setFormData] = useState({
     cliente_ids: [],
@@ -248,8 +249,11 @@ const NewSalesModal = ({
     try {
       const { data } = await inventoryService.getProducts();
       if (data) {
-        // En creación ocultamos stock 0; en edición mostramos todo
-        setInventory(sale ? data : data.filter(p => (p.stock || 0) > 0));
+        let list = sale ? data : data.filter(p => (p.stock || 0) > 0);
+        if (locationFilter) {
+          list = list.filter(p => (p.ubicacion || 'optica') === locationFilter);
+        }
+        setInventory(list);
       }
     } catch (error) {
       toast.error('Error al cargar inventario');

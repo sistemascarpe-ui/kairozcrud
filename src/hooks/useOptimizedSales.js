@@ -29,6 +29,33 @@ export const useSalesCount = () => {
   });
 };
 
+// Hook optimizado para obtener ventas de campaña
+export const useOptimizedCampaignSales = (page = 1, limit = 20) => {
+  const hasLimit = typeof limit === 'number';
+  const offset = hasLimit ? (page - 1) * limit : null;
+  return useQuery({
+    queryKey: ['campaign-sales-notes', hasLimit ? page : 'all', hasLimit ? limit : 'all'],
+    queryFn: () => salesService.getCampaignSalesNotes(hasLimit ? limit : null, offset),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    keepPreviousData: true,
+    retry: 1,
+    retryDelay: 2000,
+  });
+};
+
+// Hook para obtener el conteo total de ventas de campaña
+export const useCampaignSalesCount = () => {
+  return useQuery({
+    queryKey: ['campaign-sales-count'],
+    queryFn: () => salesService.getCampaignSalesCount(),
+    staleTime: 10 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    retry: 1,
+    retryDelay: 2000,
+  });
+};
+
 // Hook optimizado para métricas de ventas
 export const useSalesMetrics = (startDate = null, endDate = null) => {
   return useQuery({

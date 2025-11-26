@@ -105,6 +105,13 @@ export const useImprovedPDFReport = () => {
       
       // Renderizar encabezado en la primera página
       renderHeader();
+      // Subtítulo con filtro de marca (si aplica)
+      const selectedBrandId = inventoryData?.filters?.selectedBrand;
+      if (selectedBrandId) {
+        const brandName = (inventoryData?.brands || [])
+          .find(b => String(b?.id) === String(selectedBrandId))?.nombre || 'Marca seleccionada';
+        addText(`Marca: ${brandName}`, 20, yPosition - 7, { fontSize: 10, color: secondaryColor });
+      }
       
       // Restaurar Resumen Ejecutivo (sin alertas ni distribución)
       addText('RESUMEN EJECUTIVO', 20, yPosition, { fontSize: 16, bold: true, color: primaryColor });

@@ -410,7 +410,8 @@ export const salesService = {
         razon_social: ventaDetails.razon_social || '',
         estado: ventaDetails.estado || 'pendiente',
         observaciones: ventaDetails.observaciones || '',
-        fecha_venta: ventaDetails.fecha_venta || new Date().toISOString()
+        fecha_venta: ventaDetails.fecha_venta || new Date().toISOString(),
+        es_campana: !!ventaDetails.es_campana
       };
 
       // 3. Insertar la venta principal
@@ -617,6 +618,456 @@ export const salesService = {
     } catch (error) {
       console.error('Error creating sales note:', error);
       return { data: null, error: error.message };
+    }
+  },
+
+  async getCampaignSalesNotes(limit = null, offset = null) {
+    try {
+      const selectColumns = `
+          id,
+          folio,
+          total,
+          subtotal,
+          descuento_monto,
+          estado,
+          fecha_venta,
+          observaciones,
+          created_at,
+          updated_at,
+          requiere_factura,
+          monto_iva,
+          rfc,
+          razon_social,
+          venta_campana_clientes (
+            cliente_id,
+            clientes:cliente_id (id, nombre, telefono, correo, empresa_id, empresas:empresa_id(id, nombre))
+          ),
+          venta_campana_vendedores (
+            vendedor_id,
+            usuarios:vendedor_id (id, nombre, apellido)
+          ),
+          venta_campana_productos (
+            id,
+            tipo_producto,
+            armazon_id,
+            descripcion_mica,
+            cantidad,
+            precio_unitario,
+            descuento_monto,
+            subtotal,
+            armazones (id, sku, color, precio, marcas(nombre), descripciones(nombre))
+          ),
+          abonos_campana (id, monto, fecha_abono, forma_pago, observaciones)
+        `;
+
+      let query = supabase
+        .from('ventas_campana')
+        .select(selectColumns)
+        .order('created_at', { ascending: false });
+
+      if (limit !== null && offset !== null) {
+        query = query.range(offset, offset + limit - 1);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        return { data: null, error: error.message };
+      }
+
+      const transformedData = data.map(item => {
+        const clientes = item.venta_campana_clientes?.map(vc => ({
+          id: vc.clientes?.id,
+          nombre: vc.clientes?.nombre,
+          telefono: vc.clientes?.telefono,
+          correo: vc.clientes?.correo,
+          empresa: vc.clientes?.empresas?.nombre || null
+        })) || [];
+
+        const vendedores = item.venta_campana_vendedores?.map(vv => ({
+          id: vv.usuarios?.id,
+          nombre: vv.usuarios?.nombre,
+          apellido: vv.usuarios?.apellido
+        })) || [];
+
+        const productos = item.venta_campana_productos?.map(vp => {
+          const cantidad = parseFloat(vp.cantidad) || 0;
+          const precioUnitario = parseFloat(vp.precio_unitario) || 0;
+          const tieneSubtotal = !(vp.subtotal === null || vp.subtotal === undefined || `${vp.subtotal}` === '' || Number.isNaN(parseFloat(vp.subtotal)));
+          const subtotal = tieneSubtotal ? (parseFloat(vp.subtotal) || 0) : 0;
+          const descuentoCalculado = tieneSubtotal ? Math.max(0, (cantidad * precioUnitario) - subtotal) : 0;
+          const rawDescuento = vp.descuento_monto;
+          const tieneValorDescuento = !(
+            rawDescuento === null ||
+            rawDescuento === undefined ||
+            rawDescuento === '' ||
+            Number.isNaN(parseFloat(rawDescuento))
+          );
+          const descuentoExpl = tieneValorDescuento ? parseFloat(rawDescuento) || 0 : 0;
+          const descuentoReal = descuentoCalculado > 0 ? descuentoCalculado : descuentoExpl;
+          return {
+            id: vp.id,
+            tipo: vp.tipo_producto,
+            armazon_id: vp.armazon_id,
+            descripcion_mica: vp.descripcion_mica,
+            cantidad: cantidad,
+            precio_unitario: precioUnitario,
+            descuento_monto: descuentoReal,
+            subtotal: subtotal,
+            armazon: vp.armazones ? {
+              id: vp.armazones.id,
+              sku: vp.armazones.sku,
+              color: vp.armazones.color,
+              precio: vp.armazones.precio,
+              marca: vp.armazones.marcas?.nombre,
+              descripcion: vp.armazones.descripciones?.nombre
+            } : null
+          };
+        }) || [];
+
+        const totalAbonos = item.abonos_campana?.reduce((sum, abono) => sum + parseFloat(abono.monto || 0), 0) || 0;
+        const saldoPendiente = Math.max(0, parseFloat(item.total || 0) - totalAbonos);
+        const porcentajePagado = item.total > 0 ? (totalAbonos / parseFloat(item.total)) * 100 : 0;
+
+        const primerArmazon = productos.find(p => p.armazon)?.armazon;
+        const productosArmazon = productos.filter(p => p.tipo === 'armazon');
+        const productosMica = productos.filter(p => p.tipo === 'mica');
+
+        let descuentoArmazonTotal = productosArmazon.reduce((total, producto) => total + (parseFloat(producto.descuento_monto || 0)), 0);
+        let descuentoMicasTotal = productosMica.reduce((total, producto) => total + (parseFloat(producto.descuento_monto || 0)), 0);
+        if (!descuentoArmazonTotal && item.descuento_armazon_monto) descuentoArmazonTotal = parseFloat(item.descuento_armazon_monto) || 0;
+        if (!descuentoMicasTotal && item.descuento_micas_monto) descuentoMicasTotal = parseFloat(item.descuento_micas_monto) || 0;
+
+        return {
+          id: item.id,
+          folio: item.folio,
+          clientes,
+          cliente: clientes[0] || null,
+          productos,
+          productosArmazon,
+          productosMica,
+          armazon: primerArmazon ? {
+            ...primerArmazon,
+            modelo: `${primerArmazon?.marca || 'N/A'} - ${primerArmazon?.sku || 'Sin SKU'}`,
+            precio: productosArmazon[0]?.precio_unitario || 0,
+          } : null,
+          tipo_mica: {
+            nombre: productosMica.length > 0 ? productosMica[0].descripcion_mica || 'Mica' : 'N/A',
+            precio: productosMica[0]?.precio_unitario || 0,
+          },
+          vendedores,
+          precio_armazon: productosArmazon[0]?.precio_unitario || 0,
+          precio_micas: productosMica[0]?.precio_unitario || 0,
+          descripcion_micas: productosMica.length > 0 ? productosMica[0].descripcion_mica || 'N/A' : 'N/A',
+          descuento_armazon_monto: descuentoArmazonTotal,
+          descuento_micas_monto: descuentoMicasTotal,
+          descuento_monto: item.descuento_monto || 0,
+          subtotal: item.subtotal,
+          total: item.total,
+          estado: item.estado,
+          fecha_venta: item.fecha_venta,
+          observaciones: item.observaciones,
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+          requiere_factura: item.requiere_factura || false,
+          monto_iva: item.monto_iva || 0,
+          rfc: item.rfc || '',
+          razon_social: item.razon_social || '',
+          abonos: item.abonos_campana || [],
+          totalAbonos,
+          saldoPendiente,
+          porcentajePagado: Math.round(porcentajePagado)
+        };
+      });
+
+      return { data: transformedData, error: null };
+    } catch (error) {
+      console.error('Error fetching campaign sales notes:', error);
+      return { data: null, error: error.message };
+    }
+  },
+
+  async getCampaignSalesCount() {
+    try {
+      const { count, error } = await supabase
+        .from('ventas_campana')
+        .select('id', { count: 'exact' })
+        .limit(1);
+      if (error) throw error;
+      return { count, error: null };
+    } catch (error) {
+      return { count: 0, error: error?.message };
+    }
+  },
+
+  async generateUniqueCampaignFolio() {
+    try {
+      const { data: config } = await supabase
+        .from('configuracion_folios_campana')
+        .select('prefijo, numero_inicio')
+        .eq('id', 1)
+        .single();
+      let prefijo = 'VC';
+      let numeroInicio = 1;
+      if (config) {
+        prefijo = config.prefijo || 'VC';
+        numeroInicio = config.numero_inicio || 1;
+      }
+      const today = new Date();
+      const mexicoToday = new Date(today.toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
+      const todayStr = `${mexicoToday.getFullYear()}${String(mexicoToday.getMonth() + 1).padStart(2, '0')}${String(mexicoToday.getDate()).padStart(2, '0')}`;
+      const { data: allFolios } = await supabase
+        .from('ventas_campana')
+        .select('folio')
+        .not('folio', 'is', null);
+      let nextNumber = numeroInicio;
+      const usedNumbers = new Set();
+      if (allFolios && allFolios.length > 0) {
+        allFolios.forEach(folioObj => {
+          const folio = folioObj.folio;
+          const autoMatch = folio.match(new RegExp(`^${prefijo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}${todayStr}(\\d+)$`));
+          if (autoMatch) {
+            const number = parseInt(autoMatch[1]);
+            usedNumbers.add(number);
+          }
+          const manualMatch = folio.match(/^(\d+)$/);
+          if (manualMatch) {
+            const number = parseInt(manualMatch[1]);
+            usedNumbers.add(number);
+          }
+        });
+        let candidate = numeroInicio;
+        while (usedNumbers.has(candidate)) candidate++;
+        nextNumber = candidate;
+      }
+      const now = new Date();
+      const mexicoDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
+      const year = mexicoDate.getFullYear();
+      const month = String(mexicoDate.getMonth() + 1).padStart(2, '0');
+      const day = String(mexicoDate.getDate()).padStart(2, '0');
+      const number = String(nextNumber).padStart(6, '0');
+      return `${prefijo}${year}${month}${day}${number}`;
+    } catch (error) {
+      const now = new Date();
+      const mexicoDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
+      const year = mexicoDate.getFullYear();
+      const month = String(mexicoDate.getMonth() + 1).padStart(2, '0');
+      const day = String(mexicoDate.getDate()).padStart(2, '0');
+      const time = String(now.getTime()).slice(-6);
+      return `VC${year}${month}${day}${time}`;
+    }
+  },
+
+  async createCampaignSalesNote(salesData) {
+    try {
+      const { productos, vendedor_ids, cliente_ids, folio_manual, creado_por_id, registrar_abono, monto_abono, forma_pago_abono, observaciones_abono, campana_id, ...ventaDetails } = salesData;
+      const vendedorIdsArray = Array.isArray(vendedor_ids) ? vendedor_ids : (vendedor_ids ? [vendedor_ids] : []);
+      const clienteIdsArray = Array.isArray(cliente_ids) ? cliente_ids : (cliente_ids ? [cliente_ids] : []);
+      let folio;
+      if (folio_manual && folio_manual.trim() !== '') {
+        folio = folio_manual.trim();
+        const { data: existingFolio } = await supabase
+          .from('ventas_campana')
+          .select('id')
+          .eq('folio', folio)
+          .single();
+        if (existingFolio) {
+          return { data: null, error: `El folio "${folio}" ya existe en campañas.` };
+        }
+      } else {
+        folio = await this.generateUniqueCampaignFolio();
+      }
+      const dataToInsert = {
+        folio,
+        subtotal: parseFloat(ventaDetails.subtotal || 0),
+        total: parseFloat(ventaDetails.total || 0),
+        descuento_monto: parseFloat(ventaDetails.descuento_monto || 0),
+        requiere_factura: ventaDetails.requiere_factura || false,
+        monto_iva: parseFloat(ventaDetails.monto_iva || 0),
+        rfc: ventaDetails.rfc || '',
+        razon_social: ventaDetails.razon_social || '',
+        estado: ventaDetails.estado || 'pendiente',
+        observaciones: ventaDetails.observaciones || '',
+        fecha_venta: ventaDetails.fecha_venta || new Date().toISOString(),
+        campana_id: campana_id || null
+      };
+      const { data, error } = await supabase
+        .from('ventas_campana')
+        .insert([dataToInsert])
+        .select()
+        .single();
+      if (error) {
+        return { data: null, error: error.message };
+      }
+      if (productos && productos.length > 0) {
+        const productosToInsert = productos.map(producto => {
+          const baseProduct = {
+            venta_id: data.id,
+            cantidad: producto.cantidad || 1,
+            precio_unitario: parseFloat(producto.precio_unitario || 0),
+            descuento_monto: parseFloat(producto.descuento_monto || 0),
+            subtotal: parseFloat(producto.subtotal || 0)
+          };
+          if (producto.tipo_producto === 'armazon' && producto.armazon_id) {
+            return { ...baseProduct, tipo_producto: 'armazon', armazon_id: producto.armazon_id };
+          } else if (producto.tipo_producto === 'mica' && producto.descripcion_mica) {
+            return { ...baseProduct, tipo_producto: 'mica', descripcion_mica: producto.descripcion_mica };
+          } else if (producto.tipo_producto === 'otro' && producto.descripcion_mica) {
+            return { ...baseProduct, tipo_producto: 'mica', descripcion_mica: producto.descripcion_mica };
+          }
+          return null;
+        }).filter(Boolean);
+        if (productosToInsert.length > 0) {
+          const { error: productosError } = await supabase
+            .from('venta_campana_productos')
+            .insert(productosToInsert);
+          if (productosError) {
+            await supabase.from('ventas_campana').delete().eq('id', data.id);
+            return { data: null, error: `Error al insertar productos: ${productosError.message}` };
+          }
+          for (const producto of productosToInsert) {
+            if (producto.tipo_producto === 'armazon' && producto.armazon_id) {
+              const { data: armazon } = await supabase
+                .from('armazones')
+                .select('stock')
+                .eq('id', producto.armazon_id)
+                .single();
+              if (armazon) {
+                const nuevoStock = Math.max(0, (armazon.stock || 0) - (producto.cantidad || 1));
+                await supabase.from('armazones').update({ stock: nuevoStock }).eq('id', producto.armazon_id);
+              }
+            }
+          }
+        }
+      }
+      if (vendedorIdsArray && vendedorIdsArray.length > 0) {
+        const vendedoresToInsert = vendedorIdsArray.map(vendedor_id => ({ venta_id: data.id, vendedor_id }));
+        const { error: vendedoresError } = await supabase.from('venta_campana_vendedores').insert(vendedoresToInsert);
+        if (vendedoresError) {
+          await supabase.from('ventas_campana').delete().eq('id', data.id);
+          return { data: null, error: `Error al insertar vendedores: ${vendedoresError.message}` };
+        }
+      }
+      if (clienteIdsArray && clienteIdsArray.length > 0) {
+        const clientesToInsert = clienteIdsArray.map(cliente_id => ({ venta_id: data.id, cliente_id }));
+        const { error: clientesError } = await supabase.from('venta_campana_clientes').insert(clientesToInsert);
+        if (clientesError) {
+          await supabase.from('ventas_campana').delete().eq('id', data.id);
+          return { data: null, error: `Error al insertar clientes: ${clientesError.message}` };
+        }
+      }
+      if (registrar_abono && monto_abono && parseFloat(monto_abono) > 0) {
+        const abonoData = {
+          venta_id: data.id,
+          monto: parseFloat(monto_abono),
+          forma_pago: forma_pago_abono || 'efectivo',
+          observaciones: observaciones_abono || '',
+          fecha_abono: new Date().toISOString(),
+          creado_por_id: creado_por_id
+        };
+        const { error: abonoError } = await supabase.from('abonos_campana').insert([abonoData]);
+        if (!abonoError) {
+          try {
+            const { data: openSession } = await cashboxService.getOpenSession();
+            if (openSession) {
+              await cashboxService.createMovement({
+                sesionId: openSession.id,
+                tipo: 'ingreso',
+                monto: parseFloat(monto_abono),
+                concepto: `Abono inicial venta campaña ${data.folio || data.id}`,
+                categoria: 'abono',
+                metodo_pago: forma_pago_abono || 'efectivo',
+                referencia: 'abono_inicial_campana',
+                ventaId: data.id,
+                usuarioId: creado_por_id || null
+              });
+            }
+          } catch (_) {}
+        }
+      }
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error.message };
+    }
+  },
+
+  async updateCampaignSalesNote(id, updates) {
+    try {
+      let shouldRestoreStock = false;
+      if (updates && updates.estado === 'cancelada') {
+        const { data: currentSale } = await supabase
+          .from('ventas_campana')
+          .select('estado')
+          .eq('id', id)
+          .single();
+        if (currentSale && currentSale.estado !== 'cancelada') {
+          shouldRestoreStock = true;
+        }
+      }
+      const { error } = await supabase
+        .from('ventas_campana')
+        .update(updates, { returning: 'minimal' })
+        .eq('id', id);
+      if (error) throw error;
+      let restoredCount = 0;
+      if (shouldRestoreStock) {
+        const { data: productos } = await supabase
+          .from('venta_campana_productos')
+          .select('armazon_id, cantidad, tipo_producto')
+          .eq('venta_id', id);
+        const toRestore = (productos || []).filter(p => p && p.tipo_producto === 'armazon' && p.armazon_id);
+        for (const p of toRestore) {
+          const { data: armazon } = await supabase
+            .from('armazones')
+            .select('stock')
+            .eq('id', p.armazon_id)
+            .single();
+          if (armazon) {
+            const nuevoStock = Math.max(0, (armazon.stock || 0) + (parseInt(p.cantidad, 10) || 1));
+            const { error: updateError } = await supabase
+              .from('armazones')
+              .update({ stock: nuevoStock })
+              .eq('id', p.armazon_id);
+            if (!updateError) restoredCount++;
+          }
+        }
+      }
+      return { error: null, restoredStock: shouldRestoreStock, restoredCount };
+    } catch (error) {
+      return { error: error?.message };
+    }
+  },
+
+  async deleteCampaignSalesNote(id) {
+    try {
+      const { error: productosError } = await supabase
+        .from('venta_campana_productos')
+        .delete()
+        .eq('venta_id', id);
+      if (productosError) throw productosError;
+      const { error: vendedoresError } = await supabase
+        .from('venta_campana_vendedores')
+        .delete()
+        .eq('venta_id', id);
+      if (vendedoresError) throw vendedoresError;
+      const { error: abonosError } = await supabase
+        .from('abonos_campana')
+        .delete()
+        .eq('venta_id', id);
+      if (abonosError) throw abonosError;
+      const { error: clientesError } = await supabase
+        .from('venta_campana_clientes')
+        .delete()
+        .eq('venta_id', id);
+      if (clientesError) throw clientesError;
+      const { error: ventaError } = await supabase
+        .from('ventas_campana')
+        .delete()
+        .eq('id', id);
+      if (ventaError) throw ventaError;
+      return { error: null };
+    } catch (error) {
+      return { error: error?.message };
     }
   },
 

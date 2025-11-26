@@ -37,6 +37,9 @@ const InventoryManagement = () => {
   const [modalMode, setModalMode] = useState('create');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [error, setError] = useState('');
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportMode, setReportMode] = useState('general');
+  const [reportBrand, setReportBrand] = useState('');
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -461,22 +464,38 @@ const InventoryManagement = () => {
     }
   };
 
-  const handleGenerateReport = async () => {
+  const generateReportWithFilters = async (filters) => {
     try {
       // Obtener agregados consistentes con filtros actuales para el PDF
-      const { aggregates } = await inventoryService.getInventoryAggregates(serverFilters);
+      const { aggregates } = await inventoryService.getInventoryAggregates(filters);
       // Obtener lista completa de productos agotados con los filtros
-      const { data: outOfStockRaw } = await inventoryService.getOutOfStockProducts(serverFilters);
+      const { data: outOfStockRaw } = await inventoryService.getOutOfStockProducts(filters);
       // Obtener agregados por marca (tipos y total de armazones)
-      const { data: brandCounts } = await inventoryService.getBrandCounts(serverFilters);
+      const { data: brandCounts } = await inventoryService.getBrandCounts(filters);
       // Nuevos agregados simples: Grupo, Descripción, Sub Marca (nombre-cantidad)
       const [groupCountsRes, descriptionCountsRes, subBrandCountsRes] = await Promise.all([
-        inventoryService.getGroupCounts(serverFilters),
-        inventoryService.getDescriptionCounts(serverFilters),
-        inventoryService.getSubBrandCounts(serverFilters)
+        inventoryService.getGroupCounts(filters),
+        inventoryService.getDescriptionCounts(filters),
+        inventoryService.getSubBrandCounts(filters)
       ]);
 
-      const outOfStockList = (outOfStockRaw || []).map(p => {
+      // Contadores exactos según filtros seleccionados en el modal
+      const [countRes, totalUnitsRes] = await Promise.all([
+        inventoryService.getProductsCount(filters),
+        inventoryService.getTotalUnits(filters)
+      ]);
+
+      const brandNameFilter = filters?.brandId
+        ? (brands || []).find(b => String(b?.id) === String(filters?.brandId))?.nombre
+        : null;
+      const filteredOutOfStockRaw = brandNameFilter
+        ? (outOfStockRaw || []).filter(p => {
+            const brand = p?.marcas?.nombre || (Array.isArray(p?.marcas) ? p?.marcas[0]?.nombre : null) || 'Sin marca';
+            return String(brand) === String(brandNameFilter);
+          })
+        : (outOfStockRaw || []);
+
+      const outOfStockList = filteredOutOfStockRaw.map(p => {
         const brand = p?.marcas?.nombre || (Array.isArray(p?.marcas) ? p?.marcas[0]?.nombre : null) || 'Sin marca';
         const color = p?.color || '';
         // Nombre debe ser el SKU (según tu requerimiento)
@@ -490,8 +509,8 @@ const InventoryManagement = () => {
         groups,
         descriptions,
         subBrands,
-        totalProducts: totalProducts,
-        totalUnits: totalUnits,
+        totalProducts: countRes?.count ?? totalProducts,
+        totalUnits: totalUnitsRes?.totalUnits ?? totalUnits,
         // Pasar agregados calculados globalmente
         inStockCount: aggregates?.inStock ?? 0,
         outOfStockCount: aggregates?.outOfStock ?? 0,
@@ -504,7 +523,7 @@ const InventoryManagement = () => {
         userProfile,
         filters: {
           searchTerm,
-          selectedBrand,
+          selectedBrand: filters?.brandId ?? selectedBrand,
           selectedGroup,
           selectedDescription,
           selectedSubBrand,
@@ -523,6 +542,25 @@ const InventoryManagement = () => {
       toast.error('Error generando reporte');
       console.error('Error:', error);
     }
+  };
+
+  const handleGenerateReport = async () => {
+    await generateReportWithFilters(serverFilters);
+  };
+
+  const openReportModal = () => {
+    setReportMode('general');
+    setReportBrand('');
+    setIsReportModalOpen(true);
+  };
+
+  const confirmReportModal = async () => {
+    const overrideFilters = {
+      ...serverFilters,
+      brandId: reportMode === 'brand' ? (reportBrand || undefined) : undefined
+    };
+    await generateReportWithFilters(overrideFilters);
+    setIsReportModalOpen(false);
   };
 
   if (loading) {
@@ -574,7 +612,7 @@ const InventoryManagement = () => {
             <div className="mt-4 sm:mt-0 flex gap-3">
               <Button
                 iconName="FileText"
-                onClick={handleGenerateReport}
+                onClick={openReportModal}
                 size="lg"
                 variant="outline"
                 disabled={isGenerating}
@@ -695,6 +733,68 @@ const InventoryManagement = () => {
             subBrands={subBrands}
             userProfile={userProfile}
           />
+
+          {/* Report Modal */}
+          {isReportModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+              <div className="bg-card border border-border rounded-lg shadow-soft w-full max-w-md p-6">
+                <h2 className="text-xl font-semibold text-foreground mb-4">Generar Reporte</h2>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      id="report-general"
+                      name="report-mode"
+                      className="accent-primary"
+                      checked={reportMode === 'general'}
+                      onChange={() => setReportMode('general')}
+                    />
+                    <label htmlFor="report-general" className="text-sm text-foreground">General</label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      id="report-brand"
+                      name="report-mode"
+                      className="accent-primary"
+                      checked={reportMode === 'brand'}
+                      onChange={() => setReportMode('brand')}
+                    />
+                    <label htmlFor="report-brand" className="text-sm text-foreground">Por marca</label>
+                  </div>
+
+                  {reportMode === 'brand' && (
+                    <div className="mt-2">
+                      <label className="block text-sm text-muted-foreground mb-1">Selecciona la marca</label>
+                      <select
+                        value={reportBrand}
+                        onChange={(e) => setReportBrand(e.target.value)}
+                        className="w-full border border-border rounded-md bg-background text-foreground p-2"
+                      >
+                        <option value="">Seleccione una marca...</option>
+                        {brands?.map((b) => (
+                          <option key={b?.id} value={b?.id}>{b?.nombre}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-3 mt-6">
+                    <Button variant="outline" onClick={() => setIsReportModalOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button
+                      iconName="FileText"
+                      onClick={confirmReportModal}
+                      disabled={isGenerating || (reportMode === 'brand' && !reportBrand)}
+                    >
+                      {isGenerating ? 'Generando...' : 'Generar PDF'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </>

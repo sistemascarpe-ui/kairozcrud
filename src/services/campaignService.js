@@ -9,6 +9,7 @@ export const campaignService = {
         .select(`
           id,
           nombre,
+          identificador,
           empresa,
           fecha_inicio,
           fecha_fin,
@@ -16,8 +17,7 @@ export const campaignService = {
           ubicacion,
           observaciones,
           creado_por_id,
-          created_at,
-          creado_por:usuarios!creado_por_id(id, nombre, apellido)
+          created_at
         `)
         .order('created_at', { ascending: false });
 
@@ -37,6 +37,7 @@ export const campaignService = {
         .select(`
           id,
           nombre,
+          identificador,
           empresa,
           fecha_inicio,
           fecha_fin,
@@ -44,8 +45,7 @@ export const campaignService = {
           ubicacion,
           observaciones,
           creado_por_id,
-          created_at,
-          creado_por:usuarios!creado_por_id(id, nombre, apellido)
+          created_at
         `)
         .eq('id', id)
         .single();
