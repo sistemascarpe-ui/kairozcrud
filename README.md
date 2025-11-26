@@ -115,6 +115,7 @@ Crear archivo `.env` en la raíz del proyecto:
 ```env
 VITE_SUPABASE_URL=tu_supabase_url
 VITE_SUPABASE_ANON_KEY=tu_supabase_anon_key
+VITE_ADMIN_DELETE_PIN=1234
 ```
 
 ### 4. **Configurar Base de Datos**
@@ -249,6 +250,18 @@ Los archivos se generan en la carpeta `dist/` listos para servir.
 6. **📈 Métricas y Reportes** - Análisis de rendimiento
 7. **💰 Gestión de Adeudos** - Seguimiento de pagos
 
+### **Guía Operativa (Resumida):**
+
+- **Inventario**
+  - Filtros por marca, grupo, descripción, sub marca, estado de stock y `ubicación` (`optica`/`campaña`).
+  - Reporte PDF con selector: `General` o `Por marca`. El general ignora marca; el de marca filtra todas las secciones y muestra la marca en el encabezado.
+  - Lista de “Agotados” usa SKU como nombre y respeta filtros, incluyendo marca y ubicación.
+- **Ventas**
+  - Folio automático basado en los últimos 4 dígitos existentes, incrementando ascendentemente. Implementación: `src/services/salesService.js:1263`.
+  - Cancelar nota marca `estado='cancelada'` y repone stock de armazones vendidos (configurable).
+  - Eliminar nota requiere PIN de administración y no modifica inventario. Implementación: `src/services/salesService.js:1184` y uso en `src/pages/sales-management/index.jsx:661`.
+  - Menú de acciones (“…”) se cierra al hacer clic fuera o con `Escape`. Implementación: `src/pages/sales-management/components/SalesTable.jsx:33`.
+
 ### **Funcionalidades Avanzadas:**
 
 - **📅 Calendario de Ventas**: Vista mensual con métricas diarias
@@ -288,6 +301,13 @@ Los archivos se generan en la carpeta `dist/` listos para servir.
 - Clientes y empresas
 - Productos más vendidos
 
+### **Detalles del Reporte de Inventario (PDF):**
+- Encabezado con logo (`/logo.png`), fecha y hora.
+- Resumen ejecutivo: tipos, total de armazones, valor total, porcentajes de stock y agotados.
+- Productos agotados: tabla por SKU, color y marca.
+- Conteos por marca, grupo, descripción y sub marca.
+- Modo “Por marca”: muestra la marca seleccionada; modo “General”: no aplica filtro de marca.
+
 ## 🐛 Solución de Problemas
 
 ### **Errores Comunes:**
@@ -307,11 +327,35 @@ npm install
 ```
 
 **Problemas de dependencias:**
-```bash
+```
 # Verificar versión de Node.js
 node --version  # Debe ser 16+
 npm --version
 ```
+
+**No se puede crear nota de venta: error `es_campana` no existe**
+- Causa: intento de insertar columna inexistente en `ventas`.
+- Estado: corregido. Ver `src/services/salesService.js:401–416` (se eliminó `es_campana`). Si persiste, limpia caché del navegador.
+
+**Menú de acciones (“…”) no se cierra**
+- Estado: corregido con cierre por clic fuera y tecla `Escape`. Ver `src/pages/sales-management/components/SalesTable.jsx:33–47`.
+
+**Reporte general muestra datos filtrados por marca**
+- Estado: corregido. El general fuerza `selectedBrand=undefined` y `scope='general'`. Ver `src/pages/inventory-management/index.jsx:524–531` y `src/hooks/useImprovedPDFReport.js:112–115`.
+
+**Conteos incorrectos por ubicación (optica/campaña)**
+- Estado: corregido. Todos los agregados aplican `ubicacion`. Ver funciones en `src/services/inventoryService.js:118–137, 165–183, 217–235, 272–289, 326–343, 380–397, 436–453`.
+
+**Eliminar nota suma/resta inventario**
+- Estado: corregido. La eliminación ya no modifica stock; sólo borra la nota y relaciones. Ver `src/services/salesService.js:1184–1225` y mensaje en `src/pages/sales-management/index.jsx:667`.
+
+**Logo no aparece en PDF**
+- Asegura que el archivo `public/logo.png` esté accesible en ruta `/logo.png`.
+
+### **Configuraciones y Mantenimiento:**
+- **PIN de administración**: define `VITE_ADMIN_DELETE_PIN` en `.env` para eliminar armazones y notas.
+- **Folio automático (últimos 4 dígitos)**: función `generateUniqueFolio()` en `src/services/salesService.js:1263–1304`. Para reiniciar el contador, crea una venta con los 4 dígitos deseados o ajusta directamente en BD.
+- **RLS/Permisos**: valida políticas en Supabase si ves errores de acceso.
 
 ### **Logs y Debugging:**
 - Console logs disponibles en desarrollo
@@ -334,3 +378,46 @@ Para soporte técnico, consultas sobre el sistema o reportar bugs:
 **Desarrollado con ❤️ para Ópticas Kairoz**
 
 *Sistema de gestión integral optimizado para el sector óptico*
+
+## 📸 Capturas del Sistema
+
+> Coloca las imágenes en `public/screenshots/` con los nombres sugeridos. Si usas Vercel, puedes arrastrarlas a ese directorio y hacer commit.
+
+- Inicio de sesión:
+  
+  ![Login](public/screenshots/login.png)
+
+- Dashboard principal:
+  
+  ![Dashboard](public/screenshots/dashboard.png)
+
+- Inventario: filtros y conteos correctos por ubicación:
+  
+  ![Inventario Filtros](public/screenshots/inventory-filters.png)
+
+- Reporte de Inventario: selector de General / Por Marca:
+  
+  ![Reporte Modal](public/screenshots/report-modal.png)
+
+- PDF Generado (General):
+  
+  ![PDF General](public/screenshots/pdf-general.png)
+
+- PDF Generado (Por Marca):
+  
+  ![PDF Por Marca](public/screenshots/pdf-brand.png)
+
+- Ventas: menú de acciones con cierre por clic fuera:
+  
+  ![Ventas Acciones](public/screenshots/sales-actions-menu.png)
+
+- Eliminar Nota con PIN:
+  
+  ![Eliminar Nota](public/screenshots/delete-sale-pin.png)
+
+### Cómo generar las capturas
+
+1. Inicia el proyecto en desarrollo: `npm start` y abre `http://localhost:5173`.
+2. Toma capturas a 1366×768 o 1440×900 para consistencia.
+3. Guarda los archivos en `public/screenshots/` con los nombres anteriores.
+4. Opcional: sube las capturas a un CDN y actualiza los links en este README.
