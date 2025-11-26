@@ -1,0 +1,237 @@
+Proyecto Kairoz CRUD — Documentación para Nuevos Integrantes
+
+Resumen del stack
+- Frontend con `React 18` y `Vite 5`
+- Estilos con `TailwindCSS`
+- Ruteo con `react-router-dom v6`
+- Estado de datos y caché con `@tanstack/react-query`
+- Backend BaaS con `Supabase` (`@supabase/supabase-js v2`)
+- Pruebas con `Vitest` + `jsdom`
+- Deploy orientado a `Vercel`
+
+Requisitos previos
+- Node.js 18+ y npm
+- Cuenta y proyecto en Supabase (URL y ANON KEY)
+
+Instalación
+- Clonar el repositorio y entrar al directorio del proyecto
+- Copiar `env.example` a `.env` y completar variables
+- Instalar dependencias: `npm install`
+- Desarrollo: `npm run dev` (abre servidor local)
+
+Variables de entorno (resumen)
+- `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` para cliente Supabase
+- `VITE_ADMIN_DELETE_PIN` para borrados sensibles en inventario/ventas
+- `VITE_AUTH_EVENTS_MINIMAL`, `VITE_AUTH_CACHE_DURATION_MS` flags de auth/cache
+- `VITE_POSTGREST_MINIMAL_SELECTS` optimiza selects en PostgREST
+
+Scripts principales (package.json)
+- `dev`: arranca servidor de desarrollo
+- `build`: construye a `build/`
+- `preview`: sirve la build local
+- `test`: ejecuta Vitest
+
+Estructura de carpetas (resumen)
+- `src/` código de la aplicación
+  - `components/` componentes reutilizables (UI, `ProtectedRoute`, `ErrorBoundary`)
+  - `contexts/` proveedores de estado global (`AuthContext`, `QueryProvider`, `MetricsContext`)
+  - `hooks/` hooks por dominio (inventario, ventas, caja, optimizaciones)
+  - `lib/` integraciones (`supabase.js`)
+  - `pages/` páginas por módulo (inventario, ventas, caja, campañas, clientes, empresa, adeudos, folios admin)
+  - `services/` acceso a datos y lógica de negocio por módulo
+  - `styles/` estilos globales
+  - `utils/` utilidades transversales
+  - `test/` configuración de pruebas
+- Configuración: `vite.config.js`, `tailwind.config.js`, `postcss.config.js`, `vercel.json`, `env.example`
+
+Composición de la App y Proveedores
+- La aplicación envuelve rutas con proveedores: `HelmetProvider`, `QueryProvider`, `AuthProvider`, `MetricsProvider` y `Toaster`
+- Configuración de `React Query`: `staleTime` 10m, `gcTime` 20m, sin refetch en foco de ventana
+- Referencias: `src\App.jsx:16`, `src\contexts\QueryProvider.jsx:7`
+
+Ruteo y protección de rutas
+- Definición central en `src\Routes.jsx`
+- Rutas públicas: `"/"` y `"/login"`
+- Rutas protegidas con `ProtectedRoute` para dashboard y módulos
+- Campañas: `"/campaign-management"`, `"/campaigns/new"`, `"/campaigns/:id"`, `"/campaigns/:id/edit"`
+- 404: `*` → NotFound
+- Referencias: `src\Routes.jsx:27` (públicas), `src\Routes.jsx:31` (protegidas)
+- Guard: `src\components\ProtectedRoute.jsx:21` (redirige a `/login` si no hay usuario)
+
+Autenticación y autorización
+- `AuthContext` gestiona sesión Supabase, perfil de `usuarios`, e interacciones de inicio/cierre de sesión
+- Flags de entorno para eventos mínimos y caché de auth
+- Funciones clave: `signIn`, `signUp`, `signOut`
+- Referencias: `src\contexts\AuthContext.jsx:122` (signIn), `src\contexts\AuthContext.jsx:164` (signUp), `src\contexts\AuthContext.jsx:189` (signOut)
+
+Estado de datos (React Query)
+- Cachea peticiones y controla revalidación
+- Proveedor en `src\contexts\QueryProvider.jsx`
+- Devtools configurados en entorno de desarrollo
+
+Estilos y UI
+- `TailwindCSS` con tema extendido y plugin `tailwindcss-animate`
+- Archivos de estilo cargados en `src\index.jsx`
+- Configuración: `tailwind.config.js`
+
+Integración con Supabase
+- Cliente en `src\lib\supabase.js` usando `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`
+- Patrón de acceso: `select` con relaciones anidadas, `insert/update` con `returning: 'minimal'` cuando aplica, y funciones `rpc` para operaciones especializadas
+- Referencias: `src\lib\supabase.js:28` (createClient)
+
+Módulos y servicios de dominio
+- Inventario (`src\services\inventoryService.js`)
+  - Listados, conteos, agregados, low/out-of-stock
+  - Marca producto editado vía `rpc` y actualiza stock
+  - Referencias: `src\services\inventoryService.js:5` (listado), `src\services\inventoryService.js:650` (rpc marcar editado)
+- Ventas (`src\services\salesService.js`)
+  - Notas de venta con relaciones (`venta_productos`, `venta_vendedores`, `venta_clientes`)
+  - Descuento de inventario al crear venta; cancelación repone stock
+  - Folios únicos y métricas (top productos/marcas, rendimiento vendedores, mensual)
+  - Referencias: `src\services\salesService.js:349` (crear venta), `src\services\salesService.js:1073` (cancelar y reponer), `src\services\salesService.js:1238` (folio)
+- Caja (`src\services\cashboxService.js`)
+  - Sesiones, movimientos (ingresos/egresos), totales e integración con abonos
+  - Referencias: `src\services\cashboxService.js:129` (crear movimiento), `src\services\cashboxService.js:158` (totales)
+- Campañas (`src\services\campaignService.js` y páginas en `src\pages\campaign-management`)
+  - CRUD campañas, productos y miembros (RPC)
+  - Enviar/devolver producto a campaña, stock y activas
+  - UI: listados, ventas de campaña y formularios (`CampaignForm.jsx`)
+  - Referencias: `src\services\campaignService.js:170` (rpc enviar producto), `src\services\campaignService.js:190` (rpc devolver), `src\pages\campaign-management\index.jsx:141` (crear campaña)
+- Otros módulos
+  - Clientes, Empresa, Adeudos, Folios Admin, Métricas
+  - Organización por carpetas en `src\pages\*` y servicios en `src\services\*`
+
+Métricas y reportes
+- Agregados de ventas, top productos/marcas, vendedores, datos mensuales
+- Triggers y contexto de métricas para sincronización de vistas derivadas
+
+Testing
+- `Vitest` con entorno `jsdom`
+- Setup de pruebas en `src\test\setupTests.js` (mocks de Supabase y utilidades)
+- Pruebas ubicadas en `src\services\__tests__\` y archivos específicos (`App`, `index`)
+
+Deploy
+- `vercel.json` define rewrites para SPA y cabeceras de seguridad
+- `npm run build` genera `build/` como directorio de salida
+- Index inyecta Analytics/Speed Insights fuera de LAN/local
+
+Convenciones de contribución
+- Seguir patrones existentes de servicios (acceso con Supabase, relaciones y `rpc` donde corresponda)
+- Mantener configuración y opciones de `React Query` consistentes
+- Respetar estilos con Tailwind y componentes UI reutilizables
+- No exponer claves o secretos en código o logs
+
+Solución de problemas (tips rápidos)
+- Auth: verificar variables de entorno y sesión activa (`ProtectedRoute` redirige si falta usuario)
+- Supabase: revisar URL/KEY y políticas RLS si hay errores de acceso
+- Caché: invalidar queries de `react-query` tras mutaciones críticas (ventas/inventario)
+- Build: confirmar `vite` y `tailwind` sin errores; revisar rutas SPA en Vercel
+
+Referencias rápidas a archivos clave
+- `src\Routes.jsx:27` rutas públicas; `src\Routes.jsx:31` rutas protegidas
+- `src\components\ProtectedRoute.jsx:21` redirección a login
+- `src\contexts\AuthContext.jsx:122` inicio de sesión; `src\contexts\AuthContext.jsx:189` cierre de sesión
+- `src\lib\supabase.js:28` creación de cliente Supabase
+- `src\services\salesService.js:349` creación de venta; `src\services\salesService.js:1073` cancelación y reposición
+- `src\services\campaignService.js:170` RPC enviar a campaña; `src\services\campaignService.js:190` RPC devolver
+- `src\pages\campaign-management\CampaignForm.jsx` formulario de campañas
+
+Glosario
+- Nota de venta: documento de transacción con productos, vendedor y cliente
+- Abono: pago parcial aplicado a venta/adeudo
+- Folio: identificador único correlativo de venta
+- RPC: función almacenada en Postgres llamada vía Supabase
+
+Enlace al repositorio
+- Código fuente: https://github.com/sistemascarpe-ui/kairozcrud
+
+Onboarding para nuevos integrantes
+- Clonar el repo y crear `.env` a partir de `env.example`
+- Configurar `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`
+- Ejecutar `bd.sql` en Supabase para tablas, RLS, funciones y datos iniciales
+- Instalar dependencias: `npm install`
+- Arrancar en desarrollo: `npm start` (Vite en `http://localhost:4028`)
+- Alternativa de producción local: `npm run build` y `npm run serve`
+- Crear usuario: usar la pantalla de registro o crear en Supabase si el flujo de alta está restringido
+- Verificar acceso: al ingresar sin sesión, `ProtectedRoute` redirige a `"/login"`
+
+Manual de uso (operativo)
+- Inicio de sesión
+- Ingresar a `"/login"`, autenticar con correo/contraseña; cerrar sesión desde el menú de usuario
+- Dashboard y navegación
+- Visualiza resumen del negocio y accesos rápidos; usa la barra lateral para módulos
+- Gestión de clientes
+- Crear, editar y buscar clientes; registrar historial clínico y graduaciones; gestionar citas; revisar estadísticas por cliente
+- Inventario
+- Alta de productos (armazones), marcas y sub-marcas; filtros y búsqueda avanzada; revisar alertas de sin stock; actualizar stock y marcar producto editado (RPC); reportes de valorización
+- Ventas
+- Crear notas de venta; seleccionar productos, vendedor(es) y cliente; aplicar descuentos; registrar abonos; cambiar estado; cancelar venta con reposición de stock; gestionar ventas compartidas y por empresa
+- Caja
+- Abrir/cerrar sesión de caja; registrar movimientos de ingreso/egreso; consultar totales; integración con abonos de ventas
+- Campañas
+- Crear campañas; enviar/devolver productos vía RPC; listar inventario en campaña; crear ventas de campaña; cancelar ventas y reponer stock; gestionar miembros de campaña
+- Empresas
+- Administrar empresas cliente y relaciones con sus clientes; reportes por empresa
+- Adeudos
+- Controlar adeudos y pagos parciales; aplicar abonos desde ventas o caja
+- Métricas
+- Dashboard principal, metas mensuales, rankings y gráficas interactivas (inventario, tendencias, vendedores, empresas)
+- Folios
+- Administrar folios únicos de ventas, configuración y verificación
+
+Flujos comunes (paso a paso)
+- Crear una venta
+- Buscar cliente y vendedor; agregar productos del inventario; confirmar totales; generar folio; si aplica, registrar abono; la venta descuenta stock automáticamente
+- Cancelar una venta
+- Abrir detalle de venta; seleccionar cancelar; el sistema repone stock y actualiza métricas/folios
+- Enviar producto a campaña
+- Desde inventario, usar acción de envío; se ejecuta `rpc` para mover a `ubicación: campana`; crear venta de campaña desde el módulo de campañas
+- Abrir caja y registrar movimiento
+- Abrir sesión de caja; registrar ingreso/egreso; revisar totales; cerrar sesión al finalizar el día
+
+Tecnologías de UI y visualización
+- Radix UI y componentes accesibles; iconografía con `lucide-react`
+- Animaciones con `framer-motion`
+- Selectores avanzados con `react-select`
+- Gráficas con `chart.js`, `react-chartjs-2`, `recharts` y visualizaciones con `d3`
+- Formularios con `react-hook-form`; notificaciones con `react-hot-toast`
+
+Notas técnicas relevantes
+- Puerto de desarrollo
+- Vite está configurado en `vite.config.js:16` para usar `4028`; acceso en `http://localhost:4028`
+- Optimización de conteos
+- Se evita usar `HEAD` en conteos para prevenir `net::ERR_ABORTED` por cancelaciones; se usa `GET` con `select(..., { count: 'exact' })` y `limit(1)`
+- Supabase y seguridad
+- Políticas RLS activas; revisar roles y permisos al depurar accesos; usar `rpc` para operaciones complejas atómicas
+- Caché y revalidación
+- Configurar invalidaciones de `react-query` tras mutaciones críticas (ventas, inventario, campañas)
+
+Contribución y buenas prácticas
+- Crear ramas por feature/bugfix; abrir PR con descripción clara
+- Seguir patrones de servicios: selects con relaciones, `returning: 'minimal'` cuando aplique, `rpc` para consistencia
+- Mantener consistencia en estilos y componentes UI reutilizables
+- No incluir secretos en el repo ni en logs; usar `.env`
+- Escribir pruebas para lógica de negocio en `src\services\__tests__\`
+
+Referencias rápidas adicionales
+- `package.json:71` scripts (`start`, `build`, `serve`)
+- `vite.config.js:10` salida a `build/`; `vite.config.js:16` puerto `4028`
+- `bd.sql` script de base de datos en la raíz del proyecto
+
+Credenciales Necesarias:
+
+Github
+sistemascarpe@gmail.com
+Carpe2025$
+
+Supabase
+sistemascarpe@gmail.com
+Rostro901$
+
+https://kairozinventario.vercel.app/
+kairoz@kairoz.com
+K$&r#z268
+
+https://kairozinventario.vercel.app/
+optica@kairoz.com
+Jacinto2024
