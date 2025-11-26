@@ -410,8 +410,7 @@ export const salesService = {
         razon_social: ventaDetails.razon_social || '',
         estado: ventaDetails.estado || 'pendiente',
         observaciones: ventaDetails.observaciones || '',
-        fecha_venta: ventaDetails.fecha_venta || new Date().toISOString(),
-        es_campana: !!ventaDetails.es_campana
+        fecha_venta: ventaDetails.fecha_venta || new Date().toISOString()
       };
 
       // 3. Insertar la venta principal
