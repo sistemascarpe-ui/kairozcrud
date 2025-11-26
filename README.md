@@ -354,7 +354,7 @@ npm --version
 
 ### **Configuraciones y Mantenimiento:**
 - **PIN de administración**: define `VITE_ADMIN_DELETE_PIN` en `.env` para eliminar armazones y notas.
-- **Folio automático (últimos 4 dígitos)**: función `generateUniqueFolio()` en `src/services/salesService.js:1263–1304`. Para reiniciar el contador, crea una venta con los 4 dígitos deseados o ajusta directamente en BD.
+- **Folio automático (últimos 4 dígitos solicitados)**: función `generateUniqueFolio()` en `src/services/salesService.js:1263–1304`. Para reiniciar el contador, crea una venta con los 4 dígitos deseados o ajusta directamente en BD.
 - **RLS/Permisos**: valida políticas en Supabase si ves errores de acceso.
 
 ### **Logs y Debugging:**
