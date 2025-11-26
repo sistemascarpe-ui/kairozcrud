@@ -107,7 +107,8 @@ export const useImprovedPDFReport = () => {
       renderHeader();
       // Subtítulo con filtro de marca (si aplica)
       const selectedBrandId = inventoryData?.filters?.selectedBrand;
-      if (selectedBrandId) {
+      const scope = inventoryData?.filters?.scope;
+      if (selectedBrandId && scope === 'brand') {
         const brandName = (inventoryData?.brands || [])
           .find(b => String(b?.id) === String(selectedBrandId))?.nombre || 'Marca seleccionada';
         addText(`Marca: ${brandName}`, 20, yPosition - 7, { fontSize: 10, color: secondaryColor });

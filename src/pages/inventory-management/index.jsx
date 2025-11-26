@@ -523,11 +523,12 @@ const InventoryManagement = () => {
         userProfile,
         filters: {
           searchTerm,
-          selectedBrand: filters?.brandId ?? selectedBrand,
+          selectedBrand: filters?.brandId ?? undefined,
           selectedGroup,
           selectedDescription,
           selectedSubBrand,
-          selectedStockStatus
+          selectedStockStatus,
+          scope: filters?.brandId ? 'brand' : 'general'
         }
       };
 
