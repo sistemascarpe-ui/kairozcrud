@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Calculator, User, Package } from 'lucide-react';
+import React, { useState, useEffect, forwardRef } from 'react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { X, Plus, Trash2, Calculator, User, Package, Calendar } from 'lucide-react';
 import Button from './ui/Button';
 import Input from './ui/Input';
 import Select from './ui/SelectSimple';
@@ -9,14 +11,30 @@ import { inventoryService } from '../services/inventoryService';
 import { userService } from '../services/userService';
 import toast from 'react-hot-toast';
 
-const NewSalesModal = ({ 
-  isOpen, 
-  onClose, 
-  onSave, 
-  sale = null, 
+// Input personalizado para el calendario
+const CustomDateInput = forwardRef(({ value, onClick, placeholder }, ref) => (
+  <div className="relative">
+    <Input
+      onClick={onClick}
+      ref={ref}
+      value={value}
+      placeholder={placeholder}
+      readOnly
+      className="cursor-pointer w-full bg-white pl-10"
+    />
+    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 pointer-events-none" />
+  </div>
+));
+
+const NewSalesModal = ({
+  isOpen,
+  onClose,
+  onSave,
+  sale = null,
   loading = false,
-  locationFilter = null 
+  locationFilter = null
 }) => {
+
   const [formData, setFormData] = useState({
     cliente_ids: [],
     vendedor_ids: [],
@@ -33,7 +51,8 @@ const NewSalesModal = ({
     // Campos adicionales para descuentos y monto total
     monto_total_compra: '',
     descuento_general_porcentaje: 0,
-    descuento_general_monto: 0
+    descuento_general_monto: 0,
+    fecha_venta: new Date()
   });
 
   const [productos, setProductos] = useState([
@@ -57,12 +76,12 @@ const NewSalesModal = ({
   const [inventory, setInventory] = useState([]);
   const [vendedores, setVendedores] = useState([]);
   const [errors, setErrors] = useState({});
-  const [totals, setTotals] = useState({ 
-    subtotal: 0, 
-    descuentoTotal: 0, 
-    total: 0, 
-    iva: 0, 
-    totalConIva: 0 
+  const [totals, setTotals] = useState({
+    subtotal: 0,
+    descuentoTotal: 0,
+    total: 0,
+    iva: 0,
+    totalConIva: 0
   });
 
   // Función para formatear moneda
@@ -77,7 +96,7 @@ const NewSalesModal = ({
   useEffect(() => {
     if (isOpen) {
       loadInitialData();
-      
+
       if (sale) {
         // Modo edición - cargar datos de la venta existente
         // Determinar si la venta usa productos o monto manual
@@ -123,9 +142,10 @@ const NewSalesModal = ({
           // Configuración de precios (monto manual y descuentos generales)
           monto_total_compra: baseMonto || '',
           descuento_general_porcentaje: descuentoGeneralPorcentaje || 0,
-          descuento_general_monto: descuentoGeneralMonto || 0
+          descuento_general_monto: descuentoGeneralMonto || 0,
+          fecha_venta: sale.fecha_venta ? new Date(sale.fecha_venta) : new Date()
         });
-        
+
         // Cargar productos de la venta:
         // Preferir la nueva estructura `sale.productos`; si no existe, usar los campos legacy.
         let productosVenta = [];
@@ -200,8 +220,8 @@ const NewSalesModal = ({
   useEffect(() => {
     calculateTotals();
   }, [
-    productos, 
-    formData.requiere_factura, 
+    productos,
+    formData.requiere_factura,
     formData.monto_total_compra,
     formData.descuento_general_porcentaje,
     formData.descuento_general_monto
@@ -259,7 +279,6 @@ const NewSalesModal = ({
       toast.error('Error al cargar inventario');
     }
   };
-
   const resetForm = () => {
     setFormData({
       cliente_ids: [],
@@ -277,7 +296,8 @@ const NewSalesModal = ({
       // Campos adicionales para descuentos y monto total
       monto_total_compra: '',
       descuento_general_porcentaje: 0,
-      descuento_general_monto: 0
+      descuento_general_monto: 0,
+      fecha_venta: new Date()
     });
     setProductos([
       {
@@ -342,7 +362,7 @@ const NewSalesModal = ({
     setProductos(prev => prev.map(producto => {
       if (producto.id === id) {
         const updated = { ...producto, [field]: value };
-        
+
         // Si cambia el tipo de producto, limpiar campos específicos
         if (field === 'tipo_producto') {
           if (value === 'armazon') {
@@ -351,18 +371,18 @@ const NewSalesModal = ({
             updated.armazon_id = '';
           }
         }
-        
+
         // Si cambia el armazón, actualizar precio
         if (field === 'armazon_id' && value) {
           const selectedProduct = inventory.find(p => p.id === value);
           updated.precio_unitario = selectedProduct ? selectedProduct.precio : 0;
         }
-        
+
         // Calcular subtotal con descuentos específicos por tipo
         const cantidad = parseFloat(updated.cantidad) || 0;
         const precioUnitario = parseFloat(updated.precio_unitario) || 0;
         const descuentoGeneral = parseFloat(updated.descuento_monto) || 0;
-        
+
         // Calcular descuentos específicos por tipo de producto
         let descuentoEspecifico = 0;
         if (updated.tipo_producto === 'armazon') {
@@ -378,9 +398,9 @@ const NewSalesModal = ({
           const descuentoMonto = parseFloat(updated.descuento_micas_monto) || 0;
           descuentoEspecifico = descuentoPorcentaje + descuentoMonto;
         }
-        
+
         updated.subtotal = (cantidad * precioUnitario) - descuentoGeneral - descuentoEspecifico;
-        
+
         return updated;
       }
       return producto;
@@ -391,22 +411,22 @@ const NewSalesModal = ({
     // Si hay monto total de compra, usarlo como base
     if (formData.monto_total_compra && parseFloat(formData.monto_total_compra) > 0) {
       const montoBase = parseFloat(formData.monto_total_compra);
-      
+
       // Calcular descuento general
       const descuentoGeneralPorcentaje = (montoBase * (parseFloat(formData.descuento_general_porcentaje) || 0)) / 100;
       const descuentoGeneralMonto = parseFloat(formData.descuento_general_monto) || 0;
-      
+
       const descuentoTotal = descuentoGeneralPorcentaje + descuentoGeneralMonto;
-      
+
       const total = montoBase - descuentoTotal;
       const iva = formData.requiere_factura ? total * 0.16 : 0;
       const totalConIva = total + iva;
-      
-      setTotals({ 
-        subtotal: montoBase, 
-        descuentoTotal, 
-        total, 
-        iva, 
+
+      setTotals({
+        subtotal: montoBase,
+        descuentoTotal,
+        total,
+        iva,
         totalConIva,
         descuentoGeneralPorcentaje,
         descuentoGeneralMonto
@@ -418,15 +438,15 @@ const NewSalesModal = ({
         const precioUnitario = parseFloat(p.precio_unitario) || 0;
         return sum + (cantidad * precioUnitario);
       }, 0);
-      
+
       // Calcular descuentos por producto
       const descuentoProductos = productos.reduce((sum, p) => {
         const descuentoGeneral = parseFloat(p.descuento_monto) || 0;
         let descuentoEspecifico = 0;
-        
+
         const cantidad = parseFloat(p.cantidad) || 0;
         const precioUnitario = parseFloat(p.precio_unitario) || 0;
-        
+
         if (p.tipo_producto === 'armazon') {
           const descuentoPorcentaje = (precioUnitario * cantidad * (parseFloat(p.descuento_armazon_porcentaje) || 0)) / 100;
           const descuentoMonto = parseFloat(p.descuento_armazon_monto) || 0;
@@ -440,25 +460,25 @@ const NewSalesModal = ({
           const descuentoMonto = parseFloat(p.descuento_micas_monto) || 0;
           descuentoEspecifico = descuentoPorcentaje + descuentoMonto;
         }
-        
+
         return sum + descuentoGeneral + descuentoEspecifico;
       }, 0);
-      
+
       // Calcular descuento general adicional
       const descuentoGeneralPorcentaje = (subtotal * (parseFloat(formData.descuento_general_porcentaje) || 0)) / 100;
       const descuentoGeneralMonto = parseFloat(formData.descuento_general_monto) || 0;
       const descuentoGeneral = descuentoGeneralPorcentaje + descuentoGeneralMonto;
-      
+
       const descuentoTotal = descuentoProductos + descuentoGeneral;
       const total = subtotal - descuentoTotal;
       const iva = formData.requiere_factura ? total * 0.16 : 0;
       const totalConIva = total + iva;
-      
-      setTotals({ 
-        subtotal, 
-        descuentoTotal, 
-        total, 
-        iva, 
+
+      setTotals({
+        subtotal,
+        descuentoTotal,
+        total,
+        iva,
         totalConIva,
         descuentoGeneralPorcentaje,
         descuentoGeneralMonto
@@ -468,20 +488,20 @@ const NewSalesModal = ({
 
   const validate = () => {
     const newErrors = {};
-    
+
     if (!formData.cliente_ids || formData.cliente_ids.length === 0) {
       newErrors.cliente_ids = 'Debe seleccionar al menos un cliente';
     }
-    
+
     if (!formData.vendedor_ids || formData.vendedor_ids.length === 0) {
       newErrors.vendedor_ids = 'Debe seleccionar al menos un vendedor';
     }
-    
+
     // Filtrar productos que tienen al menos algún campo completado (no están completamente vacíos)
     const productosConDatos = productos.filter(p => {
       return p.armazon_id || p.descripcion_mica || p.precio_unitario > 0;
     });
-    
+
     // Validar que haya al menos un producto válido entre los que tienen datos
     const productosValidos = productosConDatos.filter(p => {
       if (p.tipo_producto === 'armazon') {
@@ -490,17 +510,17 @@ const NewSalesModal = ({
         return p.descripcion_mica && p.cantidad > 0 && p.precio_unitario > 0;
       }
     });
-    
+
     if (productosConDatos.length === 0) {
       newErrors.productos = 'Debe agregar al menos un producto';
     } else if (productosValidos.length === 0) {
       newErrors.productos = 'Complete todos los campos requeridos de los productos';
     }
-    
+
     // Validar productos individualmente (solo los que tienen al menos algún dato)
     productos.forEach((producto, index) => {
       const tieneDatos = producto.armazon_id || producto.descripcion_mica || producto.precio_unitario > 0;
-      
+
       // Solo validar productos que tienen al menos algún campo completado
       if (tieneDatos) {
         if (producto.tipo_producto === 'armazon' && !producto.armazon_id) {
@@ -517,7 +537,7 @@ const NewSalesModal = ({
         }
       }
     });
-    
+
     if (formData.requiere_factura) {
       if (!formData.rfc) {
         newErrors.rfc = 'RFC es requerido para facturación';
@@ -526,7 +546,7 @@ const NewSalesModal = ({
         newErrors.razon_social = 'Razón social es requerida para facturación';
       }
     }
-    
+
     if (formData.registrar_abono) {
       if (!formData.monto_abono || parseFloat(formData.monto_abono) <= 0) {
         newErrors.monto_abono = 'Monto del abono debe ser mayor a 0';
@@ -535,25 +555,25 @@ const NewSalesModal = ({
         newErrors.monto_abono = 'El abono no puede ser mayor al total';
       }
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validate()) {
       toast.error('Por favor, corrija los errores en el formulario');
       return;
     }
-    
+
     // Filtrar solo productos válidos y completos
     const productosValidos = productos.filter(p => {
       // Primero verificar que tenga al menos algún dato
       const tieneDatos = p.armazon_id || p.descripcion_mica || p.precio_unitario > 0;
       if (!tieneDatos) return false;
-      
+
       // Luego verificar que esté completo
       if (p.tipo_producto === 'armazon') {
         return p.armazon_id && p.cantidad > 0 && p.precio_unitario > 0;
@@ -588,13 +608,13 @@ const NewSalesModal = ({
       total: totals.total,
       monto_iva: totals.iva
     };
-    
+
     await onSave(salesData);
   };
 
   // Opciones para los selects
-  const productOptions = inventory.map(p => ({ 
-    value: p.id, 
+  const productOptions = inventory.map(p => ({
+    value: p.id,
     // Mostrar solo SKU - Color
     label: `${p.sku || 'Sin SKU'} - ${p.color || 'Sin color'}`,
     // Campos extra para mejorar búsqueda
@@ -630,14 +650,14 @@ const NewSalesModal = ({
               {sale ? 'Modifica los datos de la venta existente' : 'Completa la información para crear una nueva venta'}
             </p>
           </div>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-full transition-colors"
           >
             <X size={24} />
           </button>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
           <div className="p-6">
             {/* Sección 1: Información Principal */}
@@ -648,7 +668,7 @@ const NewSalesModal = ({
                 </div>
                 <h3 className="text-lg font-semibold text-gray-800">Información Principal</h3>
               </div>
-              
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
@@ -670,7 +690,7 @@ const NewSalesModal = ({
                     </p>
                   )}
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
                     Vendedores *
@@ -689,6 +709,32 @@ const NewSalesModal = ({
                       {errors.vendedor_ids}
                     </p>
                   )}
+                </div>
+              </div>
+            </div>
+
+            {/* Sección de Fecha de Venta */}
+            <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6 shadow-sm">
+              <div className="flex items-center mb-4">
+                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                  <Calendar className="h-4 w-4 text-purple-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800">Fecha de Venta</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Fecha de la venta *
+                  </label>
+                  <DatePicker
+                    selected={formData.fecha_venta}
+                    onChange={(date) => handleInputChange('fecha_venta', date)}
+                    customInput={<CustomDateInput placeholder="Seleccionar fecha" />}
+                    dateFormat="dd/MM/yyyy"
+                    maxDate={new Date()}
+                    showTimeSelect={false}
+                    className="w-full"
+                  />
                 </div>
               </div>
             </div>
@@ -712,7 +758,7 @@ const NewSalesModal = ({
                   Agregar Producto
                 </Button>
               </div>
-              
+
               {errors.productos && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
                   <p className="text-sm text-red-700 flex items-center">
@@ -721,7 +767,7 @@ const NewSalesModal = ({
                   </p>
                 </div>
               )}
-              
+
               <div className="space-y-4">
                 {productos.map((producto, index) => (
                   <div key={producto.id} className="border border-gray-200 rounded-lg p-5 bg-gradient-to-r from-gray-50 to-gray-100">
@@ -749,7 +795,7 @@ const NewSalesModal = ({
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Tipo *
                         </label>
-                          <Select
+                        <Select
                           options={[
                             { value: 'armazon', label: 'Armazón' },
                             { value: 'mica', label: 'Mica' },
@@ -758,9 +804,9 @@ const NewSalesModal = ({
                           value={producto.tipo_producto}
                           onChange={(value) => updateProducto(producto.id, 'tipo_producto', value)}
                           placeholder="Seleccionar tipo..."
-                          />
+                        />
                       </div>
-                      
+
                       {producto.tipo_producto === 'armazon' ? (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -793,7 +839,7 @@ const NewSalesModal = ({
                           )}
                         </div>
                       )}
-                      
+
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Cantidad *
@@ -809,7 +855,7 @@ const NewSalesModal = ({
                           <p className="text-xs text-red-600 mt-1">{errors[`producto_${index}_cantidad`]}</p>
                         )}
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Precio Unitario *
@@ -825,7 +871,7 @@ const NewSalesModal = ({
                           <p className="text-xs text-red-600 mt-1">{errors[`producto_${index}_precio`]}</p>
                         )}
                       </div>
-                      
+
                       {/* Descuentos específicos por tipo de producto */}
                       {producto.tipo_producto === 'armazon' && (
                         <>
@@ -843,7 +889,7 @@ const NewSalesModal = ({
                               placeholder="0"
                             />
                           </div>
-                          
+
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Desc. Armazón ($)
@@ -876,7 +922,7 @@ const NewSalesModal = ({
                               placeholder="0"
                             />
                           </div>
-                          
+
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Desc. Micas ($)
@@ -908,7 +954,7 @@ const NewSalesModal = ({
                               placeholder="0"
                             />
                           </div>
-                          
+
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Desc. Otros ($)
@@ -924,7 +970,7 @@ const NewSalesModal = ({
                           </div>
                         </>
                       )}
-                      
+
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Subtotal
@@ -947,7 +993,7 @@ const NewSalesModal = ({
                 </div>
                 <h3 className="text-lg font-semibold text-gray-800">Configuración de Precios</h3>
               </div>
-              
+
               <div className="space-y-6">
                 {/* Monto Total de la Compra */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -1017,7 +1063,7 @@ const NewSalesModal = ({
                 </div>
                 <h3 className="text-lg font-semibold text-gray-800">Información Adicional</h3>
               </div>
-              
+
               <div className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="space-y-2">
@@ -1031,7 +1077,7 @@ const NewSalesModal = ({
                       className="w-full"
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-gray-700">
                       {sale ? 'Folio (últimos 4 dígitos)' : 'Folio Manual (últimos 4 dígitos)'}
@@ -1103,7 +1149,7 @@ const NewSalesModal = ({
                       </p>
                     )}
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Razón Social *
@@ -1134,7 +1180,7 @@ const NewSalesModal = ({
                 </div>
                 <h3 className="text-lg font-semibold text-gray-800">Abono Inicial</h3>
               </div>
-              
+
               <div className="mb-4">
                 <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
                   <Checkbox
@@ -1148,7 +1194,7 @@ const NewSalesModal = ({
                   </label>
                 </div>
               </div>
-              
+
               {formData.registrar_abono && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                   <div>
@@ -1171,7 +1217,7 @@ const NewSalesModal = ({
                       </p>
                     )}
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Forma de Pago
@@ -1183,7 +1229,7 @@ const NewSalesModal = ({
                       className="border-green-300 focus:border-green-500 focus:ring-green-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Observaciones del Abono
@@ -1208,7 +1254,7 @@ const NewSalesModal = ({
                 </div>
                 <h4 className="text-xl font-bold text-gray-800">Resumen de la Venta</h4>
               </div>
-              
+
               {/* Información General */}
               <div className="bg-white rounded-lg p-4 shadow-sm mb-4">
                 <h5 className="font-semibold text-gray-800 mb-3 flex items-center">
@@ -1219,20 +1265,20 @@ const NewSalesModal = ({
                   <div>
                     <span className="text-gray-600">Cliente:</span>
                     <span className="ml-2 font-medium text-gray-800">
-                      {formData.cliente_ids && formData.cliente_ids.length > 0 
-                        ? formData.cliente_ids.map(id => 
-                            customers.find(c => c.value === id)?.label
-                          ).filter(Boolean).join(', ') 
+                      {formData.cliente_ids && formData.cliente_ids.length > 0
+                        ? formData.cliente_ids.map(id =>
+                          customers.find(c => c.value === id)?.label
+                        ).filter(Boolean).join(', ')
                         : 'No seleccionado'}
                     </span>
                   </div>
                   <div>
                     <span className="text-gray-600">Vendedor(es):</span>
                     <span className="ml-2 font-medium text-gray-800">
-                      {formData.vendedor_ids && formData.vendedor_ids.length > 0 
-                        ? formData.vendedor_ids.map(id => 
-                            vendedores.find(v => v.value === id)?.label
-                          ).filter(Boolean).join(', ') 
+                      {formData.vendedor_ids && formData.vendedor_ids.length > 0
+                        ? formData.vendedor_ids.map(id =>
+                          vendedores.find(v => v.value === id)?.label
+                        ).filter(Boolean).join(', ')
                         : 'No seleccionado'}
                     </span>
                   </div>
@@ -1280,7 +1326,7 @@ const NewSalesModal = ({
                             })()}
                           </div>
                           <div className="text-gray-600 text-xs">
-                            Cant: {producto.cantidad} | 
+                            Cant: {producto.cantidad} |
                             Precio Unit: {formatCurrency(producto.precio_unitario)} |
                             {producto.descuento_armazon_porcentaje > 0 && ` Desc Armazón: ${producto.descuento_armazon_porcentaje}% |`}
                             {producto.descuento_armazon_monto > 0 && ` Desc Armazón: ${formatCurrency(producto.descuento_armazon_monto)} |`}
@@ -1306,7 +1352,7 @@ const NewSalesModal = ({
                     </span>
                     <span className="font-semibold text-gray-800">{formatCurrency(totals.subtotal)}</span>
                   </div>
-                  
+
                   {/* Mostrar desglose de descuentos generales cuando se usa monto total de compra */}
                   {formData.monto_total_compra && parseFloat(formData.monto_total_compra) > 0 && totals.descuentoTotal > 0 && (
                     <div className="space-y-2 text-xs bg-red-50 p-3 rounded-lg border border-red-200">
@@ -1325,19 +1371,19 @@ const NewSalesModal = ({
                       )}
                     </div>
                   )}
-                  
+
                   {totals.descuentoTotal > 0 && (
                     <div className="flex justify-between items-center py-2 border-b border-gray-100">
                       <span className="text-red-600 font-medium">Total Descuentos:</span>
                       <span className="font-semibold text-red-600">-{formatCurrency(totals.descuentoTotal)}</span>
                     </div>
                   )}
-                  
+
                   <div className="flex justify-between items-center py-3 border-t-2 border-gray-300 bg-gray-50 px-3 rounded-lg">
                     <span className="font-bold text-gray-800 text-base">Total:</span>
                     <span className="font-bold text-xl text-gray-900">{formatCurrency(totals.total)}</span>
                   </div>
-                  
+
                   {formData.requiere_factura && (
                     <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                       <div className="flex justify-between items-center py-1">
@@ -1350,7 +1396,7 @@ const NewSalesModal = ({
                       </div>
                     </div>
                   )}
-                  
+
                   {formData.registrar_abono && formData.monto_abono && (
                     <div className="bg-green-50 p-3 rounded-lg border border-green-200 mt-3">
                       <div className="flex justify-between items-center py-1">
@@ -1369,23 +1415,23 @@ const NewSalesModal = ({
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center justify-between p-6 border-t bg-gradient-to-r from-gray-50 to-gray-100">
             <div className="text-sm text-gray-600">
               {sale ? 'Actualizando venta existente' : 'Creando nueva venta'}
             </div>
             <div className="flex items-center space-x-3">
-              <Button 
-                type="button" 
-                variant="secondary" 
+              <Button
+                type="button"
+                variant="secondary"
                 onClick={onClose}
                 className="px-6 py-2 border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-400 transition-colors duration-200"
               >
                 Cancelar
               </Button>
-              <Button 
-                type="submit" 
-                disabled={loading} 
+              <Button
+                type="submit"
+                disabled={loading}
                 className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (

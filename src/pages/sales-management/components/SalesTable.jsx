@@ -11,8 +11,8 @@ const SalesTable = ({ sales = [], onEdit, onCancel, onDelete, loading = false })
       const aNum = aDigits ? parseInt(aDigits, 10) : -1;
       const bNum = bDigits ? parseInt(bDigits, 10) : -1;
       if (bNum !== aNum) return bNum - aNum;
-      const ad = new Date(a?.created_at || 0).getTime();
-      const bd = new Date(b?.created_at || 0).getTime();
+      const ad = new Date(a?.fecha_venta || a?.created_at || 0).getTime();
+      const bd = new Date(b?.fecha_venta || b?.created_at || 0).getTime();
       return bd - ad;
     });
     return arr;
@@ -50,18 +50,18 @@ const SalesTable = ({ sales = [], onEdit, onCancel, onDelete, loading = false })
     };
   }, [openMenuId]);
 
-const formatDate = (dateString) => {
-  if (!dateString) return '---';
+  const formatDate = (dateString) => {
+    if (!dateString) return '---';
 
-  const options = {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    timeZone: 'America/Mexico_City' 
+    const options = {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      timeZone: 'America/Mexico_City'
+    };
+
+    return new Date(dateString).toLocaleDateString('es-ES', options);
   };
-
-  return new Date(dateString).toLocaleDateString('es-ES', options);
-};
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount || 0);
@@ -225,7 +225,7 @@ const formatDate = (dateString) => {
                   {(() => {
                     const last4 = getFolioDisplay(sale.folio);
                     const isDup = last4 && last4.length === 4 && last4Counts[last4] > 1;
-                    const cls = isDup 
+                    const cls = isDup
                       ? "text-sm font-mono font-bold text-red-700 bg-red-50 border border-red-200 rounded px-2 py-0.5 inline-block"
                       : "text-sm font-mono font-bold text-gray-900";
                     return (
@@ -276,27 +276,27 @@ const formatDate = (dateString) => {
                     <div className="space-y-1">
                       {sale.productosArmazon.map((producto, index) => (
                         <div key={index}>
-          <div className="font-medium text-xs">
-            {producto.armazon ? 
-              `${producto.armazon.marca || ''} - ${producto.armazon.sku || ''} - ${producto.armazon.color || ''}` :
-              'Armazón sin detalles'
-            }
-          </div>
-          <div className="text-gray-500 text-xs">{formatCurrency(producto.precio_unitario)} x {producto.cantidad}</div>
-        </div>
-      ))}
-    </div>
-  ) : sale.armazon ? (
-    <div>
-      <div className="font-medium">
-        {`${sale.armazon?.marcas?.nombre || ''} - ${sale.armazon?.sku || ''} - ${sale.armazon?.color || ''}`}
-      </div>
-      <div className="text-gray-500">{formatCurrency(sale.precio_armazon || sale.armazon?.precio)}</div>
-    </div>
-  ) : (
-    <div className="text-gray-500">-</div>
-  )}
-</td>
+                          <div className="font-medium text-xs">
+                            {producto.armazon ?
+                              `${producto.armazon.marca || ''} - ${producto.armazon.sku || ''} - ${producto.armazon.color || ''}` :
+                              'Armazón sin detalles'
+                            }
+                          </div>
+                          <div className="text-gray-500 text-xs">{formatCurrency(producto.precio_unitario)} x {producto.cantidad}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : sale.armazon ? (
+                    <div>
+                      <div className="font-medium">
+                        {`${sale.armazon?.marcas?.nombre || ''} - ${sale.armazon?.sku || ''} - ${sale.armazon?.color || ''}`}
+                      </div>
+                      <div className="text-gray-500">{formatCurrency(sale.precio_armazon || sale.armazon?.precio)}</div>
+                    </div>
+                  ) : (
+                    <div className="text-gray-500">-</div>
+                  )}
+                </td>
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                   {sale.productosMica && sale.productosMica.length > 0 ? (
                     <div className="space-y-1">
@@ -334,7 +334,7 @@ const formatDate = (dateString) => {
                     return <div className="text-gray-500">-</div>;
                   })()}
                 </td>
-                
+
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
                   {sale.descuento_armazon_monto > 0 ? (
                     <div className="text-xs text-blue-600">
@@ -356,9 +356,9 @@ const formatDate = (dateString) => {
                     </div>
                   ) : (<div className="text-xs text-gray-400">Sin desc.</div>)}
                 </td>
-                
+
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{formatCurrency(sale.subtotal)}</td>
-                
+
                 <td className="px-4 py-4 whitespace-nowrap text-center">
                   {sale.requiere_factura ? (
                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -370,7 +370,7 @@ const formatDate = (dateString) => {
                     </span>
                   )}
                 </td>
-                
+
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
                   {sale.monto_iva > 0 ? (
                     <div className="text-xs text-blue-600">
@@ -380,7 +380,7 @@ const formatDate = (dateString) => {
                     <div className="text-xs text-gray-400">-</div>
                   )}
                 </td>
-                
+
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                   {sale.rfc ? (
                     <div className="font-mono text-xs">{sale.rfc}</div>
@@ -388,7 +388,7 @@ const formatDate = (dateString) => {
                     <div className="text-xs text-gray-400">-</div>
                   )}
                 </td>
-                
+
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                   {sale.razon_social ? (
                     <div className="max-w-[200px] truncate" title={sale.razon_social}>
@@ -398,10 +398,10 @@ const formatDate = (dateString) => {
                     <div className="text-xs text-gray-400">-</div>
                   )}
                 </td>
-                
+
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
-                  {sale.requiere_factura ? 
-                    formatCurrency(sale.total + (sale.monto_iva || 0)) : 
+                  {sale.requiere_factura ?
+                    formatCurrency(sale.total + (sale.monto_iva || 0)) :
                     formatCurrency(sale.total)
                   }
                 </td>
@@ -411,7 +411,7 @@ const formatDate = (dateString) => {
                     ? sale.vendedores.map(v => `${v.nombre} ${v.apellido || ''}`.trim()).join(', ')
                     : 'No asignado'}
                 </td>
-                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(sale.created_at)}</td>
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(sale.fecha_venta || sale.created_at)}</td>
               </tr>
             ))}
           </tbody>
